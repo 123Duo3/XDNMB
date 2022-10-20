@@ -1,0 +1,24 @@
+CREATE TABLE Thread (
+    id              INTEGER NOT NULL    PRIMARY KEY,
+    fid             INTEGER NOT NULL,
+    replyCount      INTEGER,
+    img             TEXT    NOT NULL,
+    ext             TEXT    NOT NULL,
+    time            TEXT    NOT NULL,
+    userHash        TEXT    NOT NULL,
+    name            TEXT    NOT NULL,
+    title           TEXT    NOT NULL,
+    content         TEXT    NOT NULL,
+    sage            INTEGER AS Boolean  NOT NULL,
+    admin           INTEGER AS Boolean  NOT NULL,
+    hide            INTEGER AS Boolean,
+    remainReplies   INTEGER,
+    email           INTEGER,
+    master          INTEGER AS Boolean,
+    page            INTEGER AS Int      NOT NULL DEFAULT 1
+);
+
+CREATE TABLE Fourm (
+    id              INTEGER NOT NULL    PRIMARY KEY,
+    name
+)
