@@ -18,7 +18,49 @@ CREATE TABLE Thread (
     page            INTEGER AS Int      NOT NULL DEFAULT 1
 );
 
-CREATE TABLE Fourm (
-    id              INTEGER NOT NULL    PRIMARY KEY,
-    name
-)
+CREATE TABLE ForumGroup (
+    id              TEXT    NOT NULL    PRIMARY KEY,
+    name            TEXT    NOT NULL,
+    sort            TEXT    NOT NULL,
+    status          TEXT    NOT NULL
+);
+
+CREATE TABLE Forum (
+    createdAt       TEXT    DEFAULT NULL,
+    fgroup          TEXT,
+    id              TEXT    NOT NULL    PRIMARY KEY,
+    interval        TEXT,
+    name            TEXT,
+    showName        TEXT,
+    sort            TEXT    NOT NULL,
+    status          TEXT,
+    updateAt        TEXT
+);
+
+insertThread:
+INSERT INTO Thread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertForumGroup:
+INSERT INTO ForumGroup(id, name, sort, status)
+VALUES (?, ?, ?, ?);
+
+insertForum:
+INSERT INTO Forum(createdAt, fgroup, id, interval, name, showName, sort, status, updateAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+
+removeAllThead:
+DELETE FROM Thread;
+
+removeAllForum:
+DELETE FROM ForumGroup;
+
+removeAllForumDetail:
+DELETE FROM Forum;
+
+
+selectAllForumInfo:
+SELECT ForumGroup.*, Forum.*
+FROM ForumGroup
+LEFT JOIN Forum ON Forum.fgroup == ForumGroup.id;

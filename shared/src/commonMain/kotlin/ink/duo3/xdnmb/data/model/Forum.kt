@@ -6,8 +6,8 @@ import kotlinx.serialization.Serializable
 class ForumList: MutableList<Thread> by ArrayList()
 
 @Serializable
-data class Forum(
-    val forums: List<ForumDetail>,
+data class ForumGroup(
+    val forums: List<Forum>,
     val id: String,
     val name: String,
     val sort: String,
@@ -15,7 +15,7 @@ data class Forum(
 )
 
 @Serializable
-data class ForumDetail(
+data class Forum(
     var createdAt: String?= null,
     var fgroup: String?,
     val id: String,
