@@ -26,15 +26,21 @@ CREATE TABLE ForumGroup (
 );
 
 CREATE TABLE Forum (
-    createdAt       TEXT    DEFAULT NULL,
-    fgroup          TEXT,
     id              TEXT    NOT NULL    PRIMARY KEY,
-    interval        TEXT,
+    fgroup          TEXT,
+    sort            TEXT    NOT NULL,
     name            TEXT,
     showName        TEXT,
-    sort            TEXT    NOT NULL,
-    status          TEXT,
-    updateAt        TEXT
+    msg             TEXT,
+    interval        TEXT,
+    safeMode        TEXT    NOT NULL ,
+    autoDelete      TEXT    NOT NULL ,
+    threadCount      TEXT    NOT NULL ,
+    permissionLevel TEXT    NOT NULL ,
+    forumFuseId     TEXT    NOT NULL ,
+    createdAt       TEXT    DEFAULT NULL,
+    updateAt        TEXT,
+    status          TEXT
 );
 
 insertThread:
@@ -46,8 +52,8 @@ INSERT INTO ForumGroup(id, name, sort, status)
 VALUES (?, ?, ?, ?);
 
 insertForum:
-INSERT INTO Forum(createdAt, fgroup, id, interval, name, showName, sort, status, updateAt)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO Forum(id, fgroup, sort, name, showName, msg, interval, safeMode, autoDelete, threadCount, permissionLevel, forumFuseId, createdAt, updateAt, status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 
 removeAllThead:
@@ -60,7 +66,8 @@ removeAllForumDetail:
 DELETE FROM Forum;
 
 
-selectAllForumInfo:
-SELECT ForumGroup.*, Forum.*
-FROM ForumGroup
-LEFT JOIN Forum ON Forum.fgroup == ForumGroup.id;
+selectAllForumGroup:
+SELECT * FROM ForumGroup;
+
+selectForumByGroupId:
+SELECT * FROM Forum WHERE fgroup = :groupId;

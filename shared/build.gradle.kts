@@ -82,6 +82,6 @@ android {
 
 sqldelight {
     database("AppDatabase") {
-        packageName = "ink.duo3.xdnmb.shared.data.cache"
+        packageName = "ink.duo3.xdnmb.data.cache"
     }
 }

@@ -1,9 +1,10 @@
 package ink.duo3.xdnmb.data.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-class ForumList: MutableList<Thread> by ArrayList()
+class ForumList: MutableList<ForumGroup> by ArrayList()
 
 @Serializable
 data class ForumGroup(
@@ -16,14 +17,24 @@ data class ForumGroup(
 
 @Serializable
 data class Forum(
-    var createdAt: String?= null,
-    var fgroup: String?,
     val id: String,
-    var interval: String?,
-    var msg: String?,
-    var name: String?,
-    var showName: String?,
-    var sort: String,
-    var status: String?,
-    var updateAt: String?
+    val fgroup: String?,
+    val sort: String,
+    val name: String?,
+    val showName: String?,
+    val msg: String?,
+    val interval: String?, // post interval (s)
+    @SerialName("safe_mode")
+    val safeMode: String,
+    @SerialName("auto_delete")
+    val autoDelete: String,
+    @SerialName("thread_count")
+    val threadCount: String,
+    @SerialName("permission_level")
+    val permissionLevel: String, // need numbers of cookie
+    @SerialName("forum_fuse_id")
+    val forumFuseId: String,
+    val createdAt: String?= null,
+    val updateAt: String?,
+    val status: String?
 )
