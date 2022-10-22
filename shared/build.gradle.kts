@@ -31,6 +31,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
                 implementation("com.squareup.sqldelight:runtime:$sqlDelightVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:$dateTimeVersion")
             }
         }
         val commonTest by getting {
@@ -81,6 +82,6 @@ android {
 
 sqldelight {
     database("AppDatabase") {
-        packageName = "com.jetbrains.handson.kmm.shared.cache"
+        packageName = "ink.duo3.xdnmb.shared.data.cache"
     }
 }
