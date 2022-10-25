@@ -1,6 +1,6 @@
 package ink.duo3.xdnmb.network
 
-import ink.duo3.xdnmb.data.model.ForumList
+import ink.duo3.xdnmb.data.model.ForumGroup
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -17,7 +17,7 @@ class XdApi {
             })
         }
     }
-    suspend fun getForumList(): ForumList {
+    suspend fun getForumList(): List<ForumGroup> {
         return httpClient.get("https://www.nmbxd1.com/Api/getForumList").body()
     }
 }

@@ -43,5 +43,5 @@ data class Thread(
     @SerialName("master")
     var master: Boolean?, // Is poster
     @SerialName("page")
-    var page:Int=1
+    var page:Int = 1
 )

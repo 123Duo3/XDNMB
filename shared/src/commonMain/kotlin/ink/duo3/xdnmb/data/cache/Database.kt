@@ -2,7 +2,6 @@ package ink.duo3.xdnmb.data.cache
 
 import ink.duo3.xdnmb.data.model.Forum
 import ink.duo3.xdnmb.data.model.ForumGroup
-import ink.duo3.xdnmb.data.model.ForumList
 
 internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     private val database = AppDatabase(databaseDriverFactory.createDriver())
@@ -16,9 +15,9 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
         }
     }
 
-    internal fun getAllForums(): ForumList {
+    internal fun getAllForums(): List<ForumGroup> {
         val forumGroups = dbQuery.selectAllForumGroup(::mapForumGroupSelecting).executeAsList()
-        return forumGroups.toMutableList() as ForumList
+        return forumGroups
     }
 
     private fun mapForumGroupSelecting(
@@ -29,23 +28,23 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     ): ForumGroup {
         return ForumGroup(
             forums = dbQuery.selectForumByGroupId(id, ::mapForumSelecting).executeAsList(),
-            id, name, sort, status
+            id = id, name = name, sort = sort, status = status
         )
     }
 
     private fun mapForumSelecting(
         id: String,
         fgroup: String?,
-        sort: String,
-        name: String?,
+        sort: String?,
+        name: String,
         showName: String?,
         msg: String?,
         interval: String?,
-        safeMode: String,
-        autoDelete: String,
-        threadCount: String,
-        permissionLevel: String,
-        forumFuseId: String,
+        safeMode: String?,
+        autoDelete: String?,
+        threadCount: String?,
+        permissionLevel: String?,
+        forumFuseId: String?,
         createdAt: String?,
         updateAt: String?,
         status: String?
@@ -56,7 +55,7 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     }
 
 
-    internal fun createForumList(forumList: ForumList) {
+    internal fun createForumList(forumList: List<ForumGroup>) {
         dbQuery.transaction {
             forumList.forEach {forumGroup ->
                 insertForumGroup(forumGroup)
