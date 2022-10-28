@@ -4,3 +4,4 @@ local.properties
 .gradle
 androidApp/build
 shared/build
+build/
