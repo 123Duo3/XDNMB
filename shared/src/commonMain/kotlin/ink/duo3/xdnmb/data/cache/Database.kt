@@ -1,7 +1,8 @@
 package ink.duo3.xdnmb.data.cache
 
-import ink.duo3.xdnmb.data.model.Forum
-import ink.duo3.xdnmb.data.model.ForumGroup
+import ink.duo3.xdnmb.data.entity.Forum
+import ink.duo3.xdnmb.data.entity.ForumGroup
+import ink.duo3.xdnmb.shared.data.cache.AppDatabase
 
 internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     private val database = AppDatabase(databaseDriverFactory.createDriver())

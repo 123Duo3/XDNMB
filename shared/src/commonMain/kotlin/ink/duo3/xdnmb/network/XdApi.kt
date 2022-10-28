@@ -1,6 +1,6 @@
 package ink.duo3.xdnmb.network
 
-import ink.duo3.xdnmb.data.model.ForumGroup
+import ink.duo3.xdnmb.data.entity.ForumGroup
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation

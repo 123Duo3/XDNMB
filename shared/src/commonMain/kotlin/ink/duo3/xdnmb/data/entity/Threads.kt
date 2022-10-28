@@ -1,4 +1,4 @@
-package ink.duo3.xdnmb.data.model
+package ink.duo3.xdnmb.data.entity
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

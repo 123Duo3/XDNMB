@@ -10,7 +10,7 @@ import ink.duo3.xdnmb.XdSDK
 import ink.duo3.xdnmb.android.ui.ForumsDisplay
 import ink.duo3.xdnmb.android.ui.theme.AppTheme
 import ink.duo3.xdnmb.data.cache.DatabaseDriverFactory
-import ink.duo3.xdnmb.data.model.ForumGroup
+import ink.duo3.xdnmb.data.entity.ForumGroup
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

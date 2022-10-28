@@ -2,7 +2,7 @@ package ink.duo3.xdnmb
 
 import ink.duo3.xdnmb.data.cache.Database
 import ink.duo3.xdnmb.data.cache.DatabaseDriverFactory
-import ink.duo3.xdnmb.data.model.ForumGroup
+import ink.duo3.xdnmb.data.entity.ForumGroup
 import ink.duo3.xdnmb.network.XdApi
 
 class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
