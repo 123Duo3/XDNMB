@@ -1,8 +1,0 @@
-version: "Apple Swift version 5.7 (swiftlang-5.7.0.127.4 clang-1400.0.29.50)"
-options: "cea969179f9b2f45635d9091f6a1625dd22ee0fb2261e226e850c0e5c30b7b57"
-build_start_time: [1666451649, 228708982]
-build_end_time: [1666451649, 289373874]
-inputs:
-  "/Users/duo3/Files/MultiplatformProjects/XDNMB/iosApp/iosApp/ContentView.swift": !private [1666189557, 132888793]
-  "/Users/duo3/Files/MultiplatformProjects/XDNMB/iosApp/iosApp/ForumListRow.swift": !private [1666451578, 78805923]
-  "/Users/duo3/Files/MultiplatformProjects/XDNMB/iosApp/iosApp/iOSApp.swift": !private [1666189557, 136217594]
