@@ -24,8 +24,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import ink.duo3.xdnmb.data.entity.Forum
-import ink.duo3.xdnmb.data.entity.ForumGroup
+import ink.duo3.xdnmb.shared.data.entity.Forum
+import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -1,4 +1,4 @@
-package ink.duo3.xdnmb.data.cache
+package ink.duo3.xdnmb.shared.data.cache
 
 import com.squareup.sqldelight.db.SqlDriver
 import com.squareup.sqldelight.drivers.native.NativeSqliteDriver

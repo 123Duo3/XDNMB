@@ -6,11 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.*
 import androidx.compose.ui.Modifier
-import ink.duo3.xdnmb.XdSDK
+import ink.duo3.xdnmb.shared.XdSDK
 import ink.duo3.xdnmb.android.ui.ForumsDisplay
 import ink.duo3.xdnmb.android.ui.theme.AppTheme
-import ink.duo3.xdnmb.data.cache.DatabaseDriverFactory
-import ink.duo3.xdnmb.data.entity.ForumGroup
+import ink.duo3.xdnmb.shared.data.cache.DatabaseDriverFactory
+import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,9 +1,9 @@
-package ink.duo3.xdnmb
+package ink.duo3.xdnmb.shared
 
-import ink.duo3.xdnmb.data.cache.Database
-import ink.duo3.xdnmb.data.cache.DatabaseDriverFactory
-import ink.duo3.xdnmb.data.entity.ForumGroup
-import ink.duo3.xdnmb.network.XdApi
+import ink.duo3.xdnmb.shared.data.cache.Database
+import ink.duo3.xdnmb.shared.data.cache.DatabaseDriverFactory
+import ink.duo3.xdnmb.shared.data.entity.ForumGroup
+import ink.duo3.xdnmb.shared.network.XdApi
 
 class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
     private val database = Database(databaseDriverFactory)

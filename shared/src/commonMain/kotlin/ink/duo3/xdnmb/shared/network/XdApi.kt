@@ -1,11 +1,11 @@
-package ink.duo3.xdnmb.network
+package ink.duo3.xdnmb.shared.network
 
-import ink.duo3.xdnmb.data.entity.ForumGroup
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.serialization.kotlinx.json.json
+import ink.duo3.xdnmb.shared.data.entity.ForumGroup
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
 class XdApi {
