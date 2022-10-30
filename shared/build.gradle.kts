@@ -29,6 +29,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
                 implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                implementation("io.ktor:ktor-client-encoding:$ktorVersion")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
                 implementation("com.squareup.sqldelight:runtime:$sqlDelightVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:$dateTimeVersion")
