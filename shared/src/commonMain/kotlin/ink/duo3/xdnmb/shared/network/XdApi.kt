@@ -15,6 +15,7 @@ class XdApi {
             json(Json {
                 ignoreUnknownKeys = true
                 useAlternativeNames = false
+                explicitNulls = false
             })
         }
         install(ContentEncoding) {
