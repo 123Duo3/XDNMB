@@ -18,10 +18,10 @@ struct ForumListRow: View {
                 ForEach(forumList) { forumGroup in
                     Section(header: Text(forumGroup.name)) {
                         ForEach(forumGroup.forums) { forum in
-                            if ((forum.showName?.isEmpty) != nil) {
+                            if ((forum.showName?.isEmpty) == true) {
                                 Text(forum.name)
                             } else {
-                                Text(forum.showName!)
+                                Text(forum.showName ?? forum.name)
                             }
                         }
                     }

@@ -4,9 +4,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-class Threads : MutableList<Thread> by ArrayList()
-
-@Serializable
 data class Thread(
     @SerialName("id")
     val id: Int,
@@ -29,11 +26,11 @@ data class Thread(
     @SerialName("content")
     val content: String,
     @SerialName("sage")
-    val sage: Boolean,
+    val sage: Int,
     @SerialName("admin")
-    val admin: Boolean,
+    val admin: Int,
     @SerialName("Hide")
-    val hide: Boolean?,
+    val hide: Int?,
     @SerialName("Replies")
     val replies: List<Thread>?,
     @SerialName("RemainReplies")
@@ -41,7 +38,7 @@ data class Thread(
     @SerialName("email")
     val email: String?,
     @SerialName("master")
-    var master: Boolean?, // Is poster
+    var master: Int?, // Is poster
     @SerialName("page")
     var page:Int = 1
 )

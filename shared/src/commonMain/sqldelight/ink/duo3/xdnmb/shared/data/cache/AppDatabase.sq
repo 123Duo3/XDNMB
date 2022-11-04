@@ -1,7 +1,9 @@
+import kotlinx.serialization.internal.IntArrayBuilder;
+
 CREATE TABLE Thread (
-    id              INTEGER NOT NULL    PRIMARY KEY,
-    fid             INTEGER NOT NULL,
-    replyCount      INTEGER,
+    id              INTEGER AS Int  NOT NULL    PRIMARY KEY,
+    fid             INTEGER AS Int  NOT NULL,
+    replyCount      INTEGER AS Int,
     img             TEXT    NOT NULL,
     ext             TEXT    NOT NULL,
     time            TEXT    NOT NULL,
@@ -9,13 +11,33 @@ CREATE TABLE Thread (
     name            TEXT    NOT NULL,
     title           TEXT    NOT NULL,
     content         TEXT    NOT NULL,
-    sage            INTEGER AS Boolean  NOT NULL,
-    admin           INTEGER AS Boolean  NOT NULL,
-    hide            INTEGER AS Boolean,
-    remainReplies   INTEGER,
-    email           INTEGER,
-    master          INTEGER AS Boolean,
+    sage            INTEGER AS Int  NOT NULL,
+    admin           INTEGER AS Int  NOT NULL,
+    hide            INTEGER AS Int,
+    remainReplies   INTEGER AS Int,
+    email           TEXT,
+    master          INTEGER AS Int,
     page            INTEGER AS Int      NOT NULL DEFAULT 1
+);
+
+CREATE TABLE TimelineThread (
+    id              INTEGER AS Int  NOT NULL    PRIMARY KEY,
+    fid             INTEGER AS Int  NOT NULL,
+    replyCount      INTEGER AS Int,
+    img             TEXT    NOT NULL,
+    ext             TEXT    NOT NULL,
+    time            TEXT    NOT NULL,
+    userHash        TEXT    NOT NULL,
+    name            TEXT    NOT NULL,
+    title           TEXT    NOT NULL,
+    content         TEXT    NOT NULL,
+    sage            INTEGER AS Int  NOT NULL,
+    admin           INTEGER AS Int  NOT NULL,
+    hide            INTEGER AS Int ,
+    remainReplies   INTEGER AS Int,
+    email           TEXT,
+    master          INTEGER AS Int,
+    page            INTEGER AS Int  NOT NULL DEFAULT 1
 );
 
 CREATE TABLE ForumGroup (
@@ -45,7 +67,13 @@ CREATE TABLE Forum (
 
 insertThread:
 INSERT INTO Thread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT (id) DO NOTHING;
+
+insertTimeLineThread:
+INSERT INTO Thread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT (id) DO NOTHING;
 
 insertForumGroup:
 INSERT INTO ForumGroup(id, name, sort, status)
@@ -56,7 +84,13 @@ INSERT INTO Forum(id, fgroup, sort, name, showName, msg, interval, safeMode, aut
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 
-removeAllThead:
+removeAllThread:
+DELETE FROM Thread;
+
+removeThreadByForumId:
+DELETE FROM Thread WHERE fid = :forumId;
+
+removeAllTimeLineThead:
 DELETE FROM Thread;
 
 removeAllForum:
@@ -65,6 +99,15 @@ DELETE FROM ForumGroup;
 removeAllForumDetail:
 DELETE FROM Forum;
 
+
+selectAllTimeLineThread:
+SELECT * FROM TimelineThread;
+
+selectThreadByForumId:
+SELECT * FROM Thread WHERE fid = :forumId;
+
+selectForumNameByForumId:
+SELECT name FROM Forum WHERE id = :forumId;
 
 selectAllForumGroup:
 SELECT * FROM ForumGroup;

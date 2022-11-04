@@ -86,5 +86,6 @@ android {
 sqldelight {
     database("AppDatabase") {
         packageName = "ink.duo3.xdnmb.shared.data.cache"
+        dialect = "sqlite:3.25"
     }
 }

@@ -2,16 +2,17 @@ package ink.duo3.xdnmb.shared.data.cache
 
 import ink.duo3.xdnmb.shared.data.entity.Forum
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
+import ink.duo3.xdnmb.shared.data.entity.Thread
+import kotlinx.serialization.SerialName
 
 internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     private val database = AppDatabase(databaseDriverFactory.createDriver())
     private val dbQuery = database.appDatabaseQueries
 
-    internal fun clearDatabase() {
+    internal fun clearForumDatabase() {
         dbQuery.transaction {
             dbQuery.removeAllForum()
             dbQuery.removeAllForumDetail()
-            dbQuery.removeAllThead()
         }
     }
 
@@ -54,7 +55,6 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
         )
     }
 
-
     internal fun createForumList(forumList: List<ForumGroup>) {
         dbQuery.transaction {
             forumList.forEach {forumGroup ->
@@ -94,5 +94,75 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
             forum.updateAt,
             forum.status
         )
+    }
+
+
+    internal fun clearTimeLine() {
+        dbQuery.transaction {
+            dbQuery.removeAllTimeLineThead()
+        }
+    }
+
+    internal fun getAllTimeLine(): List<Thread> {
+        val threads = dbQuery.selectAllTimeLineThread(::mapThreadSelecting).executeAsList()
+        return threads
+    }
+
+    private fun mapThreadSelecting(
+        id: Int,
+        fid: Int,
+        replyCount: Int?,
+        img: String,
+        ext: String,
+        time: String,
+        userHash: String,
+        name: String,
+        title: String,
+        content: String,
+        sage: Int,
+        admin: Int,
+        hide: Int?,
+        remainReplies:Int?,
+        email: String?,
+        master: Int?,
+        page:Int
+    ): Thread{
+        return Thread(
+            id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, null, remainReplies, email, master, page
+        )
+    }
+
+    internal fun createTimeLine(threadList: List<Thread>) {
+        dbQuery.transaction {
+            threadList.forEach {thread ->
+                insertTimeLine(thread)
+            }
+        }
+    }
+
+    private fun insertTimeLine(thread: Thread) {
+        dbQuery.insertTimeLineThread(
+            thread.id,
+            thread.fid,
+            thread.replyCount,
+            thread.img,
+            thread.ext,
+            thread.time,
+            thread.userHash,
+            thread.name,
+            thread.title,
+            thread.content,
+            thread.sage,
+            thread.admin,
+            thread.hide,
+            thread.remainReplies,
+            thread.email,
+            thread.master,
+            thread.page
+        )
+    }
+
+    internal fun getForumName(forumId: String): String {
+        return dbQuery.selectForumNameByForumId(forumId).executeAsOne()
     }
 }
