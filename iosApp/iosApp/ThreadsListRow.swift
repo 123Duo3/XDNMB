@@ -39,7 +39,7 @@ struct ThreadsListRow: View {
                                         .foregroundColor(Color.red)
                                 }
                                 Spacer()
-                                Label("10月16日", systemImage: "")
+                                Label(sdk.formatTime(originalTime: threads.time, inThread: false), systemImage: "")
                                     .labelStyle(.titleOnly)
                                 Label("", systemImage: "clock")
                                     .labelStyle(.iconOnly)
@@ -59,6 +59,7 @@ struct ThreadsListRow: View {
             
                             VStack(alignment: .leading){
                                 RichText(html: threads.content)
+                                    .lineHeight(140)
                                     .padding(-8)
                                 //Text(threads.content).font(.callout)
                                 
@@ -93,6 +94,7 @@ struct ThreadsListRow: View {
                 }
             }
             .navigationTitle(Text("时间线"))
+            .listRowInsets(EdgeInsets())
         }
     }
 }

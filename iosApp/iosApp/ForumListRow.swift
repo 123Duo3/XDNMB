@@ -8,6 +8,7 @@
 
 import SwiftUI
 import shared
+import RichText
 
 struct ForumListRow: View {
     var forumList: [ForumGroup]
@@ -19,9 +20,9 @@ struct ForumListRow: View {
                     Section(header: Text(forumGroup.name)) {
                         ForEach(forumGroup.forums) { forum in
                             if ((forum.showName?.isEmpty) == true) {
-                                Text(forum.name)
+                                RichText(html: forum.name).padding(-8)
                             } else {
-                                Text(forum.showName ?? forum.name)
+                                RichText(html: forum.showName ?? forum.name).padding(-8)
                             }
                         }
                     }
