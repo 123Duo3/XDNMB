@@ -6,7 +6,10 @@ struct ContentView: View {
     
 	var body: some View {
         TabView{
-            TimelineView(viewModel: .init(sdk: sdk), sdk: sdk)
+            NavigationView{
+                TimelineView(viewModel: .init(sdk: sdk), sdk: sdk)
+            }
+                .navigationTitle("时间线")
                 .tabItem{
                     Image(systemName: "clock.fill")
                     Text("时间线")

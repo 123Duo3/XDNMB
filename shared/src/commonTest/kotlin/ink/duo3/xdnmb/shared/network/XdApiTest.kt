@@ -6,7 +6,7 @@ import kotlin.test.Test
 internal class XdApiTest {
     @Test
     fun testGetForumList() = runBlocking {
-        XdApi().getTimeLine(1).forEach {
+        XdApi().getTreadList(20, 1).forEach {
             println(it)
         }
     }

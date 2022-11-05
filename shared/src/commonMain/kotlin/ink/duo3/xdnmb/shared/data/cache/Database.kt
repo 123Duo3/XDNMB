@@ -3,7 +3,6 @@ package ink.duo3.xdnmb.shared.data.cache
 import ink.duo3.xdnmb.shared.data.entity.Forum
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Thread
-import kotlinx.serialization.SerialName
 
 internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     private val database = AppDatabase(databaseDriverFactory.createDriver())
@@ -164,5 +163,46 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
 
     internal fun getForumName(forumId: String): String {
         return dbQuery.selectForumNameByForumId(forumId).executeAsOne()
+    }
+
+    internal fun clearThreadsByForumId(forumId: Int) {
+        dbQuery.transaction {
+            dbQuery.removeThreadByForumId(forumId)
+        }
+    }
+
+    internal fun getThreadsByForumId(forumId: Int): List<Thread> {
+        val threads = dbQuery.selectThreadByForumId(forumId,::mapThreadSelecting).executeAsList()
+        return threads
+    }
+
+    internal fun createThreads(threadList: List<Thread>) {
+        dbQuery.transaction {
+            threadList.forEach {thread ->
+                insertThread(thread)
+            }
+        }
+    }
+
+    private fun insertThread(thread: Thread) {
+        dbQuery.insertThread(
+            thread.id,
+            thread.fid,
+            thread.replyCount,
+            thread.img,
+            thread.ext,
+            thread.time,
+            thread.userHash,
+            thread.name,
+            thread.title,
+            thread.content,
+            thread.sage,
+            thread.admin,
+            thread.hide,
+            thread.remainReplies,
+            thread.email,
+            thread.master,
+            thread.page
+        )
     }
 }

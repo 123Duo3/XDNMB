@@ -6,14 +6,12 @@ import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Thread
 import ink.duo3.xdnmb.shared.network.XdApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
-import kotlinx.datetime.isDistantPast
-import kotlinx.datetime.minus
 import kotlinx.datetime.periodUntil
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
@@ -50,6 +48,23 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
                 api.getTimeLine(page).also {
                     database.clearTimeLine()
                     database.createTimeLine(it)
+                }
+            }
+        }
+
+    @Throws(Exception::class)
+    suspend fun getForumThreads(forumId: Int,forceReload: Boolean,page: Int): List<Thread> =
+        withContext(Dispatchers.Default) {
+            var cachedThreadList = database.getThreadsByForumId(forumId)
+            return@withContext if (cachedThreadList.isNotEmpty() && !forceReload) {
+                val nextPage = api.getTreadList(forumId, page)
+                database.createThreads(nextPage)
+                cachedThreadList = database.getThreadsByForumId(forumId)
+                return@withContext cachedThreadList
+            } else {
+                api.getTreadList(forumId, page).also {
+                    database.clearThreadsByForumId(forumId)
+                    database.createThreads(it)
                 }
             }
         }

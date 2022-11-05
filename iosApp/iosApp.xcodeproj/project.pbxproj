@@ -15,6 +15,7 @@
 		3786377229043A94002EAA64 /* ForumListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3786377129043A94002EAA64 /* ForumListRow.swift */; };
 		3795D1632914A0DF00A3B0F4 /* TimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3795D1622914A0DF00A3B0F4 /* TimelineView.swift */; };
 		3795D1662914F34E00A3B0F4 /* RichText in Frameworks */ = {isa = PBXBuildFile; productRef = 3795D1652914F34E00A3B0F4 /* RichText */; };
+		37C0325F291609DC003C2968 /* ForumThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C0325E291609DC003C2968 /* ForumThreadView.swift */; };
 		7555FF83242A565900829871 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF82242A565900829871 /* ContentView.swift */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +40,7 @@
 		376A83432913EAAE00177017 /* ForumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumView.swift; sourceTree = "<group>"; };
 		3786377129043A94002EAA64 /* ForumListRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumListRow.swift; sourceTree = "<group>"; };
 		3795D1622914A0DF00A3B0F4 /* TimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineView.swift; sourceTree = "<group>"; };
+		37C0325E291609DC003C2968 /* ForumThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumThreadView.swift; sourceTree = "<group>"; };
 		7555FF7B242A565900829871 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7555FF82242A565900829871 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7555FF8C242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -88,6 +90,7 @@
 				7555FF82242A565900829871 /* ContentView.swift */,
 				7555FF8C242A565B00829871 /* Info.plist */,
 				2152FB032600AC8F00CF470E /* iOSApp.swift */,
+				37C0325E291609DC003C2968 /* ForumThreadView.swift */,
 				058557D7273AAEEB004C7B11 /* Preview Content */,
 				3786377129043A94002EAA64 /* ForumListRow.swift */,
 				372819BB290D71E300DEF1CC /* ThreadsListRow.swift */,
@@ -204,6 +207,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3786377229043A94002EAA64 /* ForumListRow.swift in Sources */,
+				37C0325F291609DC003C2968 /* ForumThreadView.swift in Sources */,
 				3795D1632914A0DF00A3B0F4 /* TimelineView.swift in Sources */,
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				376A83442913EAAE00177017 /* ForumView.swift in Sources */,
