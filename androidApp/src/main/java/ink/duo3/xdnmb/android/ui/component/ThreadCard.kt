@@ -91,8 +91,7 @@ fun ThreadCard(thread: Thread, sdk: XdSDK) {
 
                 HtmlText(
                     html = thread.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
 
