@@ -15,7 +15,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 
 class XdApi {
-    private val xdUrl = "https://www.nmbxd1.com/Api"
+    private val xdUrl = "https://api.nmb.best/Api"
 
     @OptIn(ExperimentalSerializationApi::class)
     private val httpClient = HttpClient {

@@ -20,21 +20,22 @@ struct ForumListRow: View {
                 ForEach(forumList) { forumGroup in
                     Section(header: Text(forumGroup.name)) {
                         ForEach(forumGroup.forums) { forum in
+                            let forumId = forum.id
                             NavigationLink(destination: {
-                                if (forum.id == "-1") {
+                                if (forumId == "-1") {
                                     TimelineView(viewModel: .init(sdk: sdk), sdk: sdk)
                                 } else {
                                     ForumThreadView(viewModel: .init(sdk: sdk, forumId: forum.id), sdk: sdk, forumId: forum.id, forumShowName: forum.name)
                                 }
                             }){
-                                if (forum.showName?.isEmpty == true) {
+                                if ((forum.showName ?? forum.name) == ""){
                                     RichText(html: forum.name).padding(-8)
                                 } else {
-                                    RichText(html: forum.showName!).padding(-8)
+                                    RichText(html: forum.showName ?? forum.name).padding(-8)
                                 }
                             }
                         }
-                    }
+                    }.textSelection(.disabled)
                 }
             }
             .navigationTitle("板块")
