@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ink.duo3.xdnmb.android.ui.component.HtmlText
+import ink.duo3.xdnmb.android.ui.component.NavigationItemGroup
 import ink.duo3.xdnmb.shared.XdSDK
 import ink.duo3.xdnmb.shared.data.entity.Forum
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
