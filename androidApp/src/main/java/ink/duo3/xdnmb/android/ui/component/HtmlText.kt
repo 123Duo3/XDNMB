@@ -16,7 +16,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -46,7 +45,7 @@ private fun Preview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             HtmlText(
                 html = """
-            Hello, <span style="color: red"><i>world</i></span>
+            Hello, <span style="color: green"><i>world</i></span><a href="https://www.example.com">test</a>
         """.trimIndent(),
                 style = LocalTextStyle.current
             )
@@ -83,15 +82,16 @@ private fun HtmlComposeText(
 fun buildAnnotatedStringFromHtml(html: String): AnnotatedString {
     val text = remember(html) { HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT) }
     val color = LocalContentColor.current
+    val urlColor = MaterialTheme.colorScheme.primary
     return remember(html) {
-        text.toSpannable().toAnnotatedString(color)
+        text.toSpannable().toAnnotatedString(color, urlColor)
     }
 }
 
 
-fun Spannable.toAnnotatedString(primaryColor: Color): AnnotatedString {
+fun Spannable.toAnnotatedString(primaryColor: Color, accentColor: Color): AnnotatedString {
     val builder = AnnotatedString.Builder(this.toString())
-    val copierContext = CopierContext(primaryColor)
+    val copierContext = CopierContext(primaryColor, accentColor)
     SpanCopier.values().forEach { copier ->
         getSpans(0, length, copier.spanClass).forEach { span ->
             copier.copySpan(span, getSpanStart(span), getSpanEnd(span), builder, copierContext)
@@ -101,7 +101,8 @@ fun Spannable.toAnnotatedString(primaryColor: Color): AnnotatedString {
 }
 
 private data class CopierContext(
-    val primaryColor: Color,
+    val normalColor: Color,
+    val accentColor: Color
 )
 
 private enum class SpanCopier {
@@ -123,7 +124,7 @@ private enum class SpanCopier {
             )
             destination.addStyle(
                 style = SpanStyle(
-                    color = context.primaryColor,
+                    color = context.accentColor,
                     textDecoration = TextDecoration.Underline
                 ),
                 start = start,
