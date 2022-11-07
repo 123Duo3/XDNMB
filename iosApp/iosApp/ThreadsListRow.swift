@@ -20,9 +20,9 @@ struct ThreadsListRow: View {
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        List{
-            ForEach(threadList) {threads in
-                Section{
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16) {
+                ForEach(threadList) {threads in
                     VStack(alignment: .leading) {
                         HStack{
                             if(forumId == "-1"){
@@ -91,9 +91,18 @@ struct ThreadsListRow: View {
                             
                         }.padding(.top, 1.0).font(.caption)
                     }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 18)
+                    .frame(maxWidth: .infinity)
+                    .background(Color (UIColor.secondarySystemGroupedBackground))
+                    .cornerRadius(16)
                 }
             }
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight:.infinity)
+            .background(Color (UIColor.systemGroupedBackground))
         }
+        .background(Color (UIColor.systemGroupedBackground))
     }
 }
 

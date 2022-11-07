@@ -22,6 +22,7 @@ kotlin {
     val ktorVersion = "2.1.2"
     val sqlDelightVersion = "1.5.3"
     val dateTimeVersion = "0.4.0"
+    val accompanistVersion = "0.27.0"
 
     sourceSets {
         val commonMain by getting {
@@ -46,6 +47,7 @@ kotlin {
                 implementation("com.squareup.sqldelight:android-driver:$sqlDelightVersion")
                 implementation("androidx.compose.material3:material3:1.0.0")
                 implementation("androidx.compose.material3:material3-window-size-class:1.0.0")
+                implementation("com.google.accompanist:accompanist-systemuicontroller:$accompanistVersion")
             }
         }
         val androidTest by getting
