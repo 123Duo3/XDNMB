@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ForumsDisplay(forumList = forumList)
+                    ForumsDisplay(forumList = forumList, sdk, timeLine)
                 }
             }
         }

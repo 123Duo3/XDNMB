@@ -25,14 +25,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ink.duo3.xdnmb.android.ui.component.HtmlText
-import ink.duo3.xdnmb.android.ui.component.NavigationItemGroup
+import ink.duo3.xdnmb.shared.XdSDK
 import ink.duo3.xdnmb.shared.data.entity.Forum
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
+import ink.duo3.xdnmb.shared.data.entity.Thread
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForumsDisplay(forumList: List<ForumGroup>?) {
+fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thread>?) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val selectedItem = remember { mutableStateOf("") }
@@ -84,7 +85,7 @@ fun ForumsDisplay(forumList: List<ForumGroup>?) {
             }
         },
         content = {
-            TimeLine { scope.launch { drawerState.open() } }
+            TimeLine ({ scope.launch { drawerState.open() } }, sdk, threadList)
         }
     )
 }
