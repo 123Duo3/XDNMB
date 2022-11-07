@@ -28,7 +28,7 @@ internal class XdApiTest {
 
     @Test
     fun testGetThreadList() = runBlocking {
-        xdApi.getTreadList("14", 1).forEach {
+        xdApi.getTreadList(14, 1).forEach {
             println(it)
         }
     }
