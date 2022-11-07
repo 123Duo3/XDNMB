@@ -43,6 +43,7 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
+                implementation("io.coil-kt:coil-compose:2.2.2")
                 implementation("io.ktor:ktor-client-android:$ktorVersion")
                 implementation("com.squareup.sqldelight:android-driver:$sqlDelightVersion")
                 implementation("androidx.compose.material3:material3:1.0.0")

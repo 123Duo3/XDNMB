@@ -18,65 +18,71 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.contentColorFor
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import ink.duo3.xdnmb.android.ui.component.ThreadCard
+import ink.duo3.xdnmb.shared.XdSDK
+import ink.duo3.xdnmb.shared.data.entity.Thread
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimeLine(onClickMenu: () -> Unit) {
+fun TimeLine(onClickMenu: () -> Unit, sdk:XdSDK, threadList: List<Thread>?) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
-                title = {
-                    Text(
-                        "时间线",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onClickMenu) {
-                        Icon(
-                            imageVector = Icons.Filled.Menu,
-                            contentDescription = "Localized description",
-                            tint = MaterialTheme.colorScheme.onSurface
+            MaterialTheme(
+                colorScheme = MaterialTheme.colorScheme.copy(surface = MaterialTheme.colorScheme.inverseOnSurface)
+            ) {
+                LargeTopAppBar(
+                    title = {
+                        Text(
+                            "时间线",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* doSomething() */ }) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "Localized description",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                windowInsets = WindowInsets(top = 38.dp)
-            )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onClickMenu) {
+                            Icon(
+                                imageVector = Icons.Filled.Menu,
+                                contentDescription = "Localized description",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { /* doSomething() */ }) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = "Localized description",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                    windowInsets = WindowInsets(top = 38.dp)
+                )
+            }
         },
+        containerColor = MaterialTheme.colorScheme.inverseOnSurface,
         content = { innerPadding ->
             LazyColumn(
                 contentPadding = innerPadding,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                val list = (0..75).map { it.toString() }
-                items(count = list.size) {
-                    Text(
-                        text = list[it],
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    )
+                if (threadList != null) {
+                    items(count = threadList.size) {
+                        (threadList?.get(it))?.let { it1 -> ThreadCard(thread = it1, sdk = sdk) }
+                    }
                 }
             }
         }
