@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerValue
@@ -37,7 +38,7 @@ import kotlinx.coroutines.launch
 fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thread>?) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val selectedItem = remember { mutableStateOf("") }
+    val selectedItem = remember { mutableStateOf("-1") }
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -74,7 +75,7 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
                                                 scope.launch { drawerState.close() }
                                                 selectedItem.value = forum.id
                                             },
-                                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                            modifier = Modifier.statusBarsPadding()
                                         )
                                     }
                                 }
@@ -86,7 +87,11 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
             }
         },
         content = {
-            TimeLine ({ scope.launch { drawerState.open() } }, sdk, threadList)
+            if (selectedItem.value == "-1") {
+                TimeLine({ scope.launch { drawerState.open() } }, sdk, threadList)
+            } else {
+
+            }
         }
     )
 }

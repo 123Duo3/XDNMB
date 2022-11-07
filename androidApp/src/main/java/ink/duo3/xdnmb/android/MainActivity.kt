@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import ink.duo3.xdnmb.android.ui.ForumsDisplay
 import ink.duo3.xdnmb.android.ui.theme.AppTheme
 import ink.duo3.xdnmb.shared.XdSDK
@@ -25,10 +26,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-        )
+        WindowCompat.setDecorFitsSystemWindows(window, false);
         setContent {
             LaunchedEffect(Unit) {
                 init()

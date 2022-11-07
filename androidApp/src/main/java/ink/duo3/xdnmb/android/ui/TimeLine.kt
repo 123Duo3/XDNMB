@@ -2,9 +2,13 @@ package ink.duo3.xdnmb.android.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -31,7 +35,7 @@ import ink.duo3.xdnmb.android.ui.component.ThreadCard
 import ink.duo3.xdnmb.shared.XdSDK
 import ink.duo3.xdnmb.shared.data.entity.Thread
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TimeLine(onClickMenu: () -> Unit, sdk:XdSDK, threadList: List<Thread>?) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -69,7 +73,7 @@ fun TimeLine(onClickMenu: () -> Unit, sdk:XdSDK, threadList: List<Thread>?) {
                         }
                     },
                     scrollBehavior = scrollBehavior,
-                    windowInsets = WindowInsets(top = 38.dp)
+                    windowInsets = WindowInsets.statusBars
                 )
             }
         },
