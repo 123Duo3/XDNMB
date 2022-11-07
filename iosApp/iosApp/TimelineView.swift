@@ -30,7 +30,7 @@ struct TimelineView: View {
             )
         case.result(let timeline):
             return AnyView(
-                ThreadsListRow(threadList: timeline, sdk: sdk)
+                ThreadsListRow(forumId: "-1", forumShowName: "时间线", threadList: timeline, sdk: sdk)
             )
         case.error(let discription):
             return AnyView(Text(discription).multilineTextAlignment(.center))
