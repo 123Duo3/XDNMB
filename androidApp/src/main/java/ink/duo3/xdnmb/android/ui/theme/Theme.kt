@@ -95,8 +95,9 @@ fun AppTheme(
         )
     }else{
         systemUiController.setSystemBarsColor(
-            color = Color.White
+            color = Color.Transparent
         )
+        systemUiController.setStatusBarColor(Color.Transparent,true)
     }
 
     MaterialTheme(
