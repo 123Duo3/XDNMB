@@ -3,11 +3,20 @@ package ink.duo3.xdnmb.android.ui
 import android.annotation.SuppressLint
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.areNavigationBarsVisible
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -45,7 +54,7 @@ import ink.duo3.xdnmb.shared.data.entity.Thread
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnrememberedMutableState")
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thread>?) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -199,6 +208,9 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
                         modifier = Modifier
                             .padding(12.dp, 0.dp)
                     )
+                    if (WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() == 0.dp) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
         },
