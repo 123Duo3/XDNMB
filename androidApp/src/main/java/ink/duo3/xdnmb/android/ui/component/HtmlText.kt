@@ -14,6 +14,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
@@ -34,10 +35,11 @@ import ink.duo3.xdnmb.android.ui.theme.AppTheme
 @Composable
 fun HtmlText(
     html: String,
-    style: TextStyle = LocalTextStyle.current
+    style: TextStyle = LocalTextStyle.current,
+    clickable: Boolean = false
 ) {
     val textColor = LocalContentColor.current
-    HtmlComposeText(html, style.copy(color = textColor))
+    HtmlComposeText(html, style.copy(color = textColor), clickable)
 }
 
 
@@ -59,21 +61,29 @@ private fun Preview() {
 @Composable
 private fun HtmlComposeText(
     html: String,
-    style: TextStyle
+    style: TextStyle,
+    clickable: Boolean
 ) {
     val annotatedText = buildAnnotatedStringFromHtml(html, style)
     val context = LocalContext.current
 
-    ClickableText(
-        text = annotatedText,
-        style = style,
-        onClick = {
-            annotatedText.getUrlAnnotations(it, it)
-                .firstOrNull()?.let {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it.item.url)))
-                }
-        }
-    )
+    if(clickable) {
+        ClickableText(
+            text = annotatedText,
+            style = style,
+            onClick = {
+                annotatedText.getUrlAnnotations(it, it)
+                    .firstOrNull()?.let {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it.item.url)))
+                    }
+            }
+        )
+    } else {
+        Text(
+            text = annotatedText,
+            style = style
+        )
+    }
 }
 
 @Composable
