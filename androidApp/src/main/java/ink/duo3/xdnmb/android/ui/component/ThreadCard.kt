@@ -1,34 +1,28 @@
 package ink.duo3.xdnmb.android.ui.component
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import ink.duo3.xdnmb.android.R
 import ink.duo3.xdnmb.shared.XdSDK
@@ -66,28 +60,24 @@ fun ThreadCard(thread: Thread, sdk: XdSDK) {
                 )
             }
 
-            Column(
-                Modifier
-            ) {
-                if (thread.title != "无标题" && thread.name != "无名氏") {
-                    Column(
-                        Modifier.padding(bottom = 8.dp)
-                    ) {
-                        if (thread.title != "无标题") {
-                            Text(
-                                text = thread.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        if (thread.name != "无名氏") {
-                            Text(
-                                text = thread.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+            Column(Modifier) {
+                val hasTitle = thread.title != "无标题"
+                val hasName = thread.name != "无名氏"
+
+                if (hasTitle || hasName) {
+                    if (hasTitle) Text(
+                        text = thread.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    if (hasName) Text(
+                        text = thread.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(Modifier.height(8.dp))
                 }
 
                 SelectionContainer {
@@ -100,11 +90,14 @@ fun ThreadCard(thread: Thread, sdk: XdSDK) {
             }
 
             if (thread.img.isNotBlank()) {
+                val context = LocalContext.current
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(sdk.imgToUrl(thread.img, thread.ext, true))
-                        .crossfade(true)
-                        .build(),
+                    model = remember {
+                        ImageRequest.Builder(context)
+                            .data(sdk.imgToUrl(thread.img, thread.ext, true))
+                            .crossfade(true)
+                            .build()
+                    },
                     contentDescription = "",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
