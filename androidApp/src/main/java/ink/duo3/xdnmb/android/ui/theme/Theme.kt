@@ -84,8 +84,8 @@ fun AppTheme(
     val colorScheme = when {
         dynamicColor && darkTheme -> dynamicDarkColorScheme(LocalContext.current)
         dynamicColor && !darkTheme -> dynamicLightColorScheme(LocalContext.current)
-        darkTheme -> LightColors
-        else -> DarkColors
+        darkTheme -> DarkColors
+        else -> LightColors
     }
 
     val systemUiController = rememberSystemUiController()
