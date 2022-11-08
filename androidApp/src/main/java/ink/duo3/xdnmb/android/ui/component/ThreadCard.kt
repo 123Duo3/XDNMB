@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -89,11 +90,13 @@ fun ThreadCard(thread: Thread, sdk: XdSDK) {
                     }
                 }
 
-                HtmlText(
-                    html = thread.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    clickable = true
-                )
+                SelectionContainer {
+                    HtmlText(
+                        html = thread.content,
+                        style = MaterialTheme.typography.bodyMedium,
+                        clickable = true
+                    )
+                }
             }
 
             if (thread.img.isNotBlank()) {
