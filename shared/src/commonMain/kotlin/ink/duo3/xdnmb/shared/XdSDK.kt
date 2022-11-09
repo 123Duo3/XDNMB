@@ -130,7 +130,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
 
         if (inThread) {
             if (diffInDay.days >= 1){
-                result = result + " " + time.hour + ":" + time.minute
+                result = result + " " + time.hour.let { if (it < 10) "0$it" else it } + ":" + time.minute.let { if (it < 10) "0$it" else it }
             } else if (duration.inWholeHours >= 1) {
                 result = time.hour.toString() + ":" + time.minute.toString()
             }

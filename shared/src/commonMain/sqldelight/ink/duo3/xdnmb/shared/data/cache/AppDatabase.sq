@@ -56,7 +56,7 @@ CREATE TABLE Histroy (
     email           TEXT,
     master          INTEGER AS Int,
     page            INTEGER AS Int  NOT NULL DEFAULT 1,
-    lastAccess      INTEGER AS Long NOT NULL
+    lastAccess      INTEGER  NOT NULL
 );
 
 CREATE TABLE Reply (
@@ -118,7 +118,8 @@ ON CONFLICT (id) DO NOTHING;
 insertHistory:
 INSERT INTO Histroy(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page, lastAccess)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT (id) DO UPDATE SET lastAccess = excluded.lastAccess;
+ON CONFLICT (id) DO UPDATE
+SET lastAccess = excluded.lastAccess;
 
 insertReply:
 INSERT INTO Reply(threadId, id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
