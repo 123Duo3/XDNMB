@@ -1,6 +1,6 @@
 CREATE TABLE Thread (
     id              INTEGER AS Int  NOT NULL    PRIMARY KEY,
-    fid             INTEGER AS Int  NOT NULL,
+    fid             INTEGER AS Int,
     replyCount      INTEGER AS Int,
     img             TEXT    NOT NULL,
     ext             TEXT    NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE Thread (
     name            TEXT    NOT NULL,
     title           TEXT    NOT NULL,
     content         TEXT    NOT NULL,
-    sage            INTEGER AS Int  NOT NULL,
+    sage            INTEGER AS Int,
     admin           INTEGER AS Int  NOT NULL,
     hide            INTEGER AS Int,
     remainReplies   INTEGER AS Int,
@@ -20,7 +20,7 @@ CREATE TABLE Thread (
 
 CREATE TABLE TimelineThread (
     id              INTEGER AS Int  NOT NULL    PRIMARY KEY,
-    fid             INTEGER AS Int  NOT NULL,
+    fid             INTEGER AS Int,
     replyCount      INTEGER AS Int,
     img             TEXT    NOT NULL,
     ext             TEXT    NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE TimelineThread (
     name            TEXT    NOT NULL,
     title           TEXT    NOT NULL,
     content         TEXT    NOT NULL,
-    sage            INTEGER AS Int  NOT NULL,
+    sage            INTEGER AS Int,
     admin           INTEGER AS Int  NOT NULL,
     hide            INTEGER AS Int ,
     remainReplies   INTEGER AS Int,
@@ -38,9 +38,9 @@ CREATE TABLE TimelineThread (
     page            INTEGER AS Int  NOT NULL DEFAULT 1
 );
 
-CREATE TABLE Reply (
+CREATE TABLE Histroy (
     id              INTEGER AS Int  NOT NULL    PRIMARY KEY,
-    fid             INTEGER AS Int  NOT NULL,
+    fid             INTEGER AS Int,
     replyCount      INTEGER AS Int,
     img             TEXT    NOT NULL,
     ext             TEXT    NOT NULL,
@@ -49,7 +49,29 @@ CREATE TABLE Reply (
     name            TEXT    NOT NULL,
     title           TEXT    NOT NULL,
     content         TEXT    NOT NULL,
-    sage            INTEGER AS Int  NOT NULL,
+    sage            INTEGER AS Int,
+    admin           INTEGER AS Int  NOT NULL,
+    hide            INTEGER AS Int ,
+    remainReplies   INTEGER AS Int,
+    email           TEXT,
+    master          INTEGER AS Int,
+    page            INTEGER AS Int  NOT NULL DEFAULT 1,
+    lastAccess      INTEGER AS Long NOT NULL
+);
+
+CREATE TABLE Reply (
+    threadId        INTEGER AS Int  NOT NULL ,
+    id              INTEGER AS Int  NOT NULL    PRIMARY KEY,
+    fid             INTEGER AS Int,
+    replyCount      INTEGER AS Int,
+    img             TEXT    NOT NULL,
+    ext             TEXT    NOT NULL,
+    time            TEXT    NOT NULL,
+    userHash        TEXT    NOT NULL,
+    name            TEXT    NOT NULL,
+    title           TEXT    NOT NULL,
+    content         TEXT    NOT NULL,
+    sage            INTEGER AS Int,
     admin           INTEGER AS Int  NOT NULL,
     hide            INTEGER AS Int ,
     remainReplies   INTEGER AS Int,
@@ -89,13 +111,18 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO NOTHING;
 
 insertTimeLineThread:
-INSERT INTO Thread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
+INSERT INTO TimelineThread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO NOTHING;
 
+insertHistory:
+INSERT INTO Histroy(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page, lastAccess)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT (id) DO UPDATE SET lastAccess = excluded.lastAccess;
+
 insertReply:
-INSERT INTO Reply(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO Reply(threadId, id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
+VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO NOTHING;
 
 insertForumGroup:
@@ -113,8 +140,14 @@ DELETE FROM Thread;
 removeThreadByForumId:
 DELETE FROM Thread WHERE fid = :forumId;
 
-removeAllTimeLineThead:
-DELETE FROM Thread;
+removeAllTimeLineThread:
+DELETE FROM TimelineThread;
+
+removeAllHistory:
+DELETE FROM Histroy;
+
+removeReplyByThreadIdAndPage:
+DELETE FROM Reply WHERE threadId = :threadId AND page = :page;
 
 removeAllForum:
 DELETE FROM ForumGroup;
@@ -128,6 +161,12 @@ SELECT * FROM TimelineThread;
 
 selectThreadByForumId:
 SELECT * FROM Thread WHERE fid = :forumId;
+
+selectAllHistory:
+SELECT * FROM Histroy ORDER BY lastAccess DESC;
+
+selectReplyByThreadIdAndPage:
+SELECT * FROM Reply WHERE threadId = :threadId AND page = :page;
 
 selectForumNameByForumId:
 SELECT name FROM Forum WHERE id = :forumId;

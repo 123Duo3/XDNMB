@@ -32,4 +32,11 @@ internal class XdApiTest {
             println(it)
         }
     }
+
+    @Test
+    fun testGetReply() = runBlocking {
+        xdApi.getReply(53213787, 1).run {
+            println(this)
+        }
+    }
 }

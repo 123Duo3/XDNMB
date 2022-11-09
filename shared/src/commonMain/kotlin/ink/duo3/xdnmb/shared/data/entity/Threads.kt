@@ -8,7 +8,7 @@ data class Thread(
     @SerialName("id")
     val id: Int,
     @SerialName("fid")
-    val fid: Int,
+    val fid: Int?,
     @SerialName("ReplyCount")
     var replyCount: Int?,
     @SerialName("img")
@@ -26,7 +26,7 @@ data class Thread(
     @SerialName("content")
     val content: String,
     @SerialName("sage")
-    val sage: Int,
+    val sage: Int?,
     @SerialName("admin")
     val admin: Int,
     @SerialName("Hide")

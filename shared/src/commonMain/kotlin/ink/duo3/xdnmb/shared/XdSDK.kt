@@ -69,6 +69,14 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
             }
         }
 
+    @Throws(Exception::class)
+    suspend fun getReply(threadId: Int, page: Int): Thread =
+        withContext(Dispatchers.Default) {
+            return@withContext api.getReply(threadId, page).also {
+                database.createHistory(it)
+            }
+        }
+
     fun imgToUrl(img: String, ext:String, isThumb: Boolean): String{
         var imageType = "image/"
         if (isThumb) {

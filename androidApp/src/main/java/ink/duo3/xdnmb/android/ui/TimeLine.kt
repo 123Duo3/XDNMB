@@ -87,7 +87,7 @@ fun TimeLine(onClickMenu: () -> Unit, sdk:XdSDK, threadList: List<Thread>?) {
             ) {
                 if (threadList != null) {
                     items(count = threadList.size) {
-                        (threadList?.get(it))?.let { it1 -> ThreadCard(thread = it1, sdk = sdk) }
+                        (threadList?.get(it))?.let { it1 -> ThreadCard(thread = it1, sdk = sdk, -1) }                                              
                     }
                 }
             }

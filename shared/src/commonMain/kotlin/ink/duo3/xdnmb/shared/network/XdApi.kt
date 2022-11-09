@@ -48,4 +48,8 @@ class XdApi {
     suspend fun getTreadList(fid: Int, page: Int): List<Thread> {
         return httpClient.get("$xdUrl/showf?id=$fid&page=$page").body()
     }
+
+    suspend fun getReply(threadId: Int, page: Int): Thread {
+        return httpClient.get("$xdUrl/thread?id=$threadId&page=$page").body()
+    }
 }

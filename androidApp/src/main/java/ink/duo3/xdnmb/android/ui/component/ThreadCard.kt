@@ -29,7 +29,7 @@ import ink.duo3.xdnmb.shared.XdSDK
 import ink.duo3.xdnmb.shared.data.entity.Thread
 
 @Composable
-fun ThreadCard(thread: Thread, sdk: XdSDK) {
+fun ThreadCard(thread: Thread, sdk: XdSDK, forumId: Int) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -116,20 +116,23 @@ fun ThreadCard(thread: Thread, sdk: XdSDK) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.CenterVertically)
                 )
-                Text(
-                    text = " • ",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.align(Alignment.CenterVertically)
-                )
-                Text(
-                    text = sdk.getForumName(thread.fid),
-                    modifier = Modifier
-                        .weight(1f)
-                        .align(Alignment.CenterVertically),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (forumId == -1) {
+                    Text(
+                        text = " • ",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    )
+
+                    Text(
+                        text = sdk.getForumName(thread.fid!!),
+                        modifier = Modifier
+                            .weight(1f)
+                            .align(Alignment.CenterVertically),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Icon(
                     painter = painterResource(id = R.drawable.comment_black_24dp),
                     "",

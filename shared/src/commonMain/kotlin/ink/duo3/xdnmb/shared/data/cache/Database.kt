@@ -3,6 +3,8 @@ package ink.duo3.xdnmb.shared.data.cache
 import ink.duo3.xdnmb.shared.data.entity.Forum
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Thread
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 
 internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     private val database = AppDatabase(databaseDriverFactory.createDriver())
@@ -98,7 +100,7 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
 
     internal fun clearTimeLine() {
         dbQuery.transaction {
-            dbQuery.removeAllTimeLineThead()
+            dbQuery.removeAllTimeLineThread()
         }
     }
 
@@ -109,7 +111,7 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
 
     private fun mapThreadSelecting(
         id: Int,
-        fid: Int,
+        fid: Int?,
         replyCount: Int?,
         img: String,
         ext: String,
@@ -118,7 +120,7 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
         name: String,
         title: String,
         content: String,
-        sage: Int,
+        sage: Int?,
         admin: Int,
         hide: Int?,
         remainReplies:Int?,
@@ -205,4 +207,98 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
             thread.page
         )
     }
+
+    internal fun clearAllHistory() {
+        dbQuery.transaction {
+            dbQuery.removeAllHistory()
+        }
+    }
+
+    internal fun clearReplyByThreadIdAndPage(threadId: Int, page: Int) {
+        dbQuery.transaction {
+            dbQuery.removeReplyByThreadIdAndPage(threadId, page)
+        }
+    }
+
+    internal fun getHistory() {
+        dbQuery.selectAllHistory(::mapHistorySelecting).executeAsList()
+    }
+
+    private fun mapHistorySelecting(
+        id: Int,
+        fid: Int?,
+        replyCount: Int?,
+        img: String,
+        ext: String,
+        time: String,
+        userHash: String,
+        name: String,
+        title: String,
+        content: String,
+        sage: Int?,
+        admin: Int,
+        hide: Int?,
+        remainReplies:Int?,
+        email: String?,
+        master: Int?,
+        page:Int,
+        lastAccess: Long
+    ): Thread{
+        return Thread(
+            id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, null, remainReplies, email, master, page
+        )
+    }
+
+    internal fun createHistory(thread: Thread) {
+        dbQuery.transaction {
+            insertHistory(thread)
+        }
+    }
+
+    private fun insertHistory(thread: Thread) {
+        dbQuery.insertHistory(
+            thread.id,
+            thread.fid,
+            thread.replyCount,
+            thread.img,
+            thread.ext,
+            thread.time,
+            thread.userHash,
+            thread.name,
+            thread.title,
+            thread.content,
+            thread.sage,
+            thread.admin,
+            thread.hide,
+            thread.remainReplies,
+            thread.email,
+            thread.master,
+            thread.page,
+            Clock.System.now().toEpochMilliseconds()
+        )
+    }
+
+    private fun insertReply(threadId: Int, reply: Thread, page: Int){
+        dbQuery.insertReply(
+            threadId,
+            reply.id,
+            reply.fid,
+            reply.replyCount,
+            reply.img,
+            reply.ext,
+            reply.time,
+            reply.userHash,
+            reply.name,
+            reply.title,
+            reply.content,
+            reply.sage,
+            reply.admin,
+            reply.hide,
+            reply.remainReplies,
+            reply.email,
+            reply.master,
+            page
+        )
+    }
+
 }
