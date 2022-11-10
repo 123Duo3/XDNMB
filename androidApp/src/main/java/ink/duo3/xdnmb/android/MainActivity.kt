@@ -1,52 +1,34 @@
 package ink.duo3.xdnmb.android
 
 import android.os.Bundle
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
+import androidx.activity.viewModels
 import androidx.core.view.WindowCompat
-import ink.duo3.xdnmb.android.ui.ForumsDisplay
-import ink.duo3.xdnmb.android.ui.theme.AppTheme
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import ink.duo3.xdnmb.android.ui.App
+import ink.duo3.xdnmb.android.viewmodel.AppViewModel
 import ink.duo3.xdnmb.shared.XdSDK
 import ink.duo3.xdnmb.shared.data.cache.DatabaseDriverFactory
-import ink.duo3.xdnmb.shared.data.entity.ForumGroup
-import ink.duo3.xdnmb.shared.data.entity.Thread
 
 class MainActivity : ComponentActivity() {
-    private var forumList by mutableStateOf<List<ForumGroup>?>(null)
-    private var timeLine by mutableStateOf<List<Thread>?>(null)
+
+    private val viewModel by viewModels<AppViewModel> {
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return modelClass.getConstructor(XdSDK::class.java).newInstance(
+                    XdSDK(DatabaseDriverFactory(applicationContext))
+                )
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false);
         setContent {
-            LaunchedEffect(Unit) {
-                init()
-            }
-
-            AppTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    ForumsDisplay(forumList = forumList, sdk, timeLine)
-                }
-            }
+            App(viewModel = viewModel)
         }
-    }
-
-    private val sdk = XdSDK(DatabaseDriverFactory(this))
-
-    private suspend fun init() {
-        forumList = sdk.getForumList(true)
-        timeLine = sdk.getTimeLine(true, 1)
     }
 }

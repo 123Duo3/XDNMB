@@ -39,7 +39,7 @@ import ink.duo3.xdnmb.shared.data.entity.Thread
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun TimeLine(onClickMenu: () -> Unit, sdk:XdSDK, threadList: List<Thread>?) {
+fun TimeLine(onClickMenu: () -> Unit, sdk: XdSDK, threadList: List<Thread>?) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier
@@ -87,7 +87,7 @@ fun TimeLine(onClickMenu: () -> Unit, sdk:XdSDK, threadList: List<Thread>?) {
             ) {
                 if (threadList != null) {
                     items(count = threadList.size) {
-                        (threadList?.get(it))?.let { it1 -> ThreadCard(thread = it1, sdk = sdk, -1) }                                              
+//                        (threadList?.get(it))?.let { it1 -> ThreadCard(thread = it1, sdk = sdk, -1) }
                     }
                 }
             }

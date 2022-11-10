@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,11 +26,44 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import ink.duo3.xdnmb.android.R
-import ink.duo3.xdnmb.shared.XdSDK
+import ink.duo3.xdnmb.android.viewmodel.formatTime
 import ink.duo3.xdnmb.shared.data.entity.Thread
 
 @Composable
-fun ThreadCard(thread: Thread, sdk: XdSDK, forumId: Int) {
+fun ThreadCard(
+    thread: Thread,
+    forumId: Int,
+    forumName: String
+) {
+    ThreadCard(
+        thread.name.takeIf { it != "无名氏" },
+        thread.userHash,
+        thread.admin == 1,
+        formatTime(thread.time, true),
+        thread.id,
+        thread.content,
+        thread.title.takeIf { it != "无标题" },
+        thread.img.takeIf { it.isNotBlank() }?.let { imgToUrl(it, thread.ext, true) },
+        thread.replyCount!!.toInt(),
+        forumName,
+        forumId
+    )
+}
+
+@Composable
+fun ThreadCard(
+    userName: String?,
+    userHash: String,
+    isAdmin: Boolean,
+    time: String,
+    threadId: Int,
+    content: String,
+    title: String?,
+    image: String?,
+    replyCount: Int,
+    forumName: String,
+    forumId: Int
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -44,57 +78,57 @@ fun ThreadCard(thread: Thread, sdk: XdSDK, forumId: Int) {
                 Modifier.padding(bottom = 8.dp)
             ) {
                 Text(
-                    text = thread.userHash,
+                    text = userHash,
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (thread.admin == 1) {
+                    color = if (isAdmin) {
                         MaterialTheme.colorScheme.error
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 )
                 Text(
-                    text = sdk.formatTime(thread.time, false),
+                    text = time,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Column(Modifier) {
-                val hasTitle = thread.title != "无标题"
-                val hasName = thread.name != "无名氏"
-
-                if (hasTitle || hasName) {
-                    if (hasTitle) Text(
-                        text = thread.title,
+                title?.let {
+                    Text(
+                        text = it,
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                }
 
-                    if (hasName) Text(
-                        text = thread.name,
+                userName?.let {
+                    Text(
+                        text = it,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    Spacer(Modifier.height(8.dp))
                 }
+
+                if (title != null || userName != null)
+                    Spacer(Modifier.height(8.dp))
 
                 SelectionContainer {
                     HtmlText(
-                        html = thread.content,
+                        html = content,
                         style = MaterialTheme.typography.bodyMedium,
                         clickable = true
                     )
                 }
             }
 
-            if (thread.img.isNotBlank()) {
+            image?.let {
                 val context = LocalContext.current
                 AsyncImage(
                     model = remember {
                         ImageRequest.Builder(context)
-                            .data(sdk.imgToUrl(thread.img, thread.ext, true))
+                            .data(it)
                             .crossfade(true)
                             .build()
                     },
@@ -108,50 +142,56 @@ fun ThreadCard(thread: Thread, sdk: XdSDK, forumId: Int) {
             }
 
             Row(
-                Modifier.padding(top = 8.dp)
+                modifier = Modifier.padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "No." + thread.id,
+                    text = "No.$threadId",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.align(Alignment.CenterVertically)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (forumId == -1) {
-                    Text(
-                        text = " • ",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
+                Row(
+                    Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (forumId == -1) {
+                        Text(
+                            text = " • ",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
 
-                    Text(
-                        text = sdk.getForumName(thread.fid!!),
-                        modifier = Modifier
-                            .weight(1f)
-                            .align(Alignment.CenterVertically),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        Text(
+                            text = forumName,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 Icon(
+                    modifier = Modifier.size(18.dp),
                     painter = painterResource(id = R.drawable.comment_black_24dp),
-                    "",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .size(18.dp)
-                        .align(Alignment.CenterVertically)
+                    contentDescription = null
                 )
                 Text(
-                    text = thread.replyCount.toString(),
+                    modifier = Modifier.padding(start = 6.dp),
+                    text = replyCount.toString(),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .align(Alignment.CenterVertically)
-                        .padding(start = 6.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
     }
+}
+
+@Stable
+fun imgToUrl(img: String, ext: String, isThumb: Boolean): String {
+    var imageType = "image/"
+    if (isThumb) {
+        imageType = "thumb/"
+    }
+    return "https://image.nmb.best/$imageType$img$ext"
 }
 
 //@Preview

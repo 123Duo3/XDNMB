@@ -27,13 +27,13 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-                implementation("io.ktor:ktor-client-encoding:$ktorVersion")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                implementation("com.squareup.sqldelight:runtime:$sqlDelightVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:$dateTimeVersion")
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                api("io.ktor:ktor-client-core:$ktorVersion")
+                api("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                api("io.ktor:ktor-client-encoding:$ktorVersion")
+                api("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+                api("com.squareup.sqldelight:runtime:$sqlDelightVersion")
+                api("org.jetbrains.kotlinx:kotlinx-datetime:$dateTimeVersion")
             }
         }
         val commonTest by getting {

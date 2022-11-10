@@ -6,7 +6,6 @@ import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Thread
 import ink.duo3.xdnmb.shared.network.XdApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDateTime
@@ -53,7 +52,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         }
 
     @Throws(Exception::class)
-    suspend fun getForumThreads(forumId: Int,forceReload: Boolean,page: Int): List<Thread> =
+    suspend fun getForumThreads(forumId: Int, forceReload: Boolean, page: Int): List<Thread> =
         withContext(Dispatchers.Default) {
             var cachedThreadList = database.getThreadsByForumId(forumId)
             return@withContext if (cachedThreadList.isNotEmpty() && !forceReload) {
@@ -77,7 +76,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
             }
         }
 
-    fun imgToUrl(img: String, ext:String, isThumb: Boolean): String{
+    fun imgToUrl(img: String, ext: String, isThumb: Boolean): String {
         var imageType = "image/"
         if (isThumb) {
             imageType = "thumb/"
@@ -91,20 +90,20 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
 
     fun formatTime(originalTime: String, inThread: Boolean): String {
         val timeZone = TimeZone.of("UTC+08:00")
-        val originalTime = originalTime.replace(Regex("\\((.+?)\\)") , "T")
+        val originalTime = originalTime.replace(Regex("\\((.+?)\\)"), "T")
         val time = LocalDateTime.parse(originalTime)
         val currentInstant = Clock.System.now()
         val current = currentInstant.toLocalDateTime(timeZone)
         val timeInstant = time.toInstant(timeZone)
 
-        val date = time.date.atTime(12,0,0,0).toInstant(timeZone)
+        val date = time.date.atTime(12, 0, 0, 0).toInstant(timeZone)
         val currentDate = currentInstant.toLocalDateTime(timeZone).date
-            .atTime(12,0,0,0).toInstant(timeZone)
+            .atTime(12, 0, 0, 0).toInstant(timeZone)
         val diffInDay = date.periodUntil(currentDate, timeZone)
         val duration = currentInstant - timeInstant
         var result: String
 
-        result = if (diffInDay.days < 1 ) {
+        result = if (diffInDay.days < 1) {
             if (duration.inWholeHours < 1) {
                 if (duration.inWholeMinutes < 1) {
                     duration.inWholeSeconds.toString() + "秒前"
@@ -129,8 +128,9 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         }
 
         if (inThread) {
-            if (diffInDay.days >= 1){
-                result = result + " " + time.hour.let { if (it < 10) "0$it" else it } + ":" + time.minute.let { if (it < 10) "0$it" else it }
+            if (diffInDay.days >= 1) {
+                result =
+                    result + " " + time.hour.let { if (it < 10) "0$it" else it } + ":" + time.minute.let { if (it < 10) "0$it" else it }
             } else if (duration.inWholeHours >= 1) {
                 result = time.hour.toString() + ":" + time.minute.toString()
             }

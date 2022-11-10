@@ -1,15 +1,13 @@
 package ink.duo3.xdnmb.android.ui
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
@@ -20,24 +18,24 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.contentColorFor
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ink.duo3.xdnmb.android.ui.component.ThreadCard
-import ink.duo3.xdnmb.shared.XdSDK
-import ink.duo3.xdnmb.shared.data.entity.Thread
+import ink.duo3.xdnmb.android.viewmodel.AppViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForumThread(onClickMenu: () -> Unit, sdk:XdSDK, threadList: List<Thread>?, forumId: Int) {
+fun ForumThread(
+    onClickMenu: () -> Unit,
+    forumName: String,
+    threadList: AppViewModel.ThreadListState,
+    forumId: Int
+) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier
@@ -49,7 +47,7 @@ fun ForumThread(onClickMenu: () -> Unit, sdk:XdSDK, threadList: List<Thread>?, f
                 LargeTopAppBar(
                     title = {
                         Text(
-                            sdk.getForumName(forumId),
+                            forumName,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -79,13 +77,21 @@ fun ForumThread(onClickMenu: () -> Unit, sdk:XdSDK, threadList: List<Thread>?, f
         },
         containerColor = MaterialTheme.colorScheme.inverseOnSurface,
         content = { innerPadding ->
-            LazyColumn(
-                contentPadding = innerPadding,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                if (threadList != null) {
-                    items(count = threadList.size) {
-                        (threadList?.get(it))?.let { it1 -> ThreadCard(thread = it1, sdk = sdk) }
+            Crossfade(targetState = threadList) { threadList ->
+                Box(Modifier.fillMaxSize(), Alignment.Center) {
+                    when (threadList) {
+                        is AppViewModel.ThreadListState.OK -> LazyColumn(
+                            contentPadding = innerPadding,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            itemsIndexed(threadList.threads) { index, item ->
+                                ThreadCard(item, forumId, forumName)
+                            }
+                        }
+
+                        is AppViewModel.ThreadListState.Error -> Text("Error: ${threadList.message}")
+                        AppViewModel.ThreadListState.Loading -> Text("Loading")
+                        AppViewModel.ThreadListState.Refreshing -> Text("Refreshing")
                     }
                 }
             }

@@ -3,24 +3,17 @@ package ink.duo3.xdnmb.android.ui
 import android.annotation.SuppressLint
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.areNavigationBarsVisible
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Divider
@@ -31,7 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -40,26 +32,28 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import ink.duo3.xdnmb.android.R
 import ink.duo3.xdnmb.android.ui.component.HtmlText
 import ink.duo3.xdnmb.android.ui.component.NavigationItemGroup
-import ink.duo3.xdnmb.shared.XdSDK
+import ink.duo3.xdnmb.android.viewmodel.AppViewModel
 import ink.duo3.xdnmb.shared.data.entity.Forum
-import ink.duo3.xdnmb.shared.data.entity.ForumGroup
-import ink.duo3.xdnmb.shared.data.entity.Thread
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnrememberedMutableState")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thread>?) {
+fun ForumsDisplay(
+    forumList: AppViewModel.ForumListState,
+    threadList: AppViewModel.ThreadListState,
+    onForumSelect: (id: String) -> Unit
+) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val selectedItem = remember { mutableStateOf("-1") }
+    var selectedItem by remember { mutableStateOf("-1") }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -86,7 +80,7 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
                             label = {
                                 Text(text = "订阅")
                             },
-                            selected = "subscribe" == selectedItem.value,
+                            selected = "subscribe" == selectedItem,
                             onClick = {
                                 scope.launch { drawerState.close() }
                                 //selectedItem.value = "subscribe"
@@ -104,7 +98,7 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
                             label = {
                                 Text(text = "历史")
                             },
-                            selected = "history" == selectedItem.value,
+                            selected = "history" == selectedItem,
                             onClick = {
                                 scope.launch { drawerState.close() }
                                 //selectedItem.value = "history"
@@ -122,7 +116,7 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
                             label = {
                                 Text(text = "发言")
                             },
-                            selected = "speech" == selectedItem.value,
+                            selected = "speech" == selectedItem,
                             onClick = {
                                 scope.launch { drawerState.close() }
                                 //selectedItem.value = "speech"
@@ -140,7 +134,7 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
                             label = {
                                 Text(text = "搜索")
                             },
-                            selected = "search" == selectedItem.value,
+                            selected = "search" == selectedItem,
                             onClick = {
                                 scope.launch { drawerState.close() }
                                 //selectedItem.value = "search"
@@ -148,49 +142,20 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
                             modifier = Modifier
                                 .padding(12.dp, 0.dp)
                         )
+
                         Divider(Modifier.padding(28.dp, 16.dp))
-                        Crossfade(targetState = forumList?.isNotEmpty()) { screen ->
-                            when (screen) {
-                                true -> Column {
-                                    forumList?.forEach { forumGroup ->
-                                        var expanded by remember { mutableStateOf(false) }
-                                        NavigationItemGroup(
-                                            label = { HtmlText(html = forumGroup.name) },
-                                            selected = remember(
-                                                forumGroup,
-                                                selectedItem.value
-                                            ) { forumGroup.forums.any { it.id == selectedItem.value } },
-                                            expanded = expanded,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            onExpandStateChange = { expanded = it }
-                                        ) {
-                                            forumGroup.forums.forEach { forum: Forum ->
-                                                val name = if (forum.showName?.isEmpty() == true) {
-                                                    forum.name
-                                                } else {
-                                                    forum.showName
-                                                } ?: "时间线"
 
-                                                NavigationDrawerItem(
-                                                    label = {
-                                                        HtmlText(html = name)
-                                                    },
-                                                    selected = forum.id == selectedItem.value,
-                                                    onClick = {
-                                                        scope.launch { drawerState.close() }
-                                                        selectedItem.value = forum.id
-                                                    },
-                                                    modifier = Modifier
-                                                        .padding(16.dp, 0.dp)
-                                                )
-                                            }
-                                        }
-                                    }
+                        Forums(
+                            forumList = forumList,
+                            selectedForum = selectedItem,
+                            onForumSelect = {
+                                onForumSelect(it)
+                                selectedItem = it
+                                scope.launch {
+                                    drawerState.close()
                                 }
-
-                                else -> Text(text = "Null")
                             }
-                        }
+                        )
                     }
                     Divider(Modifier.padding(bottom = 16.dp, start = 28.dp, end = 28.dp))
                     NavigationDrawerItem(
@@ -200,7 +165,7 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
                         label = {
                             Text(text = "设置")
                         },
-                        selected = "settings" == selectedItem.value,
+                        selected = "settings" == selectedItem,
                         onClick = {
                             scope.launch { drawerState.close() }
                             //selectedItem.value = "settings"
@@ -208,22 +173,70 @@ fun ForumsDisplay(forumList: List<ForumGroup>?, sdk: XdSDK, threadList: List<Thr
                         modifier = Modifier
                             .padding(12.dp, 0.dp)
                     )
-                    if (WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() == 0.dp) {
+                    if (WindowInsets.systemBars.asPaddingValues()
+                            .calculateBottomPadding() == 0.dp
+                    ) {
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
         },
         content = {
-            if (selectedItem.value == "-1") {
-                TimeLine({ scope.launch { drawerState.open() } }, sdk, threadList)
-            } else {
-                var threads by mutableStateOf<List<Thread>?>(null)
-                suspend fun init() {
-                    threads = sdk.getForumThreads(selectedItem.value.toInt(), true, 1)
-                }
-                ForumThread(onClickMenu = { scope.launch { drawerState.open() } }, sdk = sdk, threadList = threads, forumId = selectedItem.value.toInt())
-            }
+            ForumThread(
+                onClickMenu = { scope.launch { drawerState.open() } },
+                threadList = threadList,
+                forumId = selectedItem.toInt(),
+                forumName = "不知道该怎么拿"
+            )
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun Forums(
+    forumList: AppViewModel.ForumListState,
+    selectedForum: String,
+    onForumSelect: (id: String) -> Unit
+) {
+    Crossfade(targetState = forumList) { list ->
+        when (list) {
+            AppViewModel.ForumListState.Loading -> Text("Loading")
+            is AppViewModel.ForumListState.Error -> Text("Error: ${list.message}")
+            is AppViewModel.ForumListState.OK -> Column {
+                list.forums.forEach { forumGroup ->
+                    var expanded by remember { mutableStateOf(false) }
+                    NavigationItemGroup(
+                        label = { HtmlText(html = forumGroup.name) },
+                        selected = remember(forumGroup, selectedForum) {
+                            forumGroup.forums.any { it.id == selectedForum }
+                        },
+                        expanded = expanded,
+                        modifier = Modifier.fillMaxWidth(),
+                        onExpandStateChange = { expanded = it }
+                    ) {
+                        forumGroup.forums.forEach { forum: Forum ->
+                            val name = if (forum.showName?.isEmpty() == true) {
+                                forum.name
+                            } else {
+                                forum.showName
+                            } ?: "时间线"
+
+                            NavigationDrawerItem(
+                                label = {
+                                    HtmlText(html = name)
+                                },
+                                selected = forum.id == selectedForum,
+                                onClick = {
+                                    onForumSelect(forum.id)
+                                },
+                                modifier = Modifier
+                                    .padding(16.dp, 0.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
