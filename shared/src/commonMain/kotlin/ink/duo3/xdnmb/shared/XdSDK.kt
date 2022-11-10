@@ -132,7 +132,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
                 result =
                     result + " " + time.hour.let { if (it < 10) "0$it" else it } + ":" + time.minute.let { if (it < 10) "0$it" else it }
             } else if (duration.inWholeHours >= 1) {
-                result = time.hour.toString() + ":" + time.minute.toString()
+                result = time.hour.let { if (it < 10) "0$it" else it.toString() } + ":" + time.minute.let { if (it < 10) "0$it" else it }
             }
         }
 
