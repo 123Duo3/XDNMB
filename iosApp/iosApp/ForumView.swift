@@ -48,7 +48,7 @@ extension ForumView {
         
         init(sdk: XdSDK) {
             self.sdk = sdk
-            self.loadForumList(forceReload: true)
+            self.loadForumList(forceReload: false)
         }
         
         func loadForumList(forceReload: Bool) {

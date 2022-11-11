@@ -7,8 +7,11 @@
 //
 
 import SwiftUI
+import shared
 
 struct SelectionView: View {
+    let sdk: XdSDK
+    
     var body: some View {
         NavigationView{
             List{
@@ -25,17 +28,19 @@ struct SelectionView: View {
                         .padding(.trailing,8)
                         Text("订阅内容")
                     }
-                    HStack{
+                    NavigationLink(destination: HistoryView(viewModel: .init(sdk: sdk), sdk: sdk)){
                         HStack{
-                            Image(systemName: "clock.fill")
-                                .padding(4)
-                                .foregroundColor(Color.white)
-                                .frame(width: 30,height: 30)
+                            HStack{
+                                Image(systemName: "clock.fill")
+                                    .padding(4)
+                                    .foregroundColor(Color.white)
+                                    .frame(width: 30,height: 30)
+                            }
+                            .background(Color(UIColor.systemPurple))
+                            .cornerRadius(6)
+                            .padding(.trailing,8)
+                            Text("历史记录")
                         }
-                        .background(Color(UIColor.systemPurple))
-                        .cornerRadius(6)
-                        .padding(.trailing,8)
-                        Text("历史记录")
                     }
                     HStack{
                         HStack{
@@ -104,11 +109,5 @@ struct SelectionView: View {
                 }
             }.listStyle(.insetGrouped)
         }.navigationTitle("选项")
-    }
-}
-
-struct SelectionView_Previews: PreviewProvider {
-    static var previews: some View {
-        SelectionView()
     }
 }

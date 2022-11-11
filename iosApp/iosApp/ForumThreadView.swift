@@ -24,9 +24,7 @@ struct ForumThreadView: View {
         switch viewModel.threads {
         case .loading:
             return AnyView(
-                NavigationView{
-                    Text("加载中...")
-                }
+                Text("加载中...")
                     .navigationTitle(forumShowName)
             )
         case.result(let threads):
@@ -36,9 +34,8 @@ struct ForumThreadView: View {
             )
         case.error(let discription):
             return AnyView(
-                NavigationView{
-                    Text(discription).multilineTextAlignment(.center)
-                }.navigationTitle(forumShowName)
+                Text(discription).multilineTextAlignment(.center)
+                    .navigationTitle(forumShowName)
             )
         }
     }

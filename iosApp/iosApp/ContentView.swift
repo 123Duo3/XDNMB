@@ -22,7 +22,7 @@ struct ContentView: View {
                 }
             
             NavigationView{
-                SelectionView()
+                SelectionView(sdk: sdk)
             }
                 .navigationTitle("选项")
                 .tabItem{

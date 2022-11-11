@@ -14,7 +14,7 @@ import kotlin.test.Test
 internal class XdSDKTest {
     @Test
     fun formatTimeTest() {
-        println(formatTime("2022-11-04(六)21:34:29",true))
+        println(formatTime("2022-09-11(六)12:34:29",false))
     }
     private fun formatTime(originalTime: String, inThread: Boolean): String {
         val timeZone = TimeZone.of("UTC+08:00")
@@ -31,7 +31,9 @@ internal class XdSDKTest {
         val duration = currentInstant - timeInstant
         var result = ""
 
-        result = if (diffInDay.days < 1 ) {
+        println(diffInDay.months)
+
+        result = if (diffInDay.days < 1 && diffInDay.months == 0) {
             if (duration.inWholeHours < 1) {
                 if (duration.inWholeMinutes <= 1) {
                     duration.inWholeSeconds.toString() + "秒前"

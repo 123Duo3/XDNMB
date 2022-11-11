@@ -220,8 +220,8 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
         }
     }
 
-    internal fun getHistory() {
-        dbQuery.selectAllHistory(::mapHistorySelecting).executeAsList()
+    internal fun getHistory(): List<Thread> {
+        return dbQuery.selectAllHistory(::mapHistorySelecting).executeAsList()
     }
 
     private fun mapHistorySelecting(

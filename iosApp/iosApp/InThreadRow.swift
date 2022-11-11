@@ -33,14 +33,28 @@ struct InThreadRow: View {
                         .padding(.leading, 8)
                 }
                     .padding(.top, -16)
+                    .padding(.bottom, 8)
                     .font(.caption)
                     .textCase(nil)
                 
+                VStack(alignment: .leading){
+                    if(replyList.title != "无标题"){
+                        Text(replyList.title)
+                            .font(.headline)
+                            .foregroundColor(Color(UIColor.label))
+                    }
+                    if(replyList.name != "无名氏"){
+                        Text(replyList.name)
+                            .font(.subheadline)
+                    }
+                } .padding(.bottom, 1.0)
                 
                 if let htmlText {
                     Text(AttributedString(htmlText))
                         .textCase(nil)
-                        .padding(.top, 8)
+                } else {
+                    Text(replyList.content)
+                        .font(.callout)
                 }
                 
                 if (replyList.img != "") {
@@ -54,7 +68,7 @@ struct InThreadRow: View {
                         Color.gray.opacity(0.17)
                     }
                     .scaledToFit()
-                    .frame(maxHeight: 100)
+                    .frame(height: 100)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
@@ -131,6 +145,10 @@ struct Reply: View {
             LazyVStack(alignment: .leading){
                 if let htmlText {
                     Text(AttributedString(htmlText))
+                } else {
+                    Text(reply.content)
+                        .font(.callout)
+                        .opacity(0)
                 }
                 
                 if (reply.img != "") {

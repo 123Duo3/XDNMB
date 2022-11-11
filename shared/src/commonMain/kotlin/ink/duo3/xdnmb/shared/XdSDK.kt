@@ -25,7 +25,12 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         withContext(Dispatchers.Default) {
             val cachedForumList = database.getAllForums()
             return@withContext if (cachedForumList.isNotEmpty() && !forceReload) {
-                cachedForumList
+                cachedForumList.also{
+                    api.getForumList().also {
+                        database.clearForumDatabase()
+                        database.createForumList(it)
+                    }
+                }
             } else {
                 api.getForumList().also {
                     database.clearForumDatabase()
@@ -76,6 +81,14 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
             }
         }
 
+    @Throws(Exception::class)
+    suspend fun getHistory(): List<Thread> =
+        withContext(Dispatchers.Default) {
+            return@withContext database.getHistory()
+        }
+
+
+
     fun imgToUrl(img: String, ext: String, isThumb: Boolean): String {
         var imageType = "image/"
         if (isThumb) {
@@ -103,7 +116,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         val duration = currentInstant - timeInstant
         var result: String
 
-        result = if (diffInDay.days < 1) {
+        result = if (diffInDay.days < 1 && diffInDay.months == 0) {
             if (duration.inWholeHours < 1) {
                 if (duration.inWholeMinutes < 1) {
                     duration.inWholeSeconds.toString() + "秒前"
@@ -113,17 +126,19 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
             } else {
                 duration.inWholeHours.toString() + "小时前"
             }
-        } else {
+        } else if (diffInDay.months == 0) {
             when (diffInDay.days) {
                 -2 -> "后天"
                 -1 -> "明天"
                 1 -> "昨天"
                 2 -> "前天"
-                else -> if (time.year == current.year) {
-                    time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
-                } else {
-                    time.year.toString() + "年" + time.monthNumber + "月" + time.dayOfMonth + "日"
-                }
+                else -> time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
+            }
+        } else {
+            if (time.year == current.year) {
+                time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
+            } else {
+                time.year.toString() + "年" + time.monthNumber + "月" + time.dayOfMonth + "日"
             }
         }
 
