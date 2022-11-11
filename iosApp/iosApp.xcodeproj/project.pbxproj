@@ -3,19 +3,19 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 50;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		058557BB273AAA24004C7B11 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 058557BA273AAA24004C7B11 /* Assets.xcassets */; };
-		058557D9273AAEEB004C7B11 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 058557D8273AAEEB004C7B11 /* Preview Assets.xcassets */; };
 		2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2152FB032600AC8F00CF470E /* iOSApp.swift */; };
 		372819BC290D71E300DEF1CC /* ThreadsListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372819BB290D71E300DEF1CC /* ThreadsListRow.swift */; };
 		37513AC1291BEF8F00B8BBA6 /* SelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37513AC0291BEF8F00B8BBA6 /* SelectionView.swift */; };
 		376A83442913EAAE00177017 /* ForumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376A83432913EAAE00177017 /* ForumView.swift */; };
+		3777FAC3291DFC2E0079C4B1 /* HTMLString.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3777FAC2291DFC2E0079C4B1 /* HTMLString.swift */; };
+		3777FAC8291E1EB90079C4B1 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3777FAC7291E1EB90079C4B1 /* Preview Assets.xcassets */; };
 		3786377229043A94002EAA64 /* ForumListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3786377129043A94002EAA64 /* ForumListRow.swift */; };
 		3795D1632914A0DF00A3B0F4 /* TimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3795D1622914A0DF00A3B0F4 /* TimelineView.swift */; };
-		3795D1662914F34E00A3B0F4 /* RichText in Frameworks */ = {isa = PBXBuildFile; productRef = 3795D1652914F34E00A3B0F4 /* RichText */; };
 		37AC24532916813400B34766 /* InThreadRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37AC24522916813400B34766 /* InThreadRow.swift */; };
 		37AC245529168B6F00B34766 /* InThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37AC245429168B6F00B34766 /* InThreadView.swift */; };
 		37C0325F291609DC003C2968 /* ForumThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C0325E291609DC003C2968 /* ForumThreadView.swift */; };
@@ -37,11 +37,12 @@
 
 /* Begin PBXFileReference section */
 		058557BA273AAA24004C7B11 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		058557D8273AAEEB004C7B11 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		2152FB032600AC8F00CF470E /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
 		372819BB290D71E300DEF1CC /* ThreadsListRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadsListRow.swift; sourceTree = "<group>"; };
 		37513AC0291BEF8F00B8BBA6 /* SelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionView.swift; sourceTree = "<group>"; };
 		376A83432913EAAE00177017 /* ForumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumView.swift; sourceTree = "<group>"; };
+		3777FAC2291DFC2E0079C4B1 /* HTMLString.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLString.swift; sourceTree = "<group>"; };
+		3777FAC7291E1EB90079C4B1 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		3786377129043A94002EAA64 /* ForumListRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumListRow.swift; sourceTree = "<group>"; };
 		3795D1622914A0DF00A3B0F4 /* TimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineView.swift; sourceTree = "<group>"; };
 		37AC24522916813400B34766 /* InThreadRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InThreadRow.swift; sourceTree = "<group>"; };
@@ -57,19 +58,19 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3795D1662914F34E00A3B0F4 /* RichText in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		058557D7273AAEEB004C7B11 /* Preview Content */ = {
+		3777FAC6291E1EB90079C4B1 /* Preview Content */ = {
 			isa = PBXGroup;
 			children = (
-				058557D8273AAEEB004C7B11 /* Preview Assets.xcassets */,
+				3777FAC7291E1EB90079C4B1 /* Preview Assets.xcassets */,
 			);
-			path = "Preview Content";
+			name = "Preview Content";
+			path = "../../../../../.Trash/Preview Content";
 			sourceTree = "<group>";
 		};
 		7555FF72242A565900829871 = {
@@ -97,14 +98,15 @@
 				7555FF8C242A565B00829871 /* Info.plist */,
 				2152FB032600AC8F00CF470E /* iOSApp.swift */,
 				37C0325E291609DC003C2968 /* ForumThreadView.swift */,
-				058557D7273AAEEB004C7B11 /* Preview Content */,
 				3786377129043A94002EAA64 /* ForumListRow.swift */,
 				372819BB290D71E300DEF1CC /* ThreadsListRow.swift */,
 				376A83432913EAAE00177017 /* ForumView.swift */,
+				3777FAC6291E1EB90079C4B1 /* Preview Content */,
 				3795D1622914A0DF00A3B0F4 /* TimelineView.swift */,
 				37AC24522916813400B34766 /* InThreadRow.swift */,
 				37AC245429168B6F00B34766 /* InThreadView.swift */,
 				37513AC0291BEF8F00B8BBA6 /* SelectionView.swift */,
+				3777FAC2291DFC2E0079C4B1 /* HTMLString.swift */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -135,7 +137,6 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
-				3795D1652914F34E00A3B0F4 /* RichText */,
 			);
 			productName = iosApp;
 			productReference = 7555FF7B242A565900829871 /* iosApp.app */;
@@ -167,7 +168,6 @@
 			);
 			mainGroup = 7555FF72242A565900829871;
 			packageReferences = (
-				3795D1642914F34E00A3B0F4 /* XCRemoteSwiftPackageReference "RichText" */,
 			);
 			productRefGroup = 7555FF7C242A565900829871 /* Products */;
 			projectDirPath = "";
@@ -183,7 +183,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				058557D9273AAEEB004C7B11 /* Preview Assets.xcassets in Resources */,
+				3777FAC8291E1EB90079C4B1 /* Preview Assets.xcassets in Resources */,
 				058557BB273AAA24004C7B11 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -219,6 +219,7 @@
 				37C0325F291609DC003C2968 /* ForumThreadView.swift in Sources */,
 				3795D1632914A0DF00A3B0F4 /* TimelineView.swift in Sources */,
 				37AC24532916813400B34766 /* InThreadRow.swift in Sources */,
+				3777FAC3291DFC2E0079C4B1 /* HTMLString.swift in Sources */,
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				37AC245529168B6F00B34766 /* InThreadView.swift in Sources */,
 				376A83442913EAAE00177017 /* ForumView.swift in Sources */,
@@ -352,7 +353,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = BSQBD8LF76;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
@@ -381,7 +382,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = BSQBD8LF76;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
@@ -427,25 +428,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		3795D1642914F34E00A3B0F4 /* XCRemoteSwiftPackageReference "RichText" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/NuPlay/RichText.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		3795D1652914F34E00A3B0F4 /* RichText */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 3795D1642914F34E00A3B0F4 /* XCRemoteSwiftPackageReference "RichText" */;
-			productName = RichText;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7555FF73242A565900829871 /* Project object */;
 }

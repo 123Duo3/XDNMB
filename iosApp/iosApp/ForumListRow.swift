@@ -8,7 +8,6 @@
 
 import SwiftUI
 import shared
-import RichText
 
 struct ForumListRow: View {
     var forumList: [ForumGroup]
@@ -28,17 +27,39 @@ struct ForumListRow: View {
                                     ForumThreadView(viewModel: .init(sdk: sdk, forumId: forum.id), sdk: sdk, forumId: forum.id, forumShowName: forum.name)
                                 }
                             }){
-                                if ((forum.showName ?? forum.name) == ""){
-                                    RichText(html: forum.name).padding(-8)
-                                } else {
-                                    RichText(html: forum.showName ?? forum.name).padding(-8)
-                                }
+                                Forum(name: forum.name, showName: forum.showName)
                             }
                         }
-                    }.textSelection(.disabled)
+                    }
                 }
             }
             .navigationTitle("板块")
+        }
+    }
+}
+
+struct Forum: View {
+    var name: String
+    let showName: String?
+    @State private var htmlText: NSAttributedString?
+    
+    var body: some View {
+        LazyHStack {
+            if (showName ?? "" == ""){
+                Text(name)
+            } else {
+                if let htmlText {
+                    Text(AttributedString(htmlText))
+                }
+            }
+        }.onAppear{
+            DispatchQueue.main.async {
+                if (showName == "") {
+                    htmlText = name.htmlAttributedString()
+                } else {
+                    htmlText = (showName ?? name).htmlAttributedString()
+                }
+            }
         }
     }
 }

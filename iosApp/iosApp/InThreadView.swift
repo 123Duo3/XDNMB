@@ -24,9 +24,7 @@ struct InThreadView: View {
         switch viewModel.replys {
         case .loading:
             return AnyView(
-                NavigationView{
-                    Text("加载中...")
-                }
+                Text("加载中...")
                     .navigationTitle("No." + threadId)
             )
         case.result(let threads):
@@ -36,9 +34,8 @@ struct InThreadView: View {
             )
         case.error(let discription):
             return AnyView(
-                NavigationView{
-                    Text(discription).multilineTextAlignment(.center)
-                }.navigationTitle("No." + threadId)
+                Text(discription).multilineTextAlignment(.center)
+                    .navigationTitle("No." + threadId)
             )
         }
     }

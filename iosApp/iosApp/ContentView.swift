@@ -21,7 +21,10 @@ struct ContentView: View {
                     Text("板块")
                 }
             
-            Text("TODO")
+            NavigationView{
+                SelectionView()
+            }
+                .navigationTitle("选项")
                 .tabItem{
                     Image(systemName: "gear")
                     Text("选项")
@@ -33,5 +36,5 @@ struct ContentView: View {
 
 extension ForumGroup: Identifiable { }
 extension Forum_: Identifiable { }
-extension Forum: Identifiable { }
+extension shared.Forum: Identifiable { }
 extension shared.Thread: Identifiable { }

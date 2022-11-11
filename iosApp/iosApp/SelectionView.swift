@@ -53,7 +53,7 @@ struct SelectionView: View {
                 Section{
                     HStack{
                         HStack{
-                           Image("cookie.fill")
+                            Image("cookie.fill")
                                 .padding(4)
                                 .foregroundColor(Color.white)
                                 .frame(width: 30,height: 30)
@@ -102,7 +102,7 @@ struct SelectionView: View {
                         Text("赞助我们")
                     }
                 }
-            }
+            }.listStyle(.insetGrouped)
         }.navigationTitle("选项")
     }
 }
