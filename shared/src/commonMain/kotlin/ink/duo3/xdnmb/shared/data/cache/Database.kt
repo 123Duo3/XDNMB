@@ -1,5 +1,6 @@
 package ink.duo3.xdnmb.shared.data.cache
 
+import ink.duo3.xdnmb.shared.data.entity.Cookie
 import ink.duo3.xdnmb.shared.data.entity.Forum
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Thread
@@ -301,4 +302,36 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
         )
     }
 
+    internal fun clearCookieByName(cookie: String) {
+        dbQuery.transaction {
+            dbQuery.removeCookieByCookie(cookie)
+        }
+    }
+
+    internal fun getAllCookie(): List<Cookie> {
+        return dbQuery.selectAllCookies(::mapCookieSelecting).executeAsList()
+    }
+
+    internal fun getSelectedCookie(): Cookie {
+        return dbQuery.selectSelectedCookie(::mapCookieSelecting).executeAsOne()
+    }
+
+    private fun mapCookieSelecting(
+        cookie: String,
+        name: String,
+        rank: Int?,
+        selected: Boolean?
+    ): Cookie {
+        return Cookie(cookie, name, rank, selected)
+    }
+
+    internal fun createCookie(cookie: Cookie) {
+        dbQuery.transaction {
+            insertCookie(cookie)
+        }
+    }
+
+    private fun insertCookie(cookie: Cookie) {
+        dbQuery.insertCookie(cookie.cookie, cookie.name, cookie.rank, cookie.selected)
+    }
 }

@@ -83,7 +83,8 @@ struct InThreadRow: View {
                     Reply(poster: replyList.userHash, reply: reply, sdk: sdk)
                 }
             }
-        }.listStyle(.grouped)
+        }
+            .listStyle(.grouped)
     }
 }
 
@@ -92,6 +93,7 @@ struct Reply: View {
     let reply: shared.Thread
     let sdk: XdSDK
     @State private var htmlText: NSAttributedString?
+    
     var body: some View {
         LazyVStack(alignment:.leading){
                 HStack{
@@ -166,6 +168,7 @@ struct Reply: View {
                     .scaledToFit()
                     .frame(maxHeight: 100, alignment: .leading)
                 }
+                
             }.onAppear{
                 DispatchQueue.main.async {
                     htmlText = reply.content.htmlAttributedString()

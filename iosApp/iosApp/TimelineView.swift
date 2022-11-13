@@ -30,7 +30,7 @@ struct TimelineView: View {
             )
         case.result(let timeline):
             return AnyView(
-                ThreadsListRow(forumId: "-1", forumShowName: "时间线", threadList: timeline, sdk: sdk)
+                ThreadsListRow(forumId: "-1", forumShowName: "时间线", threadList: timeline, sdk: sdk, loadNextPage: ())
             )
         case.error(let discription):
             return AnyView(Text(discription).multilineTextAlignment(.center))
@@ -58,7 +58,9 @@ extension TimelineView {
             self.timeline = .loading
             sdk.getTimeLine(forceReload: forceReload, page: 1, completionHandler: { thread, error in
                 if let thread = thread {
-                    self.timeline = .result(thread)
+                    DispatchQueue.main.async {
+                        self.timeline = .result(thread)
+                    }
                 } else {
                     self.timeline = .error(error?.localizedDescription ?? "错误")
                 }
@@ -66,9 +68,25 @@ extension TimelineView {
         }
         
         func refreshTimeline(forceReload: Bool) {
-            sdk.getTimeLine(forceReload: forceReload, page: 1, completionHandler: { thread, error in
+            DispatchQueue.main.async {
+                self.sdk.getTimeLine(forceReload: forceReload, page: 1, completionHandler: { thread, error in
+                    if let thread = thread {
+                        DispatchQueue.main.async {
+                            self.timeline = .result(thread)
+                        }
+                    } else {
+                        self.timeline = .error(error?.localizedDescription ?? "错误")
+                    }
+                })
+            }
+        }
+        
+        func loadNextPage(page: Int) {
+            self.sdk.getTimeLine(forceReload: false, page: Int32(page+1), completionHandler: {thread, error in
                 if let thread = thread {
-                    self.timeline = .result(thread)
+                    DispatchQueue.main.async {
+                        self.timeline = .result(thread)
+                    }
                 } else {
                     self.timeline = .error(error?.localizedDescription ?? "错误")
                 }

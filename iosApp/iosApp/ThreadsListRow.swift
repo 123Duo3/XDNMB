@@ -14,6 +14,7 @@ struct ThreadsListRow: View {
     var forumShowName: String
     var threadList: [shared.Thread]
     let sdk: XdSDK
+    let loadNextPage: ()
     
     @Environment(\.colorScheme) var colorScheme
     
@@ -23,6 +24,10 @@ struct ThreadsListRow: View {
                 ForEach(threadList) {threads in
                     Threads(threads: threads, forumId: forumId, sdk: sdk)
                 }
+                Text("到底了")
+                    .onTapGesture {
+                        loadNextPage
+                    }
             }
             .padding()
             .frame(maxWidth: .infinity, maxHeight:.infinity)

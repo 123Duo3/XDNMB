@@ -4,18 +4,28 @@ import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Thread
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
 import io.ktor.client.plugins.cookies.ConstantCookiesStorage
+import io.ktor.client.plugins.cookies.CookiesStorage
 import io.ktor.client.plugins.cookies.HttpCookies
+import io.ktor.client.plugins.cookies.cookies
 import io.ktor.client.request.get
-import io.ktor.http.Cookie
+import io.ktor.client.request.header
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import io.ktor.http.*
+import io.ktor.util.collections.*
+import io.ktor.util.date.*
+import kotlinx.coroutines.sync.*
+import kotlin.math.*
 
 class XdApi {
     private val xdUrl = "https://api.nmb.best/Api"
+    private val cookiesStorage = AcceptAllCookiesStorage()
 
     @OptIn(ExperimentalSerializationApi::class)
     private val httpClient = HttpClient {
@@ -29,11 +39,8 @@ class XdApi {
         install(ContentEncoding) {
             gzip()
         }
-        install(HttpCookies) {
-            storage = ConstantCookiesStorage(Cookie(
-                name = "5noQQ4U",
-                value = "%0A%C2%1Ed%1A%5D%7C%F9%A5%AC%C2%9DT%E3%DC%ED%850%F1I%D7%D8%1B%13",
-                domain = "https://www.nmbxd1.com/" ))
+        install(UserAgent) {
+            agent = "frogIslandApp"
         }
     }
 
@@ -45,11 +52,15 @@ class XdApi {
         return httpClient.get("$xdUrl/timeline/$page").body()
     }
 
-    suspend fun getTreadList(fid: Int, page: Int): List<Thread> {
-        return httpClient.get("$xdUrl/showf?id=$fid&page=$page").body()
+    suspend fun getTreadList(cookie: String, fid: Int, page: Int): List<Thread> {
+        return httpClient.get("$xdUrl/showf?id=$fid&page=$page"){
+            header("Cookie", "userhash=$cookie;")
+        }.body()
     }
 
-    suspend fun getReply(threadId: Int, page: Int): Thread {
-        return httpClient.get("$xdUrl/thread?id=$threadId&page=$page").body()
+    suspend fun getReply(cookie: String, threadId: Int, page: Int): Thread {
+        return httpClient.get("$xdUrl/thread?id=$threadId&page=$page"){
+            header("Cookie", "userhash=$cookie;")
+        }.body()
     }
 }

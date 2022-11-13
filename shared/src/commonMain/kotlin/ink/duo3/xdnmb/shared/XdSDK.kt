@@ -2,6 +2,7 @@ package ink.duo3.xdnmb.shared
 
 import ink.duo3.xdnmb.shared.data.cache.Database
 import ink.duo3.xdnmb.shared.data.cache.DatabaseDriverFactory
+import ink.duo3.xdnmb.shared.data.entity.Cookie
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Thread
 import ink.duo3.xdnmb.shared.network.XdApi
@@ -60,13 +61,14 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
     suspend fun getForumThreads(forumId: Int, forceReload: Boolean, page: Int): List<Thread> =
         withContext(Dispatchers.Default) {
             var cachedThreadList = database.getThreadsByForumId(forumId)
+            val cookie = database.getSelectedCookie()
             return@withContext if (cachedThreadList.isNotEmpty() && !forceReload) {
-                val nextPage = api.getTreadList(forumId, page)
+                val nextPage = api.getTreadList(cookie.cookie , forumId, page)
                 database.createThreads(nextPage)
                 cachedThreadList = database.getThreadsByForumId(forumId)
                 return@withContext cachedThreadList
             } else {
-                api.getTreadList(forumId, page).also {
+                api.getTreadList(cookie.cookie, forumId, page).also {
                     database.clearThreadsByForumId(forumId)
                     database.createThreads(it)
                 }
@@ -76,7 +78,8 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
     @Throws(Exception::class)
     suspend fun getReply(threadId: Int, page: Int): Thread =
         withContext(Dispatchers.Default) {
-            return@withContext api.getReply(threadId, page).also {
+            val cookie = database.getSelectedCookie()
+            return@withContext api.getReply(cookie.cookie, threadId, page).also {
                 database.createHistory(it)
             }
         }
@@ -87,6 +90,34 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
             return@withContext database.getHistory()
         }
 
+    @Throws(Exception::class)
+    suspend fun getCookies(): List<Cookie> =
+        withContext(Dispatchers.Default) {
+            return@withContext database.getAllCookie()
+        }
+
+    suspend fun addCookie(cookie: Cookie) {
+        withContext(Dispatchers.Default) {
+            var cachedCookies = database.getAllCookie()
+            if (cachedCookies.isEmpty()) {
+                database.createCookie(cookie.copy(selected = true))
+            } else {
+                database.createCookie(cookie)
+            }
+        }
+    }
+
+    suspend fun deleteCookie(cookie: Cookie) {
+        withContext(Dispatchers.Default) {
+            database.clearCookieByName(cookie.cookie)
+        }
+    }
+
+    @Throws(Exception::class)
+    suspend fun getSelectedCookie(): Cookie =
+        withContext(Dispatchers.Default) {
+            return@withContext database.getSelectedCookie()
+        }
 
 
     fun imgToUrl(img: String, ext: String, isThumb: Boolean): String {
@@ -103,8 +134,8 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
 
     fun formatTime(originalTime: String, inThread: Boolean): String {
         val timeZone = TimeZone.of("UTC+08:00")
-        val originalTime = originalTime.replace(Regex("\\((.+?)\\)"), "T")
-        val time = LocalDateTime.parse(originalTime)
+        val originalTimeInISO = originalTime.replace(Regex("\\((.+?)\\)"), "T")
+        val time = LocalDateTime.parse(originalTimeInISO)
         val currentInstant = Clock.System.now()
         val current = currentInstant.toLocalDateTime(timeZone)
         val timeInstant = time.toInstant(timeZone)

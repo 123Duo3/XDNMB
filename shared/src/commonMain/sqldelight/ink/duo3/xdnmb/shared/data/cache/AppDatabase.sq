@@ -105,6 +105,13 @@ CREATE TABLE Forum (
     status          TEXT
 );
 
+CREATE TABLE Cookies (
+    cookie          TEXT    NOT NULL ,
+    name            TEXT    NOT NULL ,
+    rank            INTEGER AS Int ,
+    selected        INTEGER AS Boolean
+);
+
 insertThread:
 INSERT INTO Thread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -134,6 +141,12 @@ insertForum:
 INSERT INTO Forum(id, fgroup, sort, name, showName, msg, interval, safeMode, autoDelete, threadCount, permissionLevel, forumFuseId, createdAt, updateAt, status)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
+insertCookie:
+INSERT INTO Cookies(cookie, name, rank, selected)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (cookie) DO UPDATE
+SET rank = excluded.rank, selected = excluded.selected;
+
 
 removeAllThread:
 DELETE FROM Thread;
@@ -156,6 +169,9 @@ DELETE FROM ForumGroup;
 removeAllForumDetail:
 DELETE FROM Forum;
 
+removeCookieByCookie:
+DELETE FROM Cookies WHERE cookie = :cookie;
+
 
 selectAllTimeLineThread:
 SELECT * FROM TimelineThread;
@@ -177,3 +193,9 @@ SELECT * FROM ForumGroup;
 
 selectForumByGroupId:
 SELECT * FROM Forum WHERE fgroup = :groupId;
+
+selectAllCookies:
+SELECT * FROM Cookies ORDER BY rank ASC;
+
+selectSelectedCookie:
+SELECT * FROM Cookies WHERE selected = 1;

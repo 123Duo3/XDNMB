@@ -112,8 +112,8 @@ class AppViewModel(
 @Stable
 fun formatTime(originalTime: String, inThread: Boolean): String {
     val timeZone = TimeZone.of("UTC+08:00")
-    val originalTime = originalTime.replace(Regex("\\((.+?)\\)"), "T")
-    val time = LocalDateTime.parse(originalTime)
+    val originalTimeInISO = originalTime.replace(Regex("\\((.+?)\\)"), "T")
+    val time = LocalDateTime.parse(originalTimeInISO)
     val currentInstant = Clock.System.now()
     val current = currentInstant.toLocalDateTime(timeZone)
     val timeInstant = time.toInstant(timeZone)
