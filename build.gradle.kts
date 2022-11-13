@@ -11,7 +11,6 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.20")
         classpath("com.squareup.sqldelight:gradle-plugin:$sqlDelightVersion")
         classpath("com.android.tools.build:gradle:7.3.1")
-        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:0.18.5")
     }
 }
 
