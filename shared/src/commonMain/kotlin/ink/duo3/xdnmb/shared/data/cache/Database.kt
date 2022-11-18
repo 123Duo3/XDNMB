@@ -312,8 +312,8 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
         return dbQuery.selectAllCookies(::mapCookieSelecting).executeAsList()
     }
 
-    internal fun getSelectedCookie(): Cookie {
-        return dbQuery.selectSelectedCookie(::mapCookieSelecting).executeAsOne()
+    internal fun getSelectedCookie(): Cookie? {
+        return dbQuery.selectSelectedCookie(::mapCookieSelecting).executeAsOneOrNull()
     }
 
     private fun mapCookieSelecting(

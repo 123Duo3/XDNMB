@@ -1,5 +1,6 @@
 package ink.duo3.xdnmb.shared.network
 
+import io.ktor.http.Cookie
 import kotlinx.coroutines.runBlocking
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -28,14 +29,14 @@ internal class XdApiTest {
 
     @Test
     fun testGetThreadList() = runBlocking {
-        xdApi.getTreadList(98, 1).forEach {
+        xdApi.getTreadList("",4, 1).forEach {
             println(it)
         }
     }
 
     @Test
     fun testGetReply() = runBlocking {
-        xdApi.getReply(53213787, 1).run {
+        xdApi.getReply("" ,53213787, 1).run {
             println(this)
         }
     }

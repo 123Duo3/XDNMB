@@ -52,13 +52,13 @@ class XdApi {
         return httpClient.get("$xdUrl/timeline/$page").body()
     }
 
-    suspend fun getTreadList(cookie: String, fid: Int, page: Int): List<Thread> {
+    suspend fun getTreadList(cookie: String?, fid: Int, page: Int): List<Thread> {
         return httpClient.get("$xdUrl/showf?id=$fid&page=$page"){
             header("Cookie", "userhash=$cookie;")
         }.body()
     }
 
-    suspend fun getReply(cookie: String, threadId: Int, page: Int): Thread {
+    suspend fun getReply(cookie: String?, threadId: Int, page: Int): Thread {
         return httpClient.get("$xdUrl/thread?id=$threadId&page=$page"){
             header("Cookie", "userhash=$cookie;")
         }.body()

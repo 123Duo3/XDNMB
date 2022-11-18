@@ -47,7 +47,7 @@ class AppViewModel(
 
     private suspend fun getForumList() {
         try {
-            forumList.value = ForumListState.OK(sdk.getForumList(true))
+            forumList.value = ForumListState.OK(sdk.getForumList(false))
         } catch (e: Exception) {
             forumList.value = ForumListState.Error(e.message ?: "Unknown Error")
         }

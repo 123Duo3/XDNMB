@@ -63,12 +63,12 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
             var cachedThreadList = database.getThreadsByForumId(forumId)
             val cookie = database.getSelectedCookie()
             return@withContext if (cachedThreadList.isNotEmpty() && !forceReload) {
-                val nextPage = api.getTreadList(cookie.cookie , forumId, page)
+                val nextPage = api.getTreadList(cookie?.cookie , forumId, page)
                 database.createThreads(nextPage)
                 cachedThreadList = database.getThreadsByForumId(forumId)
                 return@withContext cachedThreadList
             } else {
-                api.getTreadList(cookie.cookie, forumId, page).also {
+                api.getTreadList(cookie?.cookie, forumId, page).also {
                     database.clearThreadsByForumId(forumId)
                     database.createThreads(it)
                 }
@@ -79,7 +79,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
     suspend fun getReply(threadId: Int, page: Int): Thread =
         withContext(Dispatchers.Default) {
             val cookie = database.getSelectedCookie()
-            return@withContext api.getReply(cookie.cookie, threadId, page).also {
+            return@withContext api.getReply(cookie?.cookie, threadId, page).also {
                 database.createHistory(it)
             }
         }
@@ -91,7 +91,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         }
 
     @Throws(Exception::class)
-    suspend fun getCookies(): List<Cookie> =
+    suspend fun getCookies(): List<Cookie>? =
         withContext(Dispatchers.Default) {
             return@withContext database.getAllCookie()
         }
@@ -99,7 +99,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
     suspend fun addCookie(cookie: Cookie) {
         withContext(Dispatchers.Default) {
             var cachedCookies = database.getAllCookie()
-            if (cachedCookies.isEmpty()) {
+            if (cachedCookies?.isEmpty() == true) {
                 database.createCookie(cookie.copy(selected = true))
             } else {
                 database.createCookie(cookie)
@@ -114,7 +114,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
     }
 
     @Throws(Exception::class)
-    suspend fun getSelectedCookie(): Cookie =
+    suspend fun getSelectedCookie(): Cookie? =
         withContext(Dispatchers.Default) {
             return@withContext database.getSelectedCookie()
         }

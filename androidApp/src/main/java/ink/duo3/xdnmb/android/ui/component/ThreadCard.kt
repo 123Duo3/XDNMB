@@ -39,7 +39,7 @@ fun ThreadCard(
         thread.name.takeIf { it != "无名氏" },
         thread.userHash,
         thread.admin == 1,
-        formatTime(thread.time, true),
+        formatTime(thread.time, false),
         thread.id,
         thread.content,
         thread.title.takeIf { it != "无标题" },
