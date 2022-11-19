@@ -32,8 +32,7 @@ import ink.duo3.xdnmb.shared.data.entity.Thread
 @Composable
 fun ThreadCard(
     thread: Thread,
-    forumId: Int,
-    forumName: String
+    forumId: Int
 ) {
     ThreadCard(
         thread.name.takeIf { it != "无名氏" },
@@ -45,7 +44,7 @@ fun ThreadCard(
         thread.title.takeIf { it != "无标题" },
         thread.img.takeIf { it.isNotBlank() }?.let { imgToUrl(it, thread.ext, true) },
         thread.replyCount!!.toInt(),
-        forumName,
+        thread.forumName?: "",
         forumId
     )
 }
@@ -118,7 +117,8 @@ fun ThreadCard(
                     HtmlText(
                         html = content,
                         style = MaterialTheme.typography.bodyMedium,
-                        clickable = true
+                        clickable = false,
+                        maxLines = 12
                     )
                 }
             }

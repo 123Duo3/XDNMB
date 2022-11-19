@@ -37,8 +37,10 @@ data class Thread(
     val remainReplies:Int?,
     @SerialName("email")
     val email: String?,
-    @SerialName("master")
-    var master: Int?, // Is poster
+    @SerialName("poster")
+    var poster: Boolean?,
     @SerialName("page")
-    var page:Int = 1
+    var page:Int = 1,
+    @SerialName("forumName")
+    var forumName: String?,
 )

@@ -17,6 +17,8 @@
 		3777FACA291E4A0A0079C4B1 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3777FAC9291E4A0A0079C4B1 /* HistoryView.swift */; };
 		3786377229043A94002EAA64 /* ForumListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3786377129043A94002EAA64 /* ForumListRow.swift */; };
 		3795D1632914A0DF00A3B0F4 /* TimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3795D1622914A0DF00A3B0F4 /* TimelineView.swift */; };
+		37A543A5292388C7008330A6 /* CookieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A543A4292388C7008330A6 /* CookieView.swift */; };
+		37A543A729238A81008330A6 /* CookieRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A543A629238A81008330A6 /* CookieRow.swift */; };
 		37AC24532916813400B34766 /* InThreadRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37AC24522916813400B34766 /* InThreadRow.swift */; };
 		37AC245529168B6F00B34766 /* InThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37AC245429168B6F00B34766 /* InThreadView.swift */; };
 		37C0325F291609DC003C2968 /* ForumThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C0325E291609DC003C2968 /* ForumThreadView.swift */; };
@@ -47,6 +49,8 @@
 		3777FAC9291E4A0A0079C4B1 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		3786377129043A94002EAA64 /* ForumListRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumListRow.swift; sourceTree = "<group>"; };
 		3795D1622914A0DF00A3B0F4 /* TimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineView.swift; sourceTree = "<group>"; };
+		37A543A4292388C7008330A6 /* CookieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieView.swift; sourceTree = "<group>"; };
+		37A543A629238A81008330A6 /* CookieRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieRow.swift; sourceTree = "<group>"; };
 		37AC24522916813400B34766 /* InThreadRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InThreadRow.swift; sourceTree = "<group>"; };
 		37AC245429168B6F00B34766 /* InThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InThreadView.swift; sourceTree = "<group>"; };
 		37C0325E291609DC003C2968 /* ForumThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumThreadView.swift; sourceTree = "<group>"; };
@@ -110,6 +114,8 @@
 				37513AC0291BEF8F00B8BBA6 /* SelectionView.swift */,
 				3777FAC2291DFC2E0079C4B1 /* HTMLString.swift */,
 				3777FAC9291E4A0A0079C4B1 /* HistoryView.swift */,
+				37A543A4292388C7008330A6 /* CookieView.swift */,
+				37A543A629238A81008330A6 /* CookieRow.swift */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -220,6 +226,7 @@
 			files = (
 				3786377229043A94002EAA64 /* ForumListRow.swift in Sources */,
 				3777FACA291E4A0A0079C4B1 /* HistoryView.swift in Sources */,
+				37A543A5292388C7008330A6 /* CookieView.swift in Sources */,
 				37C0325F291609DC003C2968 /* ForumThreadView.swift in Sources */,
 				3795D1632914A0DF00A3B0F4 /* TimelineView.swift in Sources */,
 				37AC24532916813400B34766 /* InThreadRow.swift in Sources */,
@@ -227,6 +234,7 @@
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				37AC245529168B6F00B34766 /* InThreadView.swift in Sources */,
 				376A83442913EAAE00177017 /* ForumView.swift in Sources */,
+				37A543A729238A81008330A6 /* CookieRow.swift in Sources */,
 				372819BC290D71E300DEF1CC /* ThreadsListRow.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
 				37513AC1291BEF8F00B8BBA6 /* SelectionView.swift in Sources */,

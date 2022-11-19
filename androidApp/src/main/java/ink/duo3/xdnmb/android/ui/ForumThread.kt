@@ -85,7 +85,7 @@ fun ForumThread(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             itemsIndexed(threadList.threads) { index, item ->
-                                ThreadCard(item, forumId, forumName)
+                                ThreadCard(item, forumId)
                             }
                         }
 

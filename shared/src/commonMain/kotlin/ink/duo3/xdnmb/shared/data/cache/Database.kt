@@ -4,6 +4,7 @@ import ink.duo3.xdnmb.shared.data.entity.Cookie
 import ink.duo3.xdnmb.shared.data.entity.Forum
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Thread
+import io.ktor.util.debug.plugins.PluginName
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
@@ -63,7 +64,7 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
                 insertForumGroup(forumGroup)
 
                 forumGroup.forums.forEach {forum ->
-                    insertForum(forum)
+                    insertForum(forum, forumGroup)
                 }
             }
         }
@@ -78,10 +79,10 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
         )
     }
 
-    private fun insertForum(forum: Forum) {
+    private fun insertForum(forum: Forum, forumGroup: ForumGroup) {
         dbQuery.insertForum(
             forum.id,
-            forum.fgroup,
+            forumGroup.id,
             forum.sort,
             forum.name,
             forum.showName,
@@ -126,18 +127,19 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
         hide: Int?,
         remainReplies:Int?,
         email: String?,
-        master: Int?,
-        page:Int
+        poster: Boolean?,
+        page:Int,
+        forumName: String?
     ): Thread{
         return Thread(
-            id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, null, remainReplies, email, master, page
+            id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, null, remainReplies, email, poster, page, forumName
         )
     }
 
     internal fun createTimeLine(threadList: List<Thread>) {
         dbQuery.transaction {
             threadList.forEach {thread ->
-                insertTimeLine(thread)
+                insertTimeLine(thread.copy(forumName = getForumName(thread.fid.toString())))
             }
         }
     }
@@ -159,8 +161,9 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
             thread.hide,
             thread.remainReplies,
             thread.email,
-            thread.master,
-            thread.page
+            thread.poster,
+            thread.page,
+            thread.forumName
         )
     }
 
@@ -204,8 +207,9 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
             thread.hide,
             thread.remainReplies,
             thread.email,
-            thread.master,
-            thread.page
+            thread.poster,
+            thread.page,
+            thread.forumName
         )
     }
 
@@ -241,12 +245,13 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
         hide: Int?,
         remainReplies:Int?,
         email: String?,
-        master: Int?,
+        poster: Boolean?,
         page:Int,
+        forumName: String?,
         lastAccess: Long
     ): Thread{
         return Thread(
-            id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, null, remainReplies, email, master, page
+            id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, null, remainReplies, email, poster, page, forumName
         )
     }
 
@@ -273,8 +278,9 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
             thread.hide,
             thread.remainReplies,
             thread.email,
-            thread.master,
+            thread.poster,
             thread.page,
+            thread.forumName,
             Clock.System.now().toEpochMilliseconds()
         )
     }
@@ -297,8 +303,9 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
             reply.hide,
             reply.remainReplies,
             reply.email,
-            reply.master,
-            page
+            reply.poster,
+            page,
+            reply.forumName
         )
     }
 

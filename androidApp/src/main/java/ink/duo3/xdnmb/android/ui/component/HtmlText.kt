@@ -27,6 +27,7 @@ import androidx.compose.ui.text.UrlAnnotation
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.text.HtmlCompat
 import androidx.core.text.toSpannable
@@ -36,10 +37,11 @@ import ink.duo3.xdnmb.android.ui.theme.AppTheme
 fun HtmlText(
     html: String,
     style: TextStyle = LocalTextStyle.current,
-    clickable: Boolean = false
+    clickable: Boolean = false,
+    maxLines: Int = Int.MAX_VALUE
 ) {
     val textColor = LocalContentColor.current
-    HtmlComposeText(html, style.copy(color = textColor), clickable)
+    HtmlComposeText(html, style.copy(color = textColor), clickable, maxLines)
 }
 
 
@@ -62,7 +64,8 @@ private fun Preview() {
 private fun HtmlComposeText(
     html: String,
     style: TextStyle,
-    clickable: Boolean
+    clickable: Boolean,
+    maxLines: Int
 ) {
     val annotatedText = buildAnnotatedStringFromHtml(html, style)
     val context = LocalContext.current
@@ -76,12 +79,16 @@ private fun HtmlComposeText(
                     .firstOrNull()?.let {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it.item.url)))
                     }
-            }
+            },
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis
         )
     } else {
         Text(
             text = annotatedText,
-            style = style
+            style = style,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

@@ -14,12 +14,13 @@ CREATE TABLE Thread (
     hide            INTEGER AS Int,
     remainReplies   INTEGER AS Int,
     email           TEXT,
-    master          INTEGER AS Int,
-    page            INTEGER AS Int      NOT NULL DEFAULT 1
+    poster          INTEGER AS Boolean ,
+    page            INTEGER AS Int      NOT NULL DEFAULT 1,
+    forumName       TEXT
 );
 
 CREATE TABLE TimelineThread (
-    id              INTEGER AS Int  NOT NULL    PRIMARY KEY,
+    id              INTEGER AS Int  NOT NULL    PRIMARY KEY ,
     fid             INTEGER AS Int,
     replyCount      INTEGER AS Int,
     img             TEXT    NOT NULL,
@@ -34,8 +35,9 @@ CREATE TABLE TimelineThread (
     hide            INTEGER AS Int ,
     remainReplies   INTEGER AS Int,
     email           TEXT,
-    master          INTEGER AS Int,
-    page            INTEGER AS Int  NOT NULL DEFAULT 1
+    poster          INTEGER AS Boolean ,
+    page            INTEGER AS Int      NOT NULL DEFAULT 1,
+    forumName       TEXT
 );
 
 CREATE TABLE Histroy (
@@ -54,8 +56,9 @@ CREATE TABLE Histroy (
     hide            INTEGER AS Int ,
     remainReplies   INTEGER AS Int,
     email           TEXT,
-    master          INTEGER AS Int,
-    page            INTEGER AS Int  NOT NULL DEFAULT 1,
+    poster          INTEGER AS Boolean ,
+    page            INTEGER AS Int      NOT NULL DEFAULT 1,
+    forumName       TEXT,
     lastAccess      INTEGER  NOT NULL
 );
 
@@ -76,8 +79,9 @@ CREATE TABLE Reply (
     hide            INTEGER AS Int ,
     remainReplies   INTEGER AS Int,
     email           TEXT,
-    master          INTEGER AS Int,
-    page            INTEGER AS Int  NOT NULL DEFAULT 1
+    poster          INTEGER AS Boolean,
+    page            INTEGER AS Int      NOT NULL DEFAULT 1,
+    forumName       TEXT
 );
 
 CREATE TABLE ForumGroup (
@@ -113,24 +117,24 @@ CREATE TABLE Cookies (
 );
 
 insertThread:
-INSERT INTO Thread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO Thread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, poster, page, forumName)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO NOTHING;
 
 insertTimeLineThread:
-INSERT INTO TimelineThread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO TimelineThread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, poster, page, forumName)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO NOTHING;
 
 insertHistory:
-INSERT INTO Histroy(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page, lastAccess)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO Histroy(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, poster, page, forumName, lastAccess)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO UPDATE
 SET lastAccess = excluded.lastAccess;
 
 insertReply:
-INSERT INTO Reply(threadId, id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, master, page)
-VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO Reply(threadId, id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, poster, page, forumName)
+VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO NOTHING;
 
 insertForumGroup:

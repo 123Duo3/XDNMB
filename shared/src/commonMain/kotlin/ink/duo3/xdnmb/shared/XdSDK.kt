@@ -44,13 +44,15 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
     suspend fun getTimeLine(forceReload: Boolean, page: Int): List<Thread> =
         withContext(Dispatchers.Default) {
             var cachedThreadList = database.getAllTimeLine()
-            return@withContext if (cachedThreadList.isNotEmpty() && !forceReload) {
+            if (cachedThreadList.isNotEmpty() && !forceReload) {
                 val nextPage = api.getTimeLine(page)
                 database.createTimeLine(nextPage)
                 cachedThreadList = database.getAllTimeLine()
                 return@withContext cachedThreadList
             } else {
-                api.getTimeLine(page).also {
+                return@withContext api.getTimeLine(page).onEach { thread ->
+                    thread.forumName = getForumName(thread.fid!!)
+                }.also {
                     database.clearTimeLine()
                     database.createTimeLine(it)
                 }

@@ -53,6 +53,7 @@ fun ForumsDisplay(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var selectedItem by remember { mutableStateOf("-1") }
+    var selectedForumName by remember { mutableStateOf("时间线") }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -148,9 +149,10 @@ fun ForumsDisplay(
                         Forums(
                             forumList = forumList,
                             selectedForum = selectedItem,
-                            onForumSelect = {
-                                onForumSelect(it)
-                                selectedItem = it
+                            onForumSelect = {id, name ->
+                                onForumSelect(id)
+                                selectedItem = id
+                                selectedForumName = name
                                 scope.launch {
                                     drawerState.close()
                                 }
@@ -186,7 +188,7 @@ fun ForumsDisplay(
                 onClickMenu = { scope.launch { drawerState.open() } },
                 threadList = threadList,
                 forumId = selectedItem.toInt(),
-                forumName = "不知道该怎么拿"
+                forumName = selectedForumName
             )
         }
     )
@@ -197,7 +199,7 @@ fun ForumsDisplay(
 private fun Forums(
     forumList: AppViewModel.ForumListState,
     selectedForum: String,
-    onForumSelect: (id: String) -> Unit
+    onForumSelect: (id: String, name: String) -> Unit
 ) {
     Crossfade(targetState = forumList) { list ->
         when (list) {
@@ -228,7 +230,7 @@ private fun Forums(
                                 },
                                 selected = forum.id == selectedForum,
                                 onClick = {
-                                    onForumSelect(forum.id)
+                                    onForumSelect(forum.id, forum.name)
                                 },
                                 modifier = Modifier
                                     .padding(16.dp, 0.dp)
