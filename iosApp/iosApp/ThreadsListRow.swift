@@ -14,20 +14,24 @@ struct ThreadsListRow: View {
     var forumShowName: String
     var threadList: [shared.Thread]
     let sdk: XdSDK
-    let loadNextPage: ()
+    let viewModel: TimelineView.ViewModel?
     
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .center, spacing: 16) {
                 ForEach(threadList) {threads in
                     Threads(threads: threads, forumId: forumId, sdk: sdk)
+                        .onAppear(perform: {
+                            if (threads.id == threadList[threadList.count - 3].id) {
+                                viewModel!.loadNextPage()
+                            }
+                        })
                 }
-                Text("到底了")
-                    .onTapGesture {
-                        loadNextPage
-                    }
+                Button("Next", action: {
+                    viewModel!.loadNextPage()
+                })
             }
             .padding()
             .frame(maxWidth: .infinity, maxHeight:.infinity)
@@ -98,6 +102,13 @@ struct Threads: View {
                 VStack(alignment: .leading){
                     if let htmlText {
                         Text(AttributedString(htmlText))
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(16)
+                            .lineSpacing(2.4)
+                    } else {
+                        Text(threads.content)
+                            .font(.callout)
+                            .opacity(0)
                             .multilineTextAlignment(.leading)
                             .lineLimit(16)
                     }

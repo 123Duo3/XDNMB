@@ -93,15 +93,15 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         }
 
     @Throws(Exception::class)
-    suspend fun getCookies(): List<Cookie>? =
+    suspend fun getCookies(): List<Cookie> =
         withContext(Dispatchers.Default) {
             return@withContext database.getAllCookie()
         }
 
     suspend fun addCookie(cookie: Cookie) {
         withContext(Dispatchers.Default) {
-            var cachedCookies = database.getAllCookie()
-            if (cachedCookies?.isEmpty() == true) {
+            val cachedCookies = database.getAllCookie()
+            if (cachedCookies.isEmpty()) {
                 database.createCookie(cookie.copy(selected = true))
             } else {
                 database.createCookie(cookie)

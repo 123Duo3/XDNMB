@@ -58,7 +58,7 @@ struct SelectionView: View {
                 Section{
                     HStack{
                         HStack{
-                            Image("cookie.fill")
+                            Image("cookie")
                                 .padding(4)
                                 .foregroundColor(Color.white)
                                 .frame(width: 30,height: 30)
@@ -84,7 +84,7 @@ struct SelectionView: View {
                 Section{
                     HStack{
                         HStack{
-                            Image(systemName: "info.circle.fill")
+                            Image("frogisland")
                                 .padding(4)
                                 .foregroundColor(Color.white)
                                 .frame(width: 30,height: 30)
@@ -96,15 +96,15 @@ struct SelectionView: View {
                     }
                     HStack{
                         HStack{
-                            Image(systemName: "heart.fill")
+                            Image("github")
                                 .padding(4)
-                                .foregroundColor(Color.white)
+                                .foregroundColor(Color(UIColor.systemBackground))
                                 .frame(width: 30,height: 30)
                         }
-                        .background(Color(UIColor.systemPink))
+                        .background(Color(UIColor.label))
                         .cornerRadius(6)
                         .padding(.trailing,8)
-                        Text("赞助我们")
+                        Text("查看源码")
                     }
                 }
             }.listStyle(.insetGrouped)

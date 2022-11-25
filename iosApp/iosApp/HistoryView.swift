@@ -29,7 +29,7 @@ struct HistoryView: View {
             )
         case.result(let threads):
             return AnyView(
-                ThreadsListRow(forumId: "-1", forumShowName: "历史记录", threadList: threads, sdk: sdk, loadNextPage: ())
+                ThreadsListRow(forumId: "-1", forumShowName: "历史记录", threadList: threads, sdk: sdk, viewModel: nil)
                     .navigationTitle("历史记录")
             )
         case.error(let discription):

@@ -55,9 +55,13 @@ extension ForumView {
             self.forumList = .loading
             sdk.getForumList(forceReload: forceReload, completionHandler: { forumList, error in
                 if let forumList = forumList {
-                    self.forumList = .result(forumList)
+                    DispatchQueue.main.async {
+                        self.forumList = .result(forumList)
+                    }
                 } else {
-                    self.forumList = .error(error?.localizedDescription ?? "错误")
+                    DispatchQueue.main.async {
+                        self.forumList = .error(error?.localizedDescription ?? "错误")
+                    }
                 }
             })
         }

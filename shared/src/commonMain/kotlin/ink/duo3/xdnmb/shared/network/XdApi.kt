@@ -49,7 +49,7 @@ class XdApi {
     }
 
     suspend fun getTimeLine(page: Int): List<Thread> {
-        return httpClient.get("$xdUrl/timeline/$page").body()
+        return httpClient.get("$xdUrl/timeline/1?page=$page").body()
     }
 
     suspend fun getTreadList(cookie: String?, fid: Int, page: Int): List<Thread> {

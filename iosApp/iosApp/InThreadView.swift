@@ -31,6 +31,21 @@ struct InThreadView: View {
             return AnyView(
                 InThreadRow(sdk: sdk, replyList: threads, forumId: forumId)
                     .navigationTitle("No." + threadId)
+                    .toolbar{
+                        Image(systemName: "arrowshape.turn.up.left")
+                            .foregroundColor(Color.accentColor)
+                            .padding(.trailing, 9)
+                        Image(systemName: "1.square")
+                            .foregroundColor(Color.accentColor)
+                        Menu(content: {
+                            Button(action: {}, label: {Label("只看Po主", systemImage: "p.circle")})
+                            Button(action: {}, label: {Label("添加订阅", systemImage: "bookmark")})
+                            Button(action: {}, label: {Label("举报", systemImage: "flag")})
+                            Button(action: {}, label: {Label("分享", systemImage: "square.and.arrow.up")})
+                        }, label: {
+                            Image(systemName: "ellipsis.circle")
+                        })
+                    }
             )
         case.error(let discription):
             return AnyView(
@@ -70,6 +85,10 @@ extension InThreadView {
                     self.replys = .error(error?.localizedDescription ?? "错误")
                 }
             })
+        }
+        
+        func loadNextPage(threadId: Int) {
+            
         }
     }
 }

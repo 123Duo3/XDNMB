@@ -29,7 +29,7 @@ struct ForumThreadView: View {
             )
         case.result(let threads):
             return AnyView(
-                ThreadsListRow(forumId: forumId, forumShowName: forumShowName, threadList: threads, sdk: sdk, loadNextPage: ())
+                ThreadsListRow(forumId: forumId, forumShowName: forumShowName, threadList: threads, sdk: sdk, viewModel: nil)
                     .navigationTitle(forumShowName)
             )
         case.error(let discription):

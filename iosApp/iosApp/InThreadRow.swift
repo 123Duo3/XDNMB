@@ -52,6 +52,7 @@ struct InThreadRow: View {
                 if let htmlText {
                     Text(AttributedString(htmlText))
                         .textCase(nil)
+                        .lineSpacing(2.4)
                 } else {
                     Text(replyList.content)
                         .font(.callout)
@@ -81,6 +82,9 @@ struct InThreadRow: View {
             ){
                 ForEach(replyList.replies!){reply in
                     Reply(poster: replyList.userHash, reply: reply, sdk: sdk)
+                        .onAppear(perform: {
+                            print(reply.id, "in", replyList.replies?.count ?? 0)
+                        })
                 }
             }
         }
@@ -98,19 +102,21 @@ struct Reply: View {
         LazyVStack(alignment:.leading){
                 HStack{
                     if(reply.id != 9999999){
-                        Text("No." + String(reply.id))
-                        Text("•")
-                            .foregroundColor(Color.gray)
                         if(reply.userHash == poster){
-                            Text(reply.userHash)
+                            Text("PO")
+                                .foregroundColor(Color.accentColor)
                                 .fontWeight(.semibold)
-                                .foregroundColor(isAdmin(admin: reply.admin))
                             Text("•")
                                 .foregroundColor(Color.gray)
-                            Text("PO")
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color.accentColor)
+                            Text("No." + String(reply.id))
+                            Text("•")
+                                .foregroundColor(Color.gray)
+                            Text(reply.userHash)
+                                .foregroundColor(isAdmin(admin: reply.admin))
                         } else {
+                            Text("No." + String(reply.id))
+                            Text("•")
+                                .foregroundColor(Color.gray)
                             Text(reply.userHash)
                                 .foregroundColor(isAdmin(admin: reply.admin))
                         }
@@ -147,6 +153,7 @@ struct Reply: View {
             LazyVStack(alignment: .leading){
                 if let htmlText {
                     Text(AttributedString(htmlText))
+                        .lineSpacing(2.4)
                 } else {
                     Text(reply.content)
                         .font(.callout)
