@@ -21,7 +21,7 @@ struct InThreadView: View {
     
     
     private func listView() -> AnyView{
-        switch viewModel.replys {
+        switch viewModel.replies {
         case .loading:
             return AnyView(
                 Text("加载中...")
@@ -29,14 +29,19 @@ struct InThreadView: View {
             )
         case.result(let threads):
             return AnyView(
-                InThreadRow(sdk: sdk, replyList: threads, forumId: forumId)
+                InThreadRow(sdk: sdk, replyList: threads, forumId: forumId, viewModel: self.viewModel)
                     .navigationTitle("No." + threadId)
                     .toolbar{
                         Image(systemName: "arrowshape.turn.up.left")
                             .foregroundColor(Color.accentColor)
                             .padding(.trailing, 9)
-                        Image(systemName: "1.square")
-                            .foregroundColor(Color.accentColor)
+                        if (viewModel.currentPage <= 50) {
+                            Image(systemName: String(viewModel.currentPage) + ".square")
+                                .foregroundColor(Color.accentColor)
+                        } else {
+                            Image("xd.square")
+                                .foregroundColor(Color.accentColor)
+                        }
                         Menu(content: {
                             Button(action: {}, label: {Label("只看Po主", systemImage: "p.circle")})
                             Button(action: {}, label: {Label("添加订阅", systemImage: "bookmark")})
@@ -63,32 +68,71 @@ extension InThreadView {
         case error(String)
     }
     
+    enum LoadaleNextPage {
+        case loading
+        case success
+        case error(String)
+    }
+    
     class ViewModel: ObservableObject {
         let sdk: XdSDK
         let threadId: Int
-        let page: Int
-        @Published var replys = LoadableReply.loading
+        var page: Int
+        var replyList: [shared.Thread]
+        var maxPage = 0
+        @Published var replies = LoadableReply.loading
+        @Published var currentPage = 1
+        @Published var nextPage = LoadaleNextPage.success
         
         init(sdk: XdSDK, threadId: Int, page: Int) {
             self.sdk = sdk
             self.threadId = threadId
             self.page = page
-            self.loadReply(threadId: self.threadId, page: self.page)
+            self.replyList = []
+            self.loadReply(threadId: self.threadId)
         }
         
-        func loadReply(threadId: Int, page: Int) {
-            self.replys = .loading
+        func loadReply(threadId: Int) {
+            self.replies = .loading
             sdk.getReply(threadId: Int32(threadId), page: Int32(page), completionHandler: {thread, error in
                 if let thread = thread {
-                    self.replys = .result(thread)
+                    self.replies = .result(thread)
+                    self.replyList = thread.replies ?? []
+                    self.maxPage = Int(ceil(Double(truncating: thread.replyCount!) / 19))
+                    print("Max Page:", self.maxPage)
                 } else {
-                    self.replys = .error(error?.localizedDescription ?? "错误")
+                    self.replies = .error(error?.localizedDescription ?? "错误")
                 }
             })
         }
         
         func loadNextPage(threadId: Int) {
-            
+            if case .success = nextPage {
+                if (page + 1 <= maxPage) {
+                    self.nextPage = .loading
+                    sdk.getReply(threadId: Int32(threadId), page: Int32(page + 1), completionHandler: {thread, error in
+                        if let thread = thread {
+                            DispatchQueue.main.async {
+                                self.replyList += thread.replies ?? []
+                                let replies = thread.doCopy(id: thread.id, fid: thread.fid, replyCount: thread.replyCount, img: thread.img, ext: thread.ext, time: thread.time, userHash: thread.userHash, name: thread.name, title: thread.title, content: thread.content, sage: thread.sage, admin: thread.admin, hide: thread.hide, replies: self.replyList, remainReplies: thread.remainReplies, email: thread.email, poster: thread.poster, page: thread.page, forumName: thread.forumName)
+                                self.replies = .result(replies)
+                                self.page += 1
+                                self.maxPage = Int(ceil(Double(truncating: thread.replyCount!) / 19))
+                                print("Max Page:", self.maxPage)
+                                self.nextPage = .success
+                            }
+                        } else {
+                            self.nextPage = .error(error?.localizedDescription ?? "错误")
+                        }
+                    })
+                }
+            }
+        }
+        
+        func updateCurrentPage(page: Int) {
+            DispatchQueue.main.async {
+                self.currentPage = page
+            }
         }
     }
 }

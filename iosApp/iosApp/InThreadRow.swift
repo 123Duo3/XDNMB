@@ -13,6 +13,7 @@ struct InThreadRow: View {
     let sdk: XdSDK
     var replyList: shared.Thread
     let forumId: String
+    let viewModel: InThreadView.ViewModel
     @State private var htmlText: NSAttributedString?
     
     var body: some View {
@@ -65,6 +66,7 @@ struct InThreadRow: View {
                         image
                             .resizable()
                             .scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                     } placeholder: {
                         Color.gray.opacity(0.17)
                     }
@@ -78,17 +80,45 @@ struct InThreadRow: View {
                     DispatchQueue.main.async {
                         htmlText = replyList.content.htmlAttributedString()
                     }
-                }
+                },
+                    footer:
+                HStack(alignment: .center){
+                Spacer()
+                nextPageIndicator()
+                    .font(.body)
+                    .textCase(nil)
+                    .padding(.vertical, 10)
+                Spacer()
+            }
             ){
                 ForEach(replyList.replies!){reply in
                     Reply(poster: replyList.userHash, reply: reply, sdk: sdk)
                         .onAppear(perform: {
-                            print(reply.id, "in", replyList.replies?.count ?? 0)
+                            print("No.", reply.id, "in page", reply.page)
+                            viewModel.updateCurrentPage(page: Int(reply.page))
+                            if (Int(truncating: replyList.replyCount ?? 0) > 19) {
+                                if (reply.id == replyList.replies![replyList.replies!.count - 2].id) {
+                                    viewModel.loadNextPage(threadId: Int(replyList.id))
+                                }
+                            }
                         })
                 }
             }
         }
             .listStyle(.grouped)
+    }
+    
+    private func nextPageIndicator() -> AnyView{
+        switch viewModel.nextPage{
+        case.success: return AnyView(
+            Text("到底了")
+        )
+        case .loading:return AnyView(
+            Text("加载中...")
+        )
+        case .error(let discription):return AnyView(
+            Text(discription)
+        )}
     }
 }
 

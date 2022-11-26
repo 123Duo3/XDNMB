@@ -96,7 +96,6 @@ extension TimelineView {
             self.sdk.getTimeLine(forceReload: true, page: currentPage+1, completionHandler: {threadList, error in
                 if let threadList = threadList {
                     DispatchQueue.main.async {
-                        //self.threads += thread
                         let timelineSet = NSMutableOrderedSet(array: self.threads)
                         timelineSet.addObjects(from: threadList)
                         self.threads = timelineSet.array as? [shared.Thread] ?? self.threads

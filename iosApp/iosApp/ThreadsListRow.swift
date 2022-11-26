@@ -25,12 +25,12 @@ struct ThreadsListRow: View {
                     Threads(threads: threads, forumId: forumId, sdk: sdk)
                         .onAppear(perform: {
                             if (threads.id == threadList[threadList.count - 3].id) {
-                                viewModel!.loadNextPage()
+                                viewModel?.loadNextPage()
                             }
                         })
                 }
                 Button("Next", action: {
-                    viewModel!.loadNextPage()
+                    viewModel?.loadNextPage()
                 })
             }
             .padding()
