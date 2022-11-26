@@ -150,7 +150,7 @@ fun formatTime(originalTime: String, inThread: Boolean): String {
     }
 
     if (inThread) {
-        if (diffInDay.days >= 1) {
+        if (diffInDay.days >= 1 || diffInDay.months != 0) {
             result =
                 result + " " + time.hour.let { if (it < 10) "0$it" else it } + ":" + time.minute.let { if (it < 10) "0$it" else it }
         } else if (duration.inWholeHours >= 1) {

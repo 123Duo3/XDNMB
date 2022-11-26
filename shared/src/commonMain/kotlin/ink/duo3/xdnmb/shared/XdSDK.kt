@@ -81,10 +81,17 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
     suspend fun getReply(threadId: Int, page: Int): Thread =
         withContext(Dispatchers.Default) {
             val cookie = database.getSelectedCookie()
-            return@withContext api.getReply(cookie?.cookie, threadId, page).also {
-                database.createHistory(it)
+            return@withContext api.getReply(cookie?.cookie, threadId, page).apply {
+                this.replies?.onEach {
+                    it.page = page
+                }
             }
         }
+
+    @Throws(Exception::class)
+    suspend fun addHistory(thread: Thread) {
+        database.createHistory(thread)
+    }
 
     @Throws(Exception::class)
     suspend fun getHistory(): List<Thread> =
@@ -176,7 +183,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         }
 
         if (inThread) {
-            if (diffInDay.days >= 1) {
+            if (diffInDay.days >= 1 || diffInDay.months != 0) {
                 result =
                     result + " " + time.hour.let { if (it < 10) "0$it" else it } + ":" + time.minute.let { if (it < 10) "0$it" else it }
             } else if (duration.inWholeHours >= 1) {
