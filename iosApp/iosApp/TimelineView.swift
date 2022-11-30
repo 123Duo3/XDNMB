@@ -30,7 +30,7 @@ struct TimelineView: View {
             )
         case.result(let timeline):
             return AnyView(
-                ThreadsListRow(forumId: "-1", forumShowName: "时间线", threadList: timeline, sdk: sdk, viewModel: self.viewModel)
+                ThreadsListRow(forumId: "-1", forumShowName: "时间线", threadList: timeline, sdk: sdk, viewModel: self.viewModel, notice: viewModel.notice)
             )
         case.error(let discription):
             return AnyView(Text(discription).multilineTextAlignment(.center))
@@ -48,6 +48,7 @@ extension TimelineView {
     class ViewModel: ObservableObject {
         let sdk: XdSDK
         @Published var timeline = LoadableTimeline.loading
+        @Published var notice: shared.Notice? = nil
         var threads: [shared.Thread]
         var currentPage: Int32
         
@@ -60,6 +61,16 @@ extension TimelineView {
         
         func loadTimeline(forceReload: Bool) {
             self.timeline = .loading
+            sdk.getCurrentNotice(completionHandler: { notice, error in
+                if let notice = notice {
+                    DispatchQueue.main.async {
+                        self.notice = notice
+                        print("getNotice")
+                    }
+                } else {
+                    print(error?.localizedDescription ?? "Error")
+                }
+            })
             sdk.getTimeLine(forceReload: forceReload, page: 1, completionHandler: { thread, error in
                 if let thread = thread {
                     DispatchQueue.main.async {
@@ -76,19 +87,17 @@ extension TimelineView {
         }
         
         @MainActor
-        func refreshTimeline(forceReload: Bool) async{
+        func refreshTimeline(forceReload: Bool) async {
             DispatchQueue.main.async {
                 self.sdk.getTimeLine(forceReload: forceReload, page: 1, completionHandler: { thread, error in
                     if let thread = thread {
-                        DispatchQueue.main.async {
-                            self.timeline = .result(thread)
-                            self.threads = thread
-                            self.currentPage = 1
-                        }
+                        self.threads = thread
+                        self.currentPage = 1
                     } else {
                         self.timeline = .error(error?.localizedDescription ?? "错误")
                     }
                 })
+                self.timeline = .result(self.threads)
             }
         }
         
@@ -105,6 +114,14 @@ extension TimelineView {
                     }
                 } else {
                     self.timeline = .error(error?.localizedDescription ?? "错误")
+                }
+            })
+        }
+        
+        func dismissNotice() {
+            self.sdk.dismissCurrentNotice(completionHandler: { error in
+                if let error = error {
+                    print(error.localizedDescription)
                 }
             })
         }

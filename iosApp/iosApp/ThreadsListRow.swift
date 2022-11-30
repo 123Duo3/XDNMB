@@ -15,12 +15,26 @@ struct ThreadsListRow: View {
     var threadList: [shared.Thread]
     let sdk: XdSDK
     let viewModel: TimelineView.ViewModel?
+    let notice: shared.Notice?
+    @State private var isShowingNotice = true
     
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .center, spacing: 16) {
+                if (notice != nil) {
+                    if isShowingNotice {
+                        Notice(notice: notice!, dismiss:
+                                {
+                            viewModel?.dismissNotice()
+                            withAnimation(.spring()){
+                                isShowingNotice.toggle()
+                            }
+                        }, sdk: sdk)
+                            .transition(.scale(scale: 0.95).combined(with: .opacity))
+                    }
+                }
                 ForEach(threadList) {threads in
                     Threads(threads: threads, forumId: forumId, sdk: sdk)
                         .onAppear(perform: {
@@ -151,6 +165,63 @@ struct Threads: View {
             .frame(maxWidth: .infinity)
             .background(Color (UIColor.secondarySystemGroupedBackground))
             .cornerRadius(16)
+        }
+    }
+}
+
+struct Notice: View {
+    let notice: shared.Notice
+    let dismiss: () -> Void
+    let sdk: XdSDK
+    
+    
+    @Environment(\.colorScheme) var colorScheme
+    @State private var htmlText: NSAttributedString?
+    
+    var body: some View{
+        
+        VStack(alignment: .leading) {
+            Text("公告")
+                .font(.title)
+                .padding(.bottom, 0.2)
+                .padding(.top, 0.1)
+            if let htmlText {
+                Text(AttributedString(htmlText))
+                    .multilineTextAlignment(.leading)
+                    .lineSpacing(2.4)
+                    .padding(.bottom, 1)
+            } else {
+                Text(notice.content)
+                    .font(.callout)
+                    .opacity(0)
+                    .multilineTextAlignment(.leading)
+                    .padding(.bottom, 1)
+            }
+            HStack{
+                Spacer()
+                Text(sdk.formatTime(originalTime: notice.date))
+                    .font(.callout)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+            }
+            Divider()
+            HStack(alignment:.center){
+                Button(
+                    action: dismiss, label:{
+                        Text("不再显示")
+                    }
+                )
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 18)
+        .frame(maxWidth: .infinity)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(16)
+        .shadow(color:Color(UIColor.label).opacity(0.07), radius: 16, y: 8)
+        .onAppear{
+            DispatchQueue.main.async {
+                htmlText = notice.content.htmlAttributedString()
+            }
         }
     }
 }

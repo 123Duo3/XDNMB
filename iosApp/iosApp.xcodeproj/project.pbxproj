@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		058557BB273AAA24004C7B11 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 058557BA273AAA24004C7B11 /* Assets.xcassets */; };
-		2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2152FB032600AC8F00CF470E /* iOSApp.swift */; };
 		372819BC290D71E300DEF1CC /* ThreadsListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372819BB290D71E300DEF1CC /* ThreadsListRow.swift */; };
 		37513AC1291BEF8F00B8BBA6 /* SelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37513AC0291BEF8F00B8BBA6 /* SelectionView.swift */; };
 		376A83442913EAAE00177017 /* ForumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376A83432913EAAE00177017 /* ForumView.swift */; };
@@ -22,6 +21,8 @@
 		37AC24532916813400B34766 /* InThreadRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37AC24522916813400B34766 /* InThreadRow.swift */; };
 		37AC245529168B6F00B34766 /* InThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37AC245429168B6F00B34766 /* InThreadView.swift */; };
 		37C0325F291609DC003C2968 /* ForumThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C0325E291609DC003C2968 /* ForumThreadView.swift */; };
+		37C8AB9F2934EA30008D4B91 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C8AB9E2934EA30008D4B91 /* iOSApp.swift */; };
+		37C8ABA12934F21D008D4B91 /* SwiftUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C8ABA02934F21D008D4B91 /* SwiftUIView.swift */; };
 		7555FF83242A565900829871 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF82242A565900829871 /* ContentView.swift */; };
 /* End PBXBuildFile section */
 
@@ -40,7 +41,6 @@
 
 /* Begin PBXFileReference section */
 		058557BA273AAA24004C7B11 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		2152FB032600AC8F00CF470E /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
 		372819BB290D71E300DEF1CC /* ThreadsListRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadsListRow.swift; sourceTree = "<group>"; };
 		37513AC0291BEF8F00B8BBA6 /* SelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionView.swift; sourceTree = "<group>"; };
 		376A83432913EAAE00177017 /* ForumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumView.swift; sourceTree = "<group>"; };
@@ -54,6 +54,8 @@
 		37AC24522916813400B34766 /* InThreadRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InThreadRow.swift; sourceTree = "<group>"; };
 		37AC245429168B6F00B34766 /* InThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InThreadView.swift; sourceTree = "<group>"; };
 		37C0325E291609DC003C2968 /* ForumThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumThreadView.swift; sourceTree = "<group>"; };
+		37C8AB9E2934EA30008D4B91 /* iOSApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = iOSApp.swift; path = ../../../../../.Trash/iOSApp.swift; sourceTree = "<group>"; };
+		37C8ABA02934F21D008D4B91 /* SwiftUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIView.swift; sourceTree = "<group>"; };
 		7555FF7B242A565900829871 /* 雾岛.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "雾岛.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7555FF82242A565900829871 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7555FF8C242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -99,23 +101,24 @@
 		7555FF7D242A565900829871 /* iosApp */ = {
 			isa = PBXGroup;
 			children = (
-				058557BA273AAA24004C7B11 /* Assets.xcassets */,
-				7555FF82242A565900829871 /* ContentView.swift */,
 				7555FF8C242A565B00829871 /* Info.plist */,
-				2152FB032600AC8F00CF470E /* iOSApp.swift */,
+				058557BA273AAA24004C7B11 /* Assets.xcassets */,
+				3777FAC6291E1EB90079C4B1 /* Preview Content */,
+				37C8AB9E2934EA30008D4B91 /* iOSApp.swift */,
+				7555FF82242A565900829871 /* ContentView.swift */,
 				37C0325E291609DC003C2968 /* ForumThreadView.swift */,
 				3786377129043A94002EAA64 /* ForumListRow.swift */,
 				372819BB290D71E300DEF1CC /* ThreadsListRow.swift */,
-				376A83432913EAAE00177017 /* ForumView.swift */,
-				3777FAC6291E1EB90079C4B1 /* Preview Content */,
 				3795D1622914A0DF00A3B0F4 /* TimelineView.swift */,
 				37AC24522916813400B34766 /* InThreadRow.swift */,
 				37AC245429168B6F00B34766 /* InThreadView.swift */,
 				37513AC0291BEF8F00B8BBA6 /* SelectionView.swift */,
+				376A83432913EAAE00177017 /* ForumView.swift */,
 				3777FAC2291DFC2E0079C4B1 /* HTMLString.swift */,
 				3777FAC9291E4A0A0079C4B1 /* HistoryView.swift */,
 				37A543A4292388C7008330A6 /* CookieView.swift */,
 				37A543A629238A81008330A6 /* CookieRow.swift */,
+				37C8ABA02934F21D008D4B91 /* SwiftUIView.swift */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -231,13 +234,14 @@
 				3795D1632914A0DF00A3B0F4 /* TimelineView.swift in Sources */,
 				37AC24532916813400B34766 /* InThreadRow.swift in Sources */,
 				3777FAC3291DFC2E0079C4B1 /* HTMLString.swift in Sources */,
-				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				37AC245529168B6F00B34766 /* InThreadView.swift in Sources */,
 				376A83442913EAAE00177017 /* ForumView.swift in Sources */,
 				37A543A729238A81008330A6 /* CookieRow.swift in Sources */,
 				372819BC290D71E300DEF1CC /* ThreadsListRow.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				37C8AB9F2934EA30008D4B91 /* iOSApp.swift in Sources */,
 				37513AC1291BEF8F00B8BBA6 /* SelectionView.swift in Sources */,
+				37C8ABA12934F21D008D4B91 /* SwiftUIView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

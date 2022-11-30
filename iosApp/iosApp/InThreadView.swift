@@ -96,10 +96,12 @@ extension InThreadView {
             self.replies = .loading
             sdk.getReply(threadId: Int32(threadId), page: Int32(page), completionHandler: {thread, error in
                 if let thread = thread {
-                    self.replies = .result(thread)
-                    self.replyList = thread.replies ?? []
-                    self.maxPage = Int(ceil(Double(truncating: thread.replyCount!) / 19))
-                    print("Max Page:", self.maxPage)
+                    DispatchQueue.main.async {
+                        self.replies = .result(thread)
+                        self.replyList = thread.replies ?? []
+                        self.maxPage = Int(ceil(Double(truncating: thread.replyCount!) / 19))
+                        print("Max Page:", self.maxPage)
+                    }
                 } else {
                     self.replies = .error(error?.localizedDescription ?? "错误")
                 }
@@ -109,7 +111,10 @@ extension InThreadView {
         func loadNextPage(threadId: Int) {
             if case .success = nextPage {
                 if (page + 1 <= maxPage) {
-                    self.nextPage = .loading
+                    DispatchQueue.main.async {
+                        self.nextPage = .loading
+                        print("LoadingNextPage")
+                    }
                     sdk.getReply(threadId: Int32(threadId), page: Int32(page + 1), completionHandler: {thread, error in
                         if let thread = thread {
                             DispatchQueue.main.async {

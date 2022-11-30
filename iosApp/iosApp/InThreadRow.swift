@@ -100,6 +100,8 @@ struct InThreadRow: View {
                                 if (reply.id == replyList.replies![replyList.replies!.count - 2].id) {
                                     viewModel.loadNextPage(threadId: Int(replyList.id))
                                 }
+                            } else {
+                                viewModel.nextPage = .success
                             }
                         })
                 }
