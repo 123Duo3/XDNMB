@@ -116,6 +116,13 @@ CREATE TABLE Cookies (
     selected        INTEGER AS Boolean
 );
 
+CREATE TABLE Notice (
+    content         TEXT                NOT NULL ,
+    date            INTEGER             NOT NULL    PRIMARY KEY ,
+    enable          INTEGER AS Boolean  NOT NULL ,
+    dismissed      INTEGER AS Boolean
+);
+
 insertThread:
 INSERT INTO Thread(id, fid, replyCount, img, ext, time, userHash, name, title, content, sage, admin, hide, remainReplies, email, poster, page, forumName)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -151,6 +158,12 @@ VALUES (?, ?, ?, ?)
 ON CONFLICT (cookie) DO UPDATE
 SET rank = excluded.rank, selected = excluded.selected;
 
+insertNotice:
+INSERT INTO Notice(content, date, enable, dismissed)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (date) DO UPDATE
+SET dismissed = excluded.dismissed;
+
 
 removeAllThread:
 DELETE FROM Thread;
@@ -175,6 +188,9 @@ DELETE FROM Forum;
 
 removeCookieByCookie:
 DELETE FROM Cookies WHERE cookie = :cookie;
+
+removeAllNotice:
+DELETE FROM Notice;
 
 
 selectAllTimeLineThread:
@@ -203,3 +219,6 @@ SELECT * FROM Cookies ORDER BY rank ASC;
 
 selectSelectedCookie:
 SELECT * FROM Cookies WHERE selected = 1;
+
+selectAllNotice:
+SELECT * FROM Notice ORDER BY date DESC;

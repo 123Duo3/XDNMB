@@ -14,7 +14,8 @@ import kotlin.test.Test
 internal class XdSDKTest {
     @Test
     fun formatTimeTest() {
-        println(formatTime("2022-11-23(六)12:34:29",true))
+        println(formatTime("2021-11-23(六)12:34:29",true))
+        println(formatTime(2022102800001))
     }
     private fun formatTime(originalTime: String, inThread: Boolean): String {
         val timeZone = TimeZone.of("UTC+08:00")
@@ -62,6 +63,44 @@ internal class XdSDKTest {
                 result = result + " " + time.hour + ":" + time.minute
             } else if (duration.inWholeHours >= 1) {
                 result = time.hour.toString() + ":" + time.minute.toString()
+            }
+        }
+
+        return result
+    }
+
+    fun formatTime(originalTime: Long): String {
+        val timeZone = TimeZone.of("UTC+08:00")
+        val originalTimeInISO = StringBuilder(originalTime.toString())
+            .insert(4,'-')
+            .insert(7,'-')
+            .insert(10,'T')
+            .insert(13,':')
+            .insert(16,":0")
+            .toString()
+        val time = LocalDateTime.parse(originalTimeInISO)
+        val currentInstant = Clock.System.now()
+        val current = currentInstant.toLocalDateTime(timeZone)
+
+        val date = time.date.atTime(12, 0, 0, 0).toInstant(timeZone)
+        val currentDate = currentInstant.toLocalDateTime(timeZone).date
+            .atTime(12, 0, 0, 0).toInstant(timeZone)
+        val diffInDay = date.periodUntil(currentDate, timeZone)
+
+        var result: String = if (diffInDay.months == 0 && time.year == current.year) {
+            when (diffInDay.days) {
+                -2 -> "后天"
+                -1 -> "明天"
+                0 -> "今天"
+                1 -> "昨天"
+                2 -> "前天"
+                else -> time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
+            }
+        } else {
+            if (time.year == current.year) {
+                time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
+            } else {
+                time.year.toString() + "年" + time.monthNumber + "月" + time.dayOfMonth + "日"
             }
         }
 

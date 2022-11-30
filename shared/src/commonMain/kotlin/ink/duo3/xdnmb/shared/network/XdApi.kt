@@ -1,9 +1,11 @@
 package ink.duo3.xdnmb.shared.network
 
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
+import ink.duo3.xdnmb.shared.data.entity.Notice
 import ink.duo3.xdnmb.shared.data.entity.Thread
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -59,8 +61,16 @@ class XdApi {
     }
 
     suspend fun getReply(cookie: String?, threadId: Int, page: Int): Thread {
-        return httpClient.get("$xdUrl/thread?id=$threadId&page=$page"){
-            header("Cookie", "userhash=$cookie;")
-        }.body()
+        //try {
+            return httpClient.get("$xdUrl/thread?id=$threadId&page=$page") {
+                header("Cookie", "userhash=$cookie;")
+            }.body()
+        /*} catch (e: ResponseException) {
+
+        }*/
+    }
+
+    suspend fun getNotice(): Notice {
+        return httpClient.get("https://nmb.ovear.info/nmb-notice.json").body()
     }
 }

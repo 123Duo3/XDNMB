@@ -4,6 +4,7 @@ import ink.duo3.xdnmb.shared.data.cache.Database
 import ink.duo3.xdnmb.shared.data.cache.DatabaseDriverFactory
 import ink.duo3.xdnmb.shared.data.entity.Cookie
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
+import ink.duo3.xdnmb.shared.data.entity.Notice
 import ink.duo3.xdnmb.shared.data.entity.Thread
 import ink.duo3.xdnmb.shared.network.XdApi
 import kotlinx.coroutines.Dispatchers
@@ -128,6 +129,30 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
             return@withContext database.getSelectedCookie()
         }
 
+    @Throws(Exception::class)
+    suspend fun getCurrentNotice(): Notice? =
+        withContext(Dispatchers.Default) {
+            val cachedNotice = database.getLastNotice()
+            val currentNotice = api.getNotice()
+            var result: Notice? = if (
+                cachedNotice?.content != currentNotice.content
+                || cachedNotice.date != currentNotice.date
+                || cachedNotice.dismissed == false
+            ){
+                currentNotice.also {
+                    database.createNotice(it)
+                }
+            } else {
+                null
+            }
+            return@withContext result
+        }
+
+    @Throws(Exception::class)
+    suspend fun dismissCurrentNotice() {
+        val currentNotice = database.getLastNotice()
+        database.createNotice(currentNotice!!.copy(dismissed = true))
+    }
 
     fun imgToUrl(img: String, ext: String, isThumb: Boolean): String {
         var imageType = "image/"
@@ -188,6 +213,44 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
                     result + " " + time.hour.let { if (it < 10) "0$it" else it } + ":" + time.minute.let { if (it < 10) "0$it" else it }
             } else if (duration.inWholeHours >= 1) {
                 result = time.hour.let { if (it < 10) "0$it" else it.toString() } + ":" + time.minute.let { if (it < 10) "0$it" else it }
+            }
+        }
+
+        return result
+    }
+
+    fun formatTime(originalTime: Long): String {
+        val timeZone = TimeZone.of("UTC+08:00")
+        val originalTimeInISO = StringBuilder(originalTime.toString())
+            .insert(4,'-')
+            .insert(7,'-')
+            .insert(10,'T')
+            .insert(13,':')
+            .insert(16,":0")
+            .toString()
+        val time = LocalDateTime.parse(originalTimeInISO)
+        val currentInstant = Clock.System.now()
+        val current = currentInstant.toLocalDateTime(timeZone)
+
+        val date = time.date.atTime(12, 0, 0, 0).toInstant(timeZone)
+        val currentDate = currentInstant.toLocalDateTime(timeZone).date
+            .atTime(12, 0, 0, 0).toInstant(timeZone)
+        val diffInDay = date.periodUntil(currentDate, timeZone)
+
+        var result: String = if (diffInDay.months == 0 && time.year == current.year) {
+            when (diffInDay.days) {
+                -2 -> "后天"
+                -1 -> "明天"
+                0 -> "今天"
+                1 -> "昨天"
+                2 -> "前天"
+                else -> time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
+            }
+        } else {
+            if (time.year == current.year) {
+                time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
+            } else {
+                time.year.toString() + "年" + time.monthNumber + "月" + time.dayOfMonth + "日"
             }
         }
 

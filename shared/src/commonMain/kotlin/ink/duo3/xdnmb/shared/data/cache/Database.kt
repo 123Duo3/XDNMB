@@ -4,9 +4,8 @@ import ink.duo3.xdnmb.shared.data.entity.Cookie
 import ink.duo3.xdnmb.shared.data.entity.Forum
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Thread
-import io.ktor.util.debug.plugins.PluginName
+import ink.duo3.xdnmb.shared.data.entity.Notice
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 
 internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     private val database = AppDatabase(databaseDriverFactory.createDriver())
@@ -340,5 +339,38 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
 
     private fun insertCookie(cookie: Cookie) {
         dbQuery.insertCookie(cookie.cookie, cookie.name, cookie.rank, cookie.selected)
+    }
+
+    internal fun clearNotice() {
+        dbQuery.transaction {
+            dbQuery.removeAllNotice()
+        }
+    }
+
+    internal fun getAllNotice(): List<Notice> {
+        return dbQuery.selectAllNotice(::mapNoticeSelecting).executeAsList()
+    }
+
+    internal fun getLastNotice(): Notice? {
+        return dbQuery.selectAllNotice(::mapNoticeSelecting).executeAsOneOrNull()
+    }
+
+    private fun mapNoticeSelecting(
+        content: String,
+        date: Long,
+        enable: Boolean,
+        dismissed: Boolean?
+    ): Notice{
+        return Notice(content, date, enable, dismissed)
+    }
+
+    internal fun createNotice(notice: Notice) {
+        dbQuery.transaction {
+            insertNotice(notice)
+        }
+    }
+
+    private fun insertNotice(notice: Notice) {
+        dbQuery.insertNotice(notice.content, notice.date, notice.enable, notice.dismissed)
     }
 }
