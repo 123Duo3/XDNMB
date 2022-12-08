@@ -1,4 +1,8 @@
 # 雾岛
+
+[![License](https://img.shields.io/github/license/123Duo3/XDNMB)](https://github.com/123Duo3/XDNMB/blob/main/LICENSE)
+![On Development](https://img.shields.io/badge/on-development-yellow)
+
 一个开源的[匿名版X岛](https://www.nmbxd.com)第三方移动端客户端，支持Android和iOS系统。
 
 ## 下载
