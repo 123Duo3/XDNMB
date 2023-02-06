@@ -17,6 +17,6 @@
 更多方法和疑难解答请参考[Kotlin文档中有关此部分的描述](https://kotlinlang.org/docs/multiplatform-mobile-setup.html)。
 
 ## 关于
-* Copyright (C) 2022 123哆3 & Konyaco.
+* Copyright (C) 2023 123哆3 & Konyaco.
 * 欢迎提交Pull Request帮助我们开发，以及提出Issue来描述您遇到的问题。
 * 您可以在[爱发电](https://afdian.net/a/123duo3)中进行捐赠，以支持开发。
