@@ -53,12 +53,26 @@ extension String {
 }
 
 extension UIColor {
-    var hexString:String? {
+    var hexString: String? {
         if let components = self.cgColor.components {
-            let r = components[0]
-            let g = components[1]
-            let b = components[2]
-            return  String(format: "#%02x%02x%02x", (Int)(r * 255), (Int)(g * 255), (Int)(b * 255))
+            let r, g, b: CGFloat
+            switch components.count {
+            case 2:
+                r = components[0]
+                g = components[0]
+                b = components[0]
+            case 3:
+                r = components[0]
+                g = components[1]
+                b = components[2]
+            case 4:
+                r = components[0]
+                g = components[1]
+                b = components[2]
+            default:
+                return nil
+            }
+            return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
         }
         return nil
     }
