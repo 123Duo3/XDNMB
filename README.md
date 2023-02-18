@@ -6,7 +6,7 @@
 一个开源的[匿名版X岛](https://www.nmbxd.com)第三方移动端客户端，支持Android和iOS系统。
 
 ## 下载
-您可以在桌面端网页左侧和移动端页面的下方中的[Releases页](https://github.com/123Duo3/XDNMB/releases)中找到最新和历史版本的下载链接。
+您可以在桌面端网页右侧和移动端页面的下方中的[Releases页](https://github.com/123Duo3/XDNMB/releases)中找到最新和历史版本的下载链接。
 
 ## 如何编译
 ### Android端
