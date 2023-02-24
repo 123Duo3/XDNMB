@@ -20,3 +20,6 @@
 * Copyright (C) 2023 123哆3 & Konyaco.
 * 欢迎提交Pull Request帮助我们开发，以及提出Issue来描述您遇到的问题。
 * 您可以在[爱发电](https://afdian.net/a/123duo3)中进行捐赠，以支持开发。
+
+## 特别鸣谢
+感谢[良辰](https://github.com/keivnluo6191)对于开发的大力支持。
