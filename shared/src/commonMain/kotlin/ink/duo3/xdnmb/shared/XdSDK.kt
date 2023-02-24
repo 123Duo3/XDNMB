@@ -166,6 +166,13 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         return database.getForumName(forumId.toString())
     }
 
+    /**
+     * 将时间字符串格式化为友好的相对时间
+     *
+     * @param originalTime 要格式化的时间字符串，格式如"2021-02-21(日)18:35:24"
+     * @param inThread 是否显示具体时间（小时和分钟）
+     * @return 格式化后的时间字符串，例如"1小时前"或"昨天 12:30"或"2021年2月21日 12:30"
+     */
     fun formatTime(originalTime: String, inThread: Boolean): String {
         val timeZone = TimeZone.of("UTC+08:00")
         val originalTimeInISO = originalTime.replace(Regex("\\((.+?)\\)"), "T")
@@ -181,7 +188,7 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         val duration = currentInstant - timeInstant
         var result: String
 
-        result = if (diffInDay.days < 1 && diffInDay.months == 0) {
+        result = if (diffInDay.days < 1 && diffInDay.months == 0 && diffInDay.years == 0) {
             if (duration.inWholeHours < 1) {
                 if (duration.inWholeMinutes < 1) {
                     duration.inWholeSeconds.toString() + "秒前"
@@ -219,6 +226,12 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
         return result
     }
 
+    /**
+     * 将公告中的时间转化为易于阅读的形式
+     *
+     * @param originalTime 要格式化的时间，如"20210221180000"
+     * @return 格式化后的字符串
+     */
     fun formatTime(originalTime: Long): String {
         val timeZone = TimeZone.of("UTC+08:00")
         val originalTimeInISO = StringBuilder(originalTime.toString())

@@ -125,7 +125,7 @@ fun formatTime(originalTime: String, inThread: Boolean): String {
     val duration = currentInstant - timeInstant
     var result: String
 
-    result = if (diffInDay.days < 1) {
+    result = if (diffInDay.days < 1 && diffInDay.months == 0 && diffInDay.years == 0) {
         if (duration.inWholeHours < 1) {
             if (duration.inWholeMinutes < 1) {
                 duration.inWholeSeconds.toString() + "秒前"
@@ -135,17 +135,19 @@ fun formatTime(originalTime: String, inThread: Boolean): String {
         } else {
             duration.inWholeHours.toString() + "小时前"
         }
-    } else {
+    } else if (diffInDay.months == 0) {
         when (diffInDay.days) {
             -2 -> "后天"
             -1 -> "明天"
             1 -> "昨天"
             2 -> "前天"
-            else -> if (time.year == current.year) {
-                time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
-            } else {
-                time.year.toString() + "年" + time.monthNumber + "月" + time.dayOfMonth + "日"
-            }
+            else -> time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
+        }
+    } else {
+        if (time.year == current.year) {
+            time.monthNumber.toString() + "月" + time.dayOfMonth + "日"
+        } else {
+            time.year.toString() + "年" + time.monthNumber + "月" + time.dayOfMonth + "日"
         }
     }
 
