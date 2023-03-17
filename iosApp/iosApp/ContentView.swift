@@ -16,7 +16,7 @@ struct ContentView: View {
                 }
             SelectionView(sdk: sdk)
                 .tabItem{
-                    Label("设置", systemImage: "gear")
+                    Label("选项", systemImage: "gear")
                 }
         }
 	}
