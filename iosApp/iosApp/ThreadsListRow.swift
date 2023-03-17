@@ -78,7 +78,7 @@ struct Threads: View {
                 HStack {
                     Text(threads.userHash)
                         .foregroundColor(isAdmin(admin: threads.admin))
-                        .font(.custom("consolas", size: 14))
+                        .font(.system(.footnote, design: .monospaced))
                     Spacer()
                     if(forumId == "-1" || forumId == "-2" || forumId == "-3") {
                         Text(sdk.getForumName(forumId: Int32(truncating: threads.fid!)))
@@ -87,7 +87,7 @@ struct Threads: View {
                     }
                     Text("No." + String(threads.id))
                         .foregroundColor(Color.gray)
-                        .font(.custom("consolas", size: 14))
+                        .font(.system(.footnote, design: .monospaced))
                     if (threads.sage == 1) {
                         Text("•")
                             .foregroundColor(Color.gray)
