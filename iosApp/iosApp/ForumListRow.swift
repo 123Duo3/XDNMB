@@ -14,26 +14,44 @@ struct ForumListRow: View {
     let sdk = XdSDK(databaseDriverFactory: DatabaseDriverFactory())
     
     var body: some View {
-        NavigationView {
-            List() {
+        VStack {
+            List {
+                Section {
+                    VStack(alignment: .center) {
+                        HStack {
+                            Spacer()
+                            Text("没有收藏")
+                                .foregroundColor(.gray)
+                            Spacer()
+                        }
+                        HStack {
+                            Spacer()
+                            Text("滑动板块来收藏")
+                                .font(.system(size: 14))
+                                .foregroundColor(.gray)
+                            Spacer()
+                        }
+                    }
+                } header: {
+                    Text("收藏").bold().font(.callout)
+                }
                 ForEach(forumList) { forumGroup in
-                    Section(header: Text(forumGroup.name)) {
+                    Section(header: Text(forumGroup.name).bold().font(.callout)) {
                         ForEach(forumGroup.forums) { forum in
-                            let forumId = forum.id
-                            NavigationLink(destination: {
-                                if (forumId == "-1") {
-                                    TimelineView(viewModel: .init(sdk: sdk), sdk: sdk)
+                            let forumGroupId = forum.fgroup
+                            NavigationLink {
+                                if (forumGroupId == "-1") {
+                                    TimelineView(viewModel: .init(sdk: sdk, forumId: forum.id), sdk: sdk, forumId: forum.id, forumShowName: forum.name)
                                 } else {
                                     ForumThreadView(viewModel: .init(sdk: sdk, forumId: forum.id), sdk: sdk, forumId: forum.id, forumShowName: forum.name)
                                 }
-                            }){
+                            } label: {
                                 Forum(name: forum.name, showName: forum.showName)
                             }
                         }
                     }
                 }
             }
-            .navigationTitle("板块")
         }
     }
 }

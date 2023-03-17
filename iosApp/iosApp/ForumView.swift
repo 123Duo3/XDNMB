@@ -11,26 +11,44 @@ import shared
 
 struct ForumView: View {
     @ObservedObject private(set) var viewModel: ViewModel
+    @State var isShowAlert: Bool = false
     
     var body: some View {
-        listView()
+        NavigationView {
+            listView()
+                .navigationTitle("板块")
+        }
     }
     
     private func listView() -> AnyView {
         switch viewModel.forumList {
         case .loading:
             return AnyView(
-                NavigationView{
-                    Text("加载中...")
-                }
-                    .navigationTitle("板块")
+                Text("加载中...(　ﾟ 3ﾟ)")
             )
         case.result(let forumList):
             return AnyView(
                 ForumListRow(forumList: forumList)
             )
         case.error(let discription):
-            return AnyView(Text(discription).multilineTextAlignment(.center))
+            return AnyView(
+                VStack {
+                    Text("Oops! 加载失败(;´Д`)")
+                        .bold()
+                    Text("")
+                    HStack {
+                        Button("查看错误信息") {
+                            self.isShowAlert.toggle()
+                        }
+                        Button("重试") {
+                            viewModel.loadForumList(forceReload: true)
+                        }
+                    }
+                    .alert(isPresented: $isShowAlert) {
+                        Alert(title: Text("错误信息"), message: Text(discription), dismissButton: .default(Text("确定")))
+                    }
+                }
+            )
         }
     }
 }

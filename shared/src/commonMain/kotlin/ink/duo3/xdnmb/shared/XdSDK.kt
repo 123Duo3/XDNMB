@@ -2,10 +2,7 @@ package ink.duo3.xdnmb.shared
 
 import ink.duo3.xdnmb.shared.data.cache.Database
 import ink.duo3.xdnmb.shared.data.cache.DatabaseDriverFactory
-import ink.duo3.xdnmb.shared.data.entity.Cookie
-import ink.duo3.xdnmb.shared.data.entity.ForumGroup
-import ink.duo3.xdnmb.shared.data.entity.Notice
-import ink.duo3.xdnmb.shared.data.entity.Thread
+import ink.duo3.xdnmb.shared.data.entity.*
 import ink.duo3.xdnmb.shared.network.XdApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,35 +20,71 @@ class XdSDK(databaseDriverFactory: DatabaseDriverFactory) {
     private val imageCDN = "https://image.nmb.best/"
 
     @Throws(Exception::class)
+    suspend fun getTimelineList(): List<ForumGroup> =
+        withContext(Dispatchers.Default) {
+            val timelineList = api.getTimelineList()
+            return@withContext listOf(
+                ForumGroup(
+                    id = "-1",
+                    name = "时间线",
+                    sort = "-1",
+                    status = "n",
+                    forums = timelineList.map {
+                        Forum(
+                            id = it.id.toString(),
+                            fgroup = "-1",
+                            sort = "2",
+                            name = it.name,
+                            showName = it.display_name,
+                            msg = it.notice,
+                            interval = null,
+                            safeMode = null,
+                            autoDelete = null,
+                            threadCount = null,
+                            permissionLevel = null,
+                            forumFuseId = null,
+                            createdAt = null,
+                            updateAt = null,
+                            status = null
+                        )
+                    }
+                )
+            )
+        }
+
+    @Throws(Exception::class)
     suspend fun getForumList(forceReload: Boolean): List<ForumGroup> =
         withContext(Dispatchers.Default) {
             val cachedForumList = database.getAllForums()
-            return@withContext if (cachedForumList.isNotEmpty() && !forceReload) {
-                cachedForumList.also{
-                    api.getForumList().also {
-                        database.clearForumDatabase()
-                        database.createForumList(it)
-                    }
-                }
+            val forumList = if (cachedForumList.isNotEmpty() && !forceReload) {
+                cachedForumList
             } else {
                 api.getForumList().also {
                     database.clearForumDatabase()
                     database.createForumList(it)
                 }
             }
+
+            return@withContext getTimelineList() + forumList.map { forumGroup ->
+                if (forumGroup.id == "4") {
+                    forumGroup.copy(forums = forumGroup.forums.filterNot { it.id == "-1" && it.name == "时间线" })
+                } else {
+                    forumGroup
+                }
+            }
         }
 
     @Throws(Exception::class)
-    suspend fun getTimeLine(forceReload: Boolean, page: Int): List<Thread> =
+    suspend fun getTimeLine(forumId: Int, forceReload: Boolean, page: Int): List<Thread> =
         withContext(Dispatchers.Default) {
             var cachedThreadList = database.getAllTimeLine()
             if (cachedThreadList.isNotEmpty() && !forceReload) {
-                val nextPage = api.getTimeLine(page)
+                val nextPage = api.getTimeLine(forumId, page)
                 database.createTimeLine(nextPage)
                 cachedThreadList = database.getAllTimeLine()
                 return@withContext cachedThreadList
             } else {
-                return@withContext api.getTimeLine(page).onEach { thread ->
+                return@withContext api.getTimeLine(forumId, page).onEach { thread ->
                     thread.forumName = getForumName(thread.fid!!)
                 }.also {
                     database.clearTimeLine()

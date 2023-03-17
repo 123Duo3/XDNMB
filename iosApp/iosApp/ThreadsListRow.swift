@@ -70,50 +70,53 @@ struct Threads: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var htmlText: NSAttributedString?
     
-    var body: some View{
-        NavigationLink(destination: {
+    var body: some View {
+        NavigationLink {
             InThreadView(viewModel: .init(sdk: sdk, threadId: Int(threads.id), page: 1), sdk: sdk, threadId: String(threads.id), forumId: forumId)
-        }) {
-            
+        } label: {
             VStack(alignment: .leading) {
-                HStack{
-                    if(forumId == "-1"){
+                HStack {
+                    Text(threads.userHash)
+                        .foregroundColor(isAdmin(admin: threads.admin))
+                        .font(.custom("consolas", size: 14))
+                    Spacer()
+                    if(forumId == "-1" || forumId == "-2" || forumId == "-3") {
                         Text(sdk.getForumName(forumId: Int32(truncating: threads.fid!)))
                         Text("•")
                             .foregroundColor(Color.gray)
                     }
                     Text("No." + String(threads.id))
                         .foregroundColor(Color.gray)
-                    if(threads.sage == 1){
+                        .font(.custom("consolas", size: 14))
+                    if (threads.sage == 1) {
                         Text("•")
                             .foregroundColor(Color.gray)
                         Text("SAGE")
                             .fontWeight(.semibold)
                             .foregroundColor(Color.red)
                     }
-                    Spacer()
-                    Label(sdk.formatTime(originalTime: threads.time, inThread: false), systemImage: "")
-                        .labelStyle(.titleOnly)
-                    Label("", systemImage: "clock")
-                        .labelStyle(.iconOnly)
-                }.padding(.bottom, 1.0).font(.caption).foregroundColor(Color(UIColor.label))
+                }
+                .padding(.bottom, 1.0)
+                .font(.caption)
+                .foregroundColor(Color(UIColor.label))
                 
-                VStack(alignment: .leading){
-                    if(threads.title != "无标题"){
+                VStack(alignment: .leading) {
+                    if (threads.title != "无标题") {
                         Text(threads.title)
-                            .font(.headline)
-                            .foregroundColor(Color(UIColor.label))
-                            .multilineTextAlignment(.leading)
+                        .font(.headline)
+                        .foregroundColor(Color(UIColor.label))
+                        .multilineTextAlignment(.leading)
                     }
-                    if(threads.name != "无名氏" && threads.name != "无标题" ){
+                    if (threads.name != "无名氏") {
                         Text(threads.name)
                             .font(.subheadline)
                             .foregroundColor(Color.gray)
                             .multilineTextAlignment(.leading)
                     }
-                } .padding(.bottom, 1.0)
+                }
+                .padding(.bottom, 1.0)
                 
-                VStack(alignment: .leading){
+                VStack(alignment: .leading) {
                     if let htmlText {
                         Text(AttributedString(htmlText))
                             .multilineTextAlignment(.leading)
@@ -126,7 +129,6 @@ struct Threads: View {
                             .multilineTextAlignment(.leading)
                             .lineLimit(16)
                     }
-                    
                     if (threads.img != "") {
                         AsyncImage(
                             url: URL(string:sdk.imgToUrl(img: threads.img, ext: threads.ext, isThumb: true))
@@ -141,29 +143,31 @@ struct Threads: View {
                         .frame(maxHeight: 100)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
-                }.onAppear{
+                }.onAppear {
                     DispatchQueue.main.async {
                         htmlText = threads.content.htmlAttributedString()
                     }
                 }
                 
-                HStack{
-                    Text(threads.userHash)
-                        .foregroundColor(isAdmin(admin: threads.admin))
+                HStack {
+                    Label("", systemImage: "clock")
+                        .labelStyle(.iconOnly)
+                    Label(sdk.formatTime(originalTime: threads.time, inThread: false), systemImage: "")
+                        .labelStyle(.titleOnly)
                     Spacer()
                     Label(String(Int(truncating: threads.replyCount ?? 0)) + "条回复", systemImage: "")
                         .labelStyle(.titleOnly)
                     Label("", systemImage: "bubble.right")
                         .labelStyle(.iconOnly)
-                    
-                }.padding(.top, 1.0).font(.caption).foregroundColor(Color(UIColor.label))
-                
-                
+                }
+                .padding(.top, 1.0)
+                .font(.caption)
+                .foregroundColor(Color(UIColor.label))
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 18)
             .frame(maxWidth: .infinity)
-            .background(Color (UIColor.secondarySystemGroupedBackground))
+            .background(Color(UIColor.secondarySystemGroupedBackground))
             .cornerRadius(16)
         }
     }

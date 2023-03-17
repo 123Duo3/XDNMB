@@ -23,6 +23,8 @@
 		37C0325F291609DC003C2968 /* ForumThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C0325E291609DC003C2968 /* ForumThreadView.swift */; };
 		37C8ABA12934F21D008D4B91 /* SwiftUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C8ABA02934F21D008D4B91 /* SwiftUIView.swift */; };
 		7555FF83242A565900829871 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF82242A565900829871 /* ContentView.swift */; };
+		7DE5D93829C446950057F82A /* consolas.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7DE5D93729C446950057F82A /* consolas.ttf */; };
+		7DE5D93A29C447700057F82A /* SubscribeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE5D93929C447700057F82A /* SubscribeView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -57,6 +59,10 @@
 		7555FF7B242A565900829871 /* 雾岛.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "雾岛.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7555FF82242A565900829871 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7555FF8C242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7DE5D93729C446950057F82A /* consolas.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = consolas.ttf; sourceTree = "<group>"; };
+		7DE5D93929C447700057F82A /* SubscribeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscribeView.swift; sourceTree = "<group>"; };
+		7DE5D93B29C447740057F82A /* consolas.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = consolas.ttf; path = iosApp/consolas.ttf; sourceTree = SOURCE_ROOT; };
+		7DE5D93C29C4477A0057F82A /* consolas.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = consolas.ttf; path = iosApp/consolas.ttf; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +79,8 @@
 		3777FAC6291E1EB90079C4B1 /* Preview Content */ = {
 			isa = PBXGroup;
 			children = (
+				7DE5D93C29C4477A0057F82A /* consolas.ttf */,
+				7DE5D93B29C447740057F82A /* consolas.ttf */,
 			);
 			name = "Preview Content";
 			path = "../../../../../.Trash/Preview Content";
@@ -99,6 +107,7 @@
 			isa = PBXGroup;
 			children = (
 				7555FF8C242A565B00829871 /* Info.plist */,
+				7DE5D93729C446950057F82A /* consolas.ttf */,
 				058557BA273AAA24004C7B11 /* Assets.xcassets */,
 				3777FAC6291E1EB90079C4B1 /* Preview Content */,
 				7555FF82242A565900829871 /* ContentView.swift */,
@@ -116,6 +125,7 @@
 				37A543A629238A81008330A6 /* CookieRow.swift */,
 				37C8ABA02934F21D008D4B91 /* SwiftUIView.swift */,
 				3763DD37299103BB0081EB71 /* iOSApp.swift */,
+				7DE5D93929C447700057F82A /* SubscribeView.swift */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -192,6 +202,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7DE5D93829C446950057F82A /* consolas.ttf in Resources */,
 				058557BB273AAA24004C7B11 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -234,6 +245,7 @@
 				37AC245529168B6F00B34766 /* InThreadView.swift in Sources */,
 				376A83442913EAAE00177017 /* ForumView.swift in Sources */,
 				37A543A729238A81008330A6 /* CookieRow.swift in Sources */,
+				7DE5D93A29C447700057F82A /* SubscribeView.swift in Sources */,
 				372819BC290D71E300DEF1CC /* ThreadsListRow.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
 				37513AC1291BEF8F00B8BBA6 /* SelectionView.swift in Sources */,

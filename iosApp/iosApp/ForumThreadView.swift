@@ -11,6 +11,7 @@ import shared
 
 struct ForumThreadView: View {
     @ObservedObject private(set) var viewModel: ViewModel
+    @State var isShowAlert: Bool = false
     var sdk: XdSDK
     var forumId: String
     var forumShowName: String
@@ -34,8 +35,23 @@ struct ForumThreadView: View {
             )
         case.error(let discription):
             return AnyView(
-                Text(discription).multilineTextAlignment(.center)
+                VStack {
+                    Text("Oops! 加载失败(´Д` )")
+                        .bold()
+                    Text("")
+                    HStack {
+                        Button("查看错误信息") {
+                            self.isShowAlert.toggle()
+                        }
+                        Button("重试") {
+                            viewModel.refreshForumThread(forceReload: true)
+                        }
+                    }
+                    .alert(isPresented: $isShowAlert) {
+                        Alert(title: Text("错误信息"), message: Text(discription), dismissButton: .default(Text("确定")))
+                    }
                     .navigationTitle(forumShowName)
+                }
             )
         }
     }

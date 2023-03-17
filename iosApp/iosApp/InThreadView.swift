@@ -11,6 +11,7 @@ import shared
 
 struct InThreadView: View {
     @ObservedObject private(set) var viewModel: ViewModel
+    @State var isShowAlert: Bool = false
     var sdk: XdSDK
     var threadId: String
     let forumId: String
@@ -58,8 +59,23 @@ struct InThreadView: View {
             )
         case.error(let discription):
             return AnyView(
-                Text(discription).multilineTextAlignment(.center)
+                VStack {
+                    Text("Oops! 加载失败(´Д` )")
+                        .bold()
+                    Text("")
+                    HStack {
+                        Button("查看错误信息") {
+                            self.isShowAlert.toggle()
+                        }
+                        Button("重试") {
+                            viewModel.loadReply(threadId: Int(threadId)!)
+                        }
+                    }
+                    .alert(isPresented: $isShowAlert) {
+                        Alert(title: Text("错误信息"), message: Text(discription), dismissButton: .default(Text("确定")))
+                    }
                     .navigationTitle("No." + threadId)
+                }
             )
         }
     }
@@ -87,6 +103,7 @@ extension InThreadView {
         @Published var replies = LoadableReply.loading
         @Published var currentPage = 1
         @Published var nextPage = LoadaleNextPage.success
+        @Published var onlyPo = false
         
         init(sdk: XdSDK, threadId: Int, page: Int) {
             self.sdk = sdk

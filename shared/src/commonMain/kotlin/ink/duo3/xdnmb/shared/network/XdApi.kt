@@ -3,6 +3,7 @@ package ink.duo3.xdnmb.shared.network
 import ink.duo3.xdnmb.shared.data.entity.ForumGroup
 import ink.duo3.xdnmb.shared.data.entity.Notice
 import ink.duo3.xdnmb.shared.data.entity.Thread
+import ink.duo3.xdnmb.shared.data.entity.Timeline
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ResponseException
@@ -50,8 +51,12 @@ class XdApi {
         return httpClient.get("$xdUrl/getForumList").body()
     }
 
-    suspend fun getTimeLine(page: Int): List<Thread> {
-        return httpClient.get("$xdUrl/timeline/1?page=$page").body()
+    suspend fun getTimelineList(): List<Timeline> {
+        return httpClient.get("$xdUrl/getTimelineList").body()
+    }
+
+    suspend fun getTimeLine(forumId: Int, page: Int): List<Thread> {
+        return httpClient.get("$xdUrl/timeline/?id=$forumId&page=$page").body()
     }
 
     suspend fun getTreadList(cookie: String?, fid: Int, page: Int): List<Thread> {
