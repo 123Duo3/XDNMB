@@ -47,7 +47,7 @@ struct InThreadView: View {
                                 }
                                 Menu(content: {
                                     Button(action: {}, label: {Label("只看Po主", systemImage: "p.circle")})
-                                    Button(action: {}, label: {Label("添加订阅", systemImage: "bookmark")})
+                                    Button(action: {}, label: {Label("添加订阅", systemImage: "star")})
                                     Button(action: {}, label: {Label("举报", systemImage: "flag")})
                                     Button(action: {}, label: {Label("分享", systemImage: "square.and.arrow.up")})
                                 }, label: {

@@ -34,7 +34,7 @@ struct ForumView: View {
             return AnyView(
                 VStack {
                     Text("Oops! 加载失败(;´Д`)")
-                        .bold()
+                        .font(.headline)
                     Text("")
                     HStack {
                         Button("查看错误信息") {
@@ -44,6 +44,7 @@ struct ForumView: View {
                             viewModel.loadForumList(forceReload: true)
                         }
                     }
+                    .buttonStyle(.bordered)
                     .alert(isPresented: $isShowAlert) {
                         Alert(title: Text("错误信息"), message: Text(discription), dismissButton: .default(Text("确定")))
                     }

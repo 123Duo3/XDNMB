@@ -27,11 +27,11 @@ struct ForumListRow: View {
                         HStack {
                             Spacer()
                             Text("滑动板块来收藏")
-                                .font(.system(size: 14))
+                                .font(.caption)
                                 .foregroundColor(.gray)
                             Spacer()
                         }
-                    }
+                    }.padding(1)
                 } header: {
                     Text("收藏").bold().font(.callout)
                 }
@@ -66,8 +66,12 @@ struct Forum: View {
             if (showName ?? "" == ""){
                 Text(name)
             } else {
-                if let htmlText {
-                    Text(AttributedString(htmlText))
+                if(showName!.contains("<")){
+                    if let htmlText {
+                        Text(AttributedString(htmlText))
+                    }
+                } else {
+                    Text(showName!)
                 }
             }
         }.onAppear{

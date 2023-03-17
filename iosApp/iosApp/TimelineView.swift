@@ -37,8 +37,13 @@ struct TimelineView: View {
         case.error(let discription):
             return AnyView(
                 VStack {
-                    Text("Oops! 加载失败(´Д` )")
-                        .bold()
+                    if(discription != "Illegal input"){
+                        Text("Oops! 加载失败(´Д` )")
+                            .font(.headline)
+                    } else {
+                        Text("饼干权限不足！(>д<)")
+                            .font(.headline)
+                    }
                     Text("")
                     HStack {
                         Button("查看错误信息") {
@@ -49,7 +54,7 @@ struct TimelineView: View {
                                 await viewModel.refreshTimeline(forceReload: true)
                             }
                         }
-                    }
+                    }.buttonStyle(.bordered)
                     .alert(isPresented: $isShowAlert) {
                         Alert(title: Text("错误信息"), message: Text(discription), dismissButton: .default(Text("确定")))
                     }
