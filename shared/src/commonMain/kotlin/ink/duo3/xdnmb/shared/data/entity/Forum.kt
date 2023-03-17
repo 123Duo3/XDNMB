@@ -52,3 +52,17 @@ data class Forum(
     @SerialName("status")
     val status: String?
 )
+
+@Serializable
+data class Timeline(
+    @SerialName("id")
+    val id: Int,
+    @SerialName("name")
+    val name: String,
+    @SerialName("display_name")
+    val display_name: String,
+    @SerialName("notice")
+    val notice: String,
+    @SerialName("max_page")
+    val max_page: Int
+)

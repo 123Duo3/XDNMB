@@ -28,6 +28,7 @@ struct InThreadRow: View {
                     }
                     Text(replyList.userHash)
                         .foregroundColor(isAdmin(admin: replyList.admin))
+                        .font(.system(.footnote, design: .monospaced))
                     Label(String(Int(truncating: replyList.replyCount ?? 0)), systemImage: "bubble.right")
                         .padding(.leading, 8)
                     Label(sdk.formatTime(originalTime: replyList.time, inThread: true), systemImage: "clock")
@@ -141,16 +142,20 @@ struct Reply: View {
                             Text("•")
                                 .foregroundColor(Color.gray)
                             Text("No." + String(reply.id))
+                                .font(.system(.footnote, design: .monospaced))
                             Text("•")
                                 .foregroundColor(Color.gray)
                             Text(reply.userHash)
                                 .foregroundColor(isAdmin(admin: reply.admin))
+                                .font(.system(.footnote, design: .monospaced))
                         } else {
                             Text("No." + String(reply.id))
+                                .font(.system(.footnote, design: .monospaced))
                             Text("•")
                                 .foregroundColor(Color.gray)
                             Text(reply.userHash)
                                 .foregroundColor(isAdmin(admin: reply.admin))
+                                .font(.system(.footnote, design: .monospaced))
                         }
                         if(reply.sage == 1){
                             Text("•")
@@ -163,9 +168,9 @@ struct Reply: View {
                         
                         Label(sdk.formatTime(originalTime: reply.time, inThread: true),systemImage: "")
                             .labelStyle(.titleOnly)
-                        Label("", systemImage: "clock")
+                        /* Label("", systemImage: "clock")
                             .labelStyle(.iconOnly)
-                            .padding(.bottom, 1.0)
+                            .padding(.bottom, 1.0) */
                     }
                 }.font(.caption)
             

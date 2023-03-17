@@ -11,11 +11,14 @@ import shared
 
 struct TimelineView: View {
     @ObservedObject private(set) var viewModel: ViewModel
+    @State var isShowAlert: Bool = false
     var sdk: XdSDK
+    var forumId: String
+    var forumShowName: String
     
     var body: some View {
         listView()
-            .navigationTitle(Text("时间线"))
+            .navigationTitle(forumShowName)
             .refreshable(action: {await self.viewModel.refreshTimeline(forceReload: true)})
     }
     
@@ -23,17 +26,40 @@ struct TimelineView: View {
         switch viewModel.timeline {
         case .loading:
             return AnyView(
-                NavigationView{
-                    Text("加载中...")
-                }
-                    .navigationTitle("时间线")
+                Text("加载中...")
+                    .navigationTitle(forumShowName)
             )
         case.result(let timeline):
             return AnyView(
-                ThreadsListRow(forumId: "-1", forumShowName: "时间线", threadList: timeline, sdk: sdk, viewModel: self.viewModel, notice: viewModel.notice)
+                ThreadsListRow(forumId: "-" + forumId, forumShowName: forumShowName, threadList: timeline, sdk: sdk, viewModel: self.viewModel, notice: viewModel.notice)
+                    .navigationTitle(forumShowName)
             )
         case.error(let discription):
-            return AnyView(Text(discription).multilineTextAlignment(.center))
+            return AnyView(
+                VStack {
+                    if(discription != "Illegal input"){
+                        Text("Oops! 加载失败(´Д` )")
+                            .font(.headline)
+                    } else {
+                        Text("饼干权限不足！(>д<)")
+                            .font(.headline)
+                    }
+                    Text("")
+                    HStack {
+                        Button("查看错误信息") {
+                            self.isShowAlert.toggle()
+                        }
+                        Button("重试") {
+                            Task {
+                                await viewModel.refreshTimeline(forceReload: true)
+                            }
+                        }
+                    }.buttonStyle(.bordered)
+                    .alert(isPresented: $isShowAlert) {
+                        Alert(title: Text("错误信息"), message: Text(discription), dismissButton: .default(Text("确定")))
+                    }
+                }
+            )
         }
     }
 }
@@ -47,19 +73,21 @@ extension TimelineView {
     
     class ViewModel: ObservableObject {
         let sdk: XdSDK
+        let forumId: String
         @Published var timeline = LoadableTimeline.loading
         @Published var notice: shared.Notice? = nil
         var threads: [shared.Thread]
         var currentPage: Int32
         
-        init(sdk: XdSDK) {
+        init(sdk: XdSDK, forumId: String) {
+            self.forumId = forumId
             self.sdk = sdk
             self.threads = []
             self.currentPage = 1
-            self.loadTimeline(forceReload: true)
+            self.loadTimeline(forumId: forumId, forceReload: true)
         }
         
-        func loadTimeline(forceReload: Bool) {
+        func loadTimeline(forumId: String, forceReload: Bool) {
             self.timeline = .loading
             sdk.getCurrentNotice(completionHandler: { notice, error in
                 if let notice = notice {
@@ -71,7 +99,7 @@ extension TimelineView {
                     print(error?.localizedDescription ?? "Error")
                 }
             })
-            sdk.getTimeLine(forceReload: forceReload, page: 1, completionHandler: { thread, error in
+            sdk.getTimeLine(forumId: Int32(forumId)!, forceReload: forceReload, page: 1, completionHandler: { thread, error in
                 if let thread = thread {
                     DispatchQueue.main.async {
                         self.timeline = .result(thread)
@@ -89,7 +117,7 @@ extension TimelineView {
         @MainActor
         func refreshTimeline(forceReload: Bool) async {
             DispatchQueue.main.async {
-                self.sdk.getTimeLine(forceReload: forceReload, page: 1, completionHandler: { thread, error in
+                self.sdk.getTimeLine(forumId: Int32(self.forumId)!, forceReload: forceReload, page: 1, completionHandler: { thread, error in
                     if let thread = thread {
                         self.threads = thread
                         self.currentPage = 1
@@ -102,7 +130,7 @@ extension TimelineView {
         }
         
         func loadNextPage() {
-            self.sdk.getTimeLine(forceReload: true, page: currentPage+1, completionHandler: {threadList, error in
+            self.sdk.getTimeLine(forumId: Int32(forumId)!, forceReload: true, page: currentPage+1, completionHandler: {threadList, error in
                 if let threadList = threadList {
                     DispatchQueue.main.async {
                         let timelineSet = NSMutableOrderedSet(array: self.threads)

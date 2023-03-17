@@ -5,31 +5,19 @@ struct ContentView: View {
     let sdk = XdSDK(databaseDriverFactory: DatabaseDriverFactory())
     
 	var body: some View {
-        TabView{
-            NavigationView{
-                TimelineView(viewModel: .init(sdk: sdk), sdk: sdk)
-            }
-                .navigationTitle("时间线")
-                .tabItem{
-                    Image(systemName: "clock.fill")
-                    Text("时间线")
-                }
-            
+        TabView {
             ForumView(viewModel: .init(sdk: sdk))
                 .tabItem{
-                    Image(systemName: "tray.2.fill")
-                    Text("板块")
+                    Label("板块", systemImage: "tray.2.fill")
                 }
-            
-            NavigationView{
-                SelectionView(sdk: sdk)
-            }
-                .navigationTitle("选项")
+            SubscribeView()
                 .tabItem{
-                    Image(systemName: "gear")
-                    Text("选项")
+                    Label("订阅", systemImage: "star")
                 }
-            
+            SelectionView(sdk: sdk)
+                .tabItem{
+                    Label("选项", systemImage: "gear")
+                }
         }
 	}
 }

@@ -107,7 +107,9 @@ struct SelectionView: View {
                         Text("查看源码")
                     }
                 }
-            }.listStyle(.insetGrouped)
-        }.navigationTitle("选项")
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("选项")
+        }
     }
 }

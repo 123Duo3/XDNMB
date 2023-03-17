@@ -11,6 +11,7 @@ import shared
 
 struct ForumThreadView: View {
     @ObservedObject private(set) var viewModel: ViewModel
+    @State var isShowAlert: Bool = false
     var sdk: XdSDK
     var forumId: String
     var forumShowName: String
@@ -34,8 +35,29 @@ struct ForumThreadView: View {
             )
         case.error(let discription):
             return AnyView(
-                Text(discription).multilineTextAlignment(.center)
+                VStack {
+                    if(discription != "Illegal input"){
+                        Text("Oops! 加载失败(´Д` )")
+                            .font(.headline)
+                    } else {
+                        Text("饼干权限不足！(>д<)")
+                            .font(.headline)
+                    }
+                    Text("")
+                    HStack {
+                        Button("查看错误信息") {
+                            self.isShowAlert.toggle()
+                        }
+                        Button("重试") {
+                            viewModel.refreshForumThread(forceReload: true)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .alert(isPresented: $isShowAlert) {
+                        Alert(title: Text("错误信息"), message: Text(discription), dismissButton: .default(Text("确定")))
+                    }
                     .navigationTitle(forumShowName)
+                }
             )
         }
     }
