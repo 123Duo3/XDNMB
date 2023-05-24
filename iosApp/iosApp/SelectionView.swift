@@ -84,7 +84,7 @@ struct SelectionView: View {
                 Section{
                     HStack{
                         HStack{
-                            Image("frogisland")
+                            Image("fogisland")
                                 .padding(4)
                                 .foregroundColor(Color.white)
                                 .frame(width: 30,height: 30)

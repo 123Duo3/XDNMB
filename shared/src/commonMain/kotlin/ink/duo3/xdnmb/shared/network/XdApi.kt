@@ -43,7 +43,7 @@ class XdApi {
             gzip()
         }
         install(UserAgent) {
-            agent = "frogIslandApp"
+            agent = "fogIslandApp"
         }
     }
 
