@@ -1,28 +1,33 @@
 import SwiftUI
-import shared
+import Shared
 
 struct ContentView: View {
-    let sdk = XdSDK(databaseDriverFactory: DatabaseDriverFactory())
-    
-	var body: some View {
-        TabView {
-            ForumView(viewModel: .init(sdk: sdk))
-                .tabItem{
-                    Label("板块", systemImage: "tray.2.fill")
+    @State private var showContent = false
+    var body: some View {
+        VStack {
+            Button("Click me!") {
+                withAnimation {
+                    showContent = !showContent
                 }
-            SubscribeView()
-                .tabItem{
-                    Label("订阅", systemImage: "star")
+            }
+
+            if showContent {
+                VStack(spacing: 16) {
+                    Image(systemName: "swift")
+                        .font(.system(size: 200))
+                        .foregroundColor(.accentColor)
+                    Text("SwiftUI: \(Greeting().greet())")
                 }
-            SelectionView(sdk: sdk)
-                .tabItem{
-                    Label("选项", systemImage: "gear")
-                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
-	}
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding()
+    }
 }
 
-extension ForumGroup: Identifiable { }
-extension Forum_: Identifiable { }
-extension shared.Forum: Identifiable { }
-extension shared.Thread: Identifiable { }
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}

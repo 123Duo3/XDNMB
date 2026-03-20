@@ -1,25 +1,52 @@
-# 雾岛
+This is a Kotlin Multiplatform project targeting Android, iOS, Desktop (JVM).
 
-[![License](https://img.shields.io/github/license/123Duo3/XDNMB)](https://github.com/123Duo3/XDNMB/blob/main/LICENSE)
-![On Development](https://img.shields.io/badge/on-development-yellow)
+* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
+  It contains several subfolders:
+  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
+  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
+    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
+    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
+    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
+    folder is the appropriate location.
 
-一个开源的[匿名版X岛](https://www.nmbxd.com)第三方移动端客户端，支持Android和iOS系统。
+* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
+  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
 
-## 下载
-您可以在桌面端网页右侧和移动端页面的下方中的[Releases页](https://github.com/123Duo3/XDNMB/releases)中找到最新和历史版本的下载链接。
+* [/shared](./shared/src) is for the code that will be shared between all targets in the project.
+  The most important subfolder is [commonMain](./shared/src/commonMain/kotlin). If preferred, you
+  can add code to the platform-specific folders here too.
 
-## 如何编译
-### Android端
-克隆本仓库，在Android Studio中安装[Kotlin Multiplatform Mobile (KMM) 插件](https://plugins.jetbrains.com/plugin/14936-kotlin-multiplatform-mobile)后，打开工程项目。
-### iOS端
-克隆本仓库，在使用Gradle完整构建一次项目之后，使用Xcode打开项目中的iosApp文件夹。您也可以在Xcode在后台运行的时候，使用安装了KMM插件的Android Studio进行编译。
+### Build and Run Android Application
 
-更多方法和疑难解答请参考[Kotlin文档中有关此部分的描述](https://kotlinlang.org/docs/multiplatform-mobile-setup.html)。
+To build and run the development version of the Android app, use the run configuration from the run widget
+in your IDE’s toolbar or build it directly from the terminal:
+- on macOS/Linux
+  ```shell
+  ./gradlew :composeApp:assembleDebug
+  ```
+- on Windows
+  ```shell
+  .\gradlew.bat :composeApp:assembleDebug
+  ```
 
-## 关于
-* Copyright (C) 2023 123哆3 & Konyaco.
-* 欢迎提交Pull Request帮助我们开发，以及提出Issue来描述您遇到的问题。
-* 您可以在[爱发电](https://afdian.net/a/123duo3)中进行捐赠，以支持开发。
+### Build and Run Desktop (JVM) Application
 
-## 特别鸣谢
-感谢[良辰](https://github.com/kevinluo6191)对于开发的大力支持。
+To build and run the development version of the desktop app, use the run configuration from the run widget
+in your IDE’s toolbar or run it directly from the terminal:
+- on macOS/Linux
+  ```shell
+  ./gradlew :composeApp:run
+  ```
+- on Windows
+  ```shell
+  .\gradlew.bat :composeApp:run
+  ```
+
+### Build and Run iOS Application
+
+To build and run the development version of the iOS app, use the run configuration from the run widget
+in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+
+---
+
+Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
