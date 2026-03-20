@@ -33,6 +33,9 @@ google-services.json
 # Android Profiling
 *.hprof
 
+# Kotlin
+.kotlin/
+
 #Xcode
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
