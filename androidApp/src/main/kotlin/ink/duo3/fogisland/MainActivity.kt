@@ -4,16 +4,36 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import ink.duo3.fogisland.ui.FogIslandApp
+import ink.duo3.fogisland.data.themeSettingsFlow
+import ink.duo3.fogisland.data.ThemeSettings
+import ink.duo3.fogisland.ui.theme.FogIslandTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-
+        
         setContent {
-            App()
+            val themeSettings by applicationContext.themeSettingsFlow.collectAsState(initial = ThemeSettings())
+
+            FogIslandTheme(themeSettings = themeSettings) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surfaceContainer
+                ) {
+                    FogIslandApp()
+                }
+            }
         }
     }
 }
@@ -21,5 +41,7 @@ class MainActivity : ComponentActivity() {
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    App()
+    FogIslandTheme {
+        FogIslandApp()
+    }
 }
