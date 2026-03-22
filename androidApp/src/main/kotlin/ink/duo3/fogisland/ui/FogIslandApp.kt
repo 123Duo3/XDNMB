@@ -1,6 +1,6 @@
 package ink.duo3.fogisland.ui
 
-import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
-import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -38,21 +38,17 @@ fun FogIslandApp() {
     val backStack = remember { mutableStateListOf<String>("Forum") }
     val currentRoute = backStack.lastOrNull() ?: "Forum"
 
-    BackHandler(enabled = drawerState.isOpen || backStack.size > 1) {
-        if (drawerState.isOpen) {
-            scope.launch {
-                drawerState.close()
-            }
-        } else if (backStack.size > 1) {
-            backStack.removeAt(backStack.lastIndex)
-        }
-    }
-
     ModalNavigationDrawer(
         modifier = Modifier.fillMaxSize(),
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                drawerState = drawerState,
+                drawerContainerColor = if (isSystemInDarkTheme())
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                else
+                    DrawerDefaults.modalContainerColor
+            ) {
                 Column(
                     Modifier.padding(12.dp, 8.dp)
                 ) {

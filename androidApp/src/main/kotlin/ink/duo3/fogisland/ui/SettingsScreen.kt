@@ -50,6 +50,7 @@ import ink.duo3.fogisland.data.updateUseMonet
 import ink.duo3.fogisland.ui.components.SettingItem
 import ink.duo3.fogisland.ui.components.SettingItemGroup
 import ink.duo3.fogisland.ui.components.SettingItemWithSwitch
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +96,7 @@ fun SettingsScreen(
             SettingItemGroup(title = "外观") {
                 SettingItemWithSwitch(
                     title = { Text("跟随系统外观") },
-                    description = { Text("亮暗色主题跟随系统设置。") },
+                    description = { Text("亮暗色模式跟随系统设置。") },
                     icon = { Icon(Icons.Default.BrightnessAuto, contentDescription = null) },
                     checked = themeSettings.followSystemAppearance,
                     onCheckedChange = { scope.launch { context.updateFollowSystemAppearance(it) } }
