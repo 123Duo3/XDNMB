@@ -17,6 +17,7 @@ import android.app.Activity
 import androidx.core.view.WindowCompat
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
+import ink.duo3.fogisland.data.ThemeSettings
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -260,7 +261,7 @@ val unspecified_scheme = ColorFamily(
 
 @Composable
 fun FogIslandTheme(
-    themeSettings: ink.duo3.fogisland.data.ThemeSettings = ink.duo3.fogisland.data.ThemeSettings(),
+    themeSettings: ThemeSettings = ThemeSettings(),
     content: @Composable() () -> Unit
 ) {
     val darkTheme = if (themeSettings.followSystemAppearance) {
@@ -272,7 +273,7 @@ fun FogIslandTheme(
     val enableMonet = themeSettings.useMonet
     val monetSeed = themeSettings.monetSeed
 
-    var colorScheme = when {
+    val colorScheme = when {
         !enableMonet -> if (darkTheme) darkScheme else lightScheme
 
         monetSeed == 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {

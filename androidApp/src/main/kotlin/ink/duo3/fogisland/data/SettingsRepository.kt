@@ -1,6 +1,7 @@
 package ink.duo3.fogisland.data
 
 import android.content.Context
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -17,6 +18,8 @@ data class ThemeSettings(
     val monetSeed: Int = 0
 )
 
+val LocalThemeSettings = staticCompositionLocalOf { ThemeSettings() }
+
 val FOLLOW_SYSTEM_APPEARANCE = booleanPreferencesKey("follow_system_appearance")
 val USE_DARK_MODE = booleanPreferencesKey("use_dark_mode")
 val USE_MONET = booleanPreferencesKey("use_monet")
@@ -26,7 +29,7 @@ val Context.themeSettingsFlow: Flow<ThemeSettings>
     get() = dataStore.data.map { preferences ->
         val followSystem = preferences[FOLLOW_SYSTEM_APPEARANCE] ?: true
         val useDark = preferences[USE_DARK_MODE] ?: false
-        val useMonetVal = preferences[USE_MONET] ?: true
+        val useMonetVal = preferences[USE_MONET] ?: false
         val monetSeedVal = preferences[MONET_SEED] ?: 0
         ThemeSettings(followSystem, useDark, useMonetVal, monetSeedVal)
     }

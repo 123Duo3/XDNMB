@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import ink.duo3.fogisland.data.LocalThemeSettings
 import ink.duo3.fogisland.data.ThemeSettings
 import ink.duo3.fogisland.data.themeSettingsFlow
 import ink.duo3.fogisland.data.updateFollowSystemAppearance
@@ -59,7 +60,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val themeSettings by context.themeSettingsFlow.collectAsState(initial = ThemeSettings())
+    val themeSettings = LocalThemeSettings.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

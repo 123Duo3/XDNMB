@@ -8,13 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import ink.duo3.fogisland.ui.FogIslandApp
 import ink.duo3.fogisland.data.themeSettingsFlow
 import ink.duo3.fogisland.data.ThemeSettings
+import ink.duo3.fogisland.data.LocalThemeSettings
 import ink.duo3.fogisland.ui.theme.FogIslandTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 
@@ -24,14 +27,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         setContent {
-            val themeSettings by applicationContext.themeSettingsFlow.collectAsState(initial = ThemeSettings())
+            val themeSettings by applicationContext.themeSettingsFlow.collectAsState(ThemeSettings())
 
-            FogIslandTheme(themeSettings = themeSettings) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.surfaceContainer
-                ) {
-                    FogIslandApp()
+            CompositionLocalProvider(LocalThemeSettings provides themeSettings) {
+                FogIslandTheme(themeSettings = themeSettings) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.surfaceContainer
+                    ) {
+                        FogIslandApp()
+                    }
                 }
             }
         }
