@@ -11,12 +11,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemColors
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,6 +32,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.ui.theme.FogIslandTheme
+import ink.duo3.fogisland.utils.ProvideContentColorTextStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,9 +46,10 @@ fun NavigationItemGroup(
 ) {
     Column(modifier) {
         NavigationDrawerItem(
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+            modifier = Modifier,
             colors = NavigationDrawerItemDefaults.colors(
-                selectedContainerColor = LocalContentColor.current.copy(0.08f)
+                selectedContainerColor = LocalContentColor.current.copy(0.08f),
+                selectedTextColor = MaterialTheme.colorScheme.onSurface
             ),
             label = label,
             selected = selected,
@@ -54,8 +58,8 @@ fun NavigationItemGroup(
                 val rotate by animateFloatAsState(if (expanded) 180f else 0f, label = "")
                 Icon(
                     modifier = Modifier.rotate(rotate),
-                    imageVector = Icons.Rounded.ArrowDropDown,
-                    contentDescription = "Dropdown"
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "展开"
                 )
             }
         )
@@ -77,14 +81,14 @@ private fun Preview() {
                 repeat(5) {
                     var expanded by remember { mutableStateOf(false) }
                     NavigationItemGroup(
-                        label = { Text("你好") },
+                        label = { Text("你好", style = MaterialTheme.typography.labelLarge) },
                         selected = false,
                         expanded = expanded,
                         modifier = Modifier.width(200.dp),
                         onExpandStateChange = { expanded = it }
                     ) {
                         NavigationDrawerItem(
-                            label = { Text("再见") },
+                            label = { Text("再见", style = MaterialTheme.typography.labelLarge) },
                             selected = false,
                             onClick = {},
                             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),

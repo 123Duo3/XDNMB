@@ -32,7 +32,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -42,12 +41,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.data.LocalThemeSettings
-import ink.duo3.fogisland.data.ThemeSettings
-import ink.duo3.fogisland.data.themeSettingsFlow
+import ink.duo3.fogisland.data.LocalTimeSettings
 import ink.duo3.fogisland.data.updateFollowSystemAppearance
 import ink.duo3.fogisland.data.updateMonetSeed
 import ink.duo3.fogisland.data.updateUseDarkMode
 import ink.duo3.fogisland.data.updateUseMonet
+import ink.duo3.fogisland.data.updateUseUtcPlus8Time
 import ink.duo3.fogisland.ui.components.SettingItem
 import ink.duo3.fogisland.ui.components.SettingItemGroup
 import ink.duo3.fogisland.ui.components.SettingItemWithSwitch
@@ -61,6 +60,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val themeSettings = LocalThemeSettings.current
+    val timeSettings = LocalTimeSettings.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -224,6 +224,15 @@ fun SettingsScreen(
                         }
                     )
                 }
+            }
+
+            SettingItemGroup(title = "时间") {
+                SettingItemWithSwitch(
+                    title = { Text("以 UTC+8 显示时间") },
+                    description = { Text("关闭后按设备本地时区显示。") },
+                    checked = timeSettings.useUtcPlus8Time,
+                    onCheckedChange = { scope.launch { context.updateUseUtcPlus8Time(it) } }
+                )
             }
         }
     }

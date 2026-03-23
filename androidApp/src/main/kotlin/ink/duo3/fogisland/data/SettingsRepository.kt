@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import ink.duo3.fogisland.shared.model.ForumTimeSettings
+import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -19,6 +21,7 @@ data class ThemeSettings(
 )
 
 val LocalThemeSettings = staticCompositionLocalOf { ThemeSettings() }
+val LocalTimeSettings = staticCompositionLocalOf { ForumTimeSettings() }
 
 val FOLLOW_SYSTEM_APPEARANCE = booleanPreferencesKey("follow_system_appearance")
 val USE_DARK_MODE = booleanPreferencesKey("use_dark_mode")
@@ -33,6 +36,9 @@ val Context.themeSettingsFlow: Flow<ThemeSettings>
         val monetSeedVal = preferences[MONET_SEED] ?: 0
         ThemeSettings(followSystem, useDark, useMonetVal, monetSeedVal)
     }
+
+val Context.timeSettingsFlow: Flow<ForumTimeSettings>
+    get() = RepositoryProvider.provideForumPreferences(this).timeSettingsFlow
 
 suspend fun Context.updateFollowSystemAppearance(follow: Boolean) {
     dataStore.edit { preferences ->
@@ -56,4 +62,8 @@ suspend fun Context.updateMonetSeed(seed: Int) {
     dataStore.edit { preferences ->
         preferences[MONET_SEED] = seed
     }
+}
+
+suspend fun Context.updateUseUtcPlus8Time(useUtcPlus8Time: Boolean) {
+    RepositoryProvider.provideForumPreferences(this).updateUseUtcPlus8Time(useUtcPlus8Time)
 }
