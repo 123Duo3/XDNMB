@@ -6,14 +6,14 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ThreadDto(
     @SerialName("id") val id: Long,
-    @SerialName("fid") val fid: Long? = null,
+    @SerialName("fid") val forumId: Long? = null,
     @SerialName("user_hash") val userHash: String? = null,
     @SerialName("name") val name: String? = null,
     @SerialName("title") val title: String? = null,
     @SerialName("content") val content: String? = null,
-    @SerialName("img") val img: String? = null,
-    @SerialName("ext") val ext: String? = null,
-    @SerialName("now") val now: String? = null,
+    @SerialName("img") val image: String? = null,
+    @SerialName("ext") val imageExtension: String? = null,
+    @SerialName("now") val postedAtRaw: String? = null,
     @SerialName("sage") val sage: Int? = null,
     @SerialName("admin") val admin: Int? = null,
     @SerialName("ReplyCount") val replyCount: Int? = null,
@@ -25,15 +25,15 @@ data class ThreadDto(
 @Serializable
 data class PostDto(
     @SerialName("id") val id: Long,
-    @SerialName("fid") val fid: Long? = null,
+    @SerialName("fid") val forumId: Long? = null,
     @SerialName("ReplyCount") val replyCount: Int? = null,
     @SerialName("user_hash") val userHash: String? = null,
     @SerialName("name") val name: String? = null,
     @SerialName("title") val title: String? = null,
     @SerialName("content") val content: String? = null,
-    @SerialName("img") val img: String? = null,
-    @SerialName("ext") val ext: String? = null,
-    @SerialName("now") val now: String? = null,
+    @SerialName("img") val image: String? = null,
+    @SerialName("ext") val imageExtension: String? = null,
+    @SerialName("now") val postedAtRaw: String? = null,
     @SerialName("sage") val sage: Int? = null,
     @SerialName("admin") val admin: Int? = null,
     @SerialName("Hide") val hide: Int? = null

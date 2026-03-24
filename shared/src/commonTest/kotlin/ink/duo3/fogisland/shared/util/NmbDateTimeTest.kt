@@ -8,6 +8,11 @@ import kotlin.time.Instant
 
 class NmbDateTimeTest {
 
+    private fun postedAtEpochMillis(raw: String): Long {
+        return parseNmbPostedAtEpochMillis(raw)
+            ?: error("Expected '$raw' to be parsed")
+    }
+
     @Test
     fun parseSupportsWeekdayWrappedFormat() {
         val parsed = parseNmbPostedAt("2026-03-24(二)02:55:51")
@@ -32,7 +37,7 @@ class NmbDateTimeTest {
     @Test
     fun relativeFormatterKeepsFutureText() {
         val formatted = formatNmbPostedAt(
-            raw = "2026-03-24(二)14:38:00",
+            epochMillis = postedAtEpochMillis("2026-03-24(二)14:38:00"),
             now = Instant.parse("2026-03-24T04:38:00Z")
         )
 
@@ -45,7 +50,7 @@ class NmbDateTimeTest {
     @Test
     fun relativeFormatterUsesNamedDays() {
         val formatted = formatNmbPostedAt(
-            raw = "2026-03-26(四)12:38:00",
+            epochMillis = postedAtEpochMillis("2026-03-26(四)12:38:00"),
             now = Instant.parse("2026-03-24T04:38:00Z")
         )
 
@@ -58,7 +63,7 @@ class NmbDateTimeTest {
     @Test
     fun preciseFormatterCanShowSeconds() {
         val formatted = formatNmbPostedAt(
-            raw = "2025-02-01(六)12:38:09",
+            epochMillis = postedAtEpochMillis("2025-02-01(六)12:38:09"),
             now = Instant.parse("2026-03-24T04:38:00Z"),
             options = NmbTimeFormatOptions(
                 mode = NmbTimeDisplayMode.PRECISE,
@@ -75,7 +80,7 @@ class NmbDateTimeTest {
     @Test
     fun localTimeZoneModeUsesDeviceTimeZoneForDisplay() {
         val formatted = formatNmbPostedAt(
-            raw = "2026-03-24(二)00:30:00",
+            epochMillis = postedAtEpochMillis("2026-03-24(二)00:30:00"),
             now = Instant.parse("2026-03-23T15:00:00Z"),
             localTimeZone = TimeZone.of("UTC"),
             options = NmbTimeFormatOptions(

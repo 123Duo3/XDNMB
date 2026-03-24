@@ -37,8 +37,8 @@ import androidx.navigation3.ui.NavDisplay
 import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.CatalogType
 import ink.duo3.fogisland.shared.model.ThreadDetail
-import ink.duo3.fogisland.shared.model.buildForumDisplayNameMap
-import ink.duo3.fogisland.shared.model.resolveForumDisplayName
+import ink.duo3.fogisland.shared.model.buildForumNameMap
+import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toCatalogSource
 import ink.duo3.fogisland.ui.components.NavigationItemGroup
 import ink.duo3.fogisland.ui.forum.ForumBrowseViewModel
@@ -54,7 +54,7 @@ fun FogIslandApp() {
     val expandedGroups = remember { mutableStateMapOf<Long, Boolean>() }
     val currentRoute = backStack.lastOrNull() ?: AppRoute.Catalog
     val isCatalogRoute = currentRoute == AppRoute.Catalog
-    val forumDisplayNameById = remember(state.forumGroups) { buildForumDisplayNameMap(state.forumGroups) }
+    val forumNameById = remember(state.forumGroups) { buildForumNameMap(state.forumGroups) }
 
     fun showCatalog() {
         backStack.clear()
@@ -223,7 +223,7 @@ fun FogIslandApp() {
                     }
                     ThreadDetailScreen(
                         detail = routeDetail,
-                        forumName = resolveForumDisplayName(routeDetail.thread?.forumId, forumDisplayNameById),
+                        forumName = resolveForumName(routeDetail.thread?.forumId, forumNameById),
                         loadedPage = if (isRouteThreadActive) state.loadedThreadPage else 0,
                         isLoading = isRouteThreadActive && state.isLoadingThread,
                         canLoadMore = isRouteThreadActive && state.canLoadMoreReplies,

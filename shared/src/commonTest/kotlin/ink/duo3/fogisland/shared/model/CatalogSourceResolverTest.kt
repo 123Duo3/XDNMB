@@ -93,4 +93,21 @@ class CatalogSourceResolverTest {
         assertEquals("板块 No.404", resolveForumDisplayName(404L, forumNames))
         assertNull(resolveForumDisplayName(null, forumNames))
     }
+
+    @Test
+    fun resolveForumNameUsesShortNameWhenAvailable() {
+        val forumNames = buildForumNameMap(listOf(boardGroup))
+
+        assertEquals("综合版1", resolveForumName(4L, forumNames))
+        assertEquals("板块 No.404", resolveForumName(404L, forumNames))
+        assertNull(resolveForumName(null, forumNames))
+    }
+
+    @Test
+    fun forumCatalogSourceUsesShortNameForTitle() {
+        val source = boardGroup.forums.first().toCatalogSource(boardGroup)
+
+        assertEquals("综合版1", source.title)
+        assertEquals("综合版", source.subtitle)
+    }
 }

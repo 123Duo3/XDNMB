@@ -50,11 +50,28 @@ fun buildForumDisplayNameMap(forumGroups: List<ForumGroup>): Map<Long, String> {
         .toMap()
 }
 
+fun buildForumNameMap(forumGroups: List<ForumGroup>): Map<Long, String> {
+    return forumGroups
+        .flatMap { group ->
+            group.forums.map { forum ->
+                forum.id to forum.name.ifBlank { forum.displayName }
+            }
+        }
+        .toMap()
+}
+
 fun resolveForumDisplayName(
     forumId: Long?,
     forumDisplayNames: Map<Long, String>
 ): String? {
     return forumId?.let(forumDisplayNames::get) ?: forumId?.let { "板块 No.$it" }
+}
+
+fun resolveForumName(
+    forumId: Long?,
+    forumNames: Map<Long, String>
+): String? {
+    return forumId?.let(forumNames::get) ?: forumId?.let { "板块 No.$it" }
 }
 
 fun findCatalogSource(
@@ -79,7 +96,7 @@ fun ForumBoard.toCatalogSource(group: ForumGroup): CatalogSource {
     return CatalogSource(
         type = CatalogType.FORUM,
         id = id,
-        title = displayName,
+        title = name.ifBlank { displayName },
         subtitle = group.name
     )
 }

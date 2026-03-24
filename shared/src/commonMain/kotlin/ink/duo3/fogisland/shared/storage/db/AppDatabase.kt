@@ -20,7 +20,7 @@ import ink.duo3.fogisland.shared.storage.db.entity.ThreadReadProgressEntity
         CatalogEntryEntity::class,
         ThreadReadProgressEntity::class
     ],
-    version = 2
+    version = 3
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {

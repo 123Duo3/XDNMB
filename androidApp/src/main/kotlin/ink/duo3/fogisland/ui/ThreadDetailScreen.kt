@@ -171,7 +171,7 @@ fun ThreadDetailScreen(
                     PostCard(
                         title = resolveNmbDisplayTitle(root.title),
                         author = resolveNmbDisplayAuthor(root.userHash, root.name),
-                        postedAt = root.postedAt,
+                        postedAtEpochMillis = root.postedAtEpochMillis,
                         content = root.contentText,
                         timeFormatOptions = timeFormatOptions
                     )
@@ -185,7 +185,7 @@ fun ThreadDetailScreen(
                 PostCard(
                     title = resolveNmbDisplayTitle(post.title),
                     author = resolveNmbDisplayAuthor(post.userHash, post.name),
-                    postedAt = post.postedAt,
+                    postedAtEpochMillis = post.postedAtEpochMillis,
                     content = post.contentText,
                     timeFormatOptions = timeFormatOptions
                 )
@@ -219,15 +219,15 @@ fun ThreadDetailScreen(
 private fun PostCard(
     title: String?,
     author: String?,
-    postedAt: String,
+    postedAtEpochMillis: Long?,
     content: String,
     timeFormatOptions: NmbTimeFormatOptions
 ) {
     val postedAtText = formatNmbPostedAtText(
-        raw = postedAt,
+        epochMillis = postedAtEpochMillis,
         options = timeFormatOptions
     )
-    val metaText = listOfNotNull(author, postedAtText.takeIf { it.isNotBlank() })
+    val metaText = listOfNotNull(author, postedAtText)
         .joinToString(separator = " · ")
 
     Card(

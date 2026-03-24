@@ -14,7 +14,7 @@ data class ThreadEntity(
     val contentText: String,
     val image: String,
     val ext: String,
-    val postedAt: String,
+    val postedAtEpochMillis: Long?,
     val sage: Int,
     val admin: Int,
     val hide: Int,

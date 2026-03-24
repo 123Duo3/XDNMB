@@ -32,8 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.data.LocalTimeSettings
-import ink.duo3.fogisland.shared.model.buildForumDisplayNameMap
-import ink.duo3.fogisland.shared.model.resolveForumDisplayName
+import ink.duo3.fogisland.shared.model.buildForumNameMap
+import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
@@ -49,7 +49,7 @@ fun ForumScreen(
     onThreadClick: (Long) -> Unit
 ) {
     val source = state.currentSource
-    val forumNameById = buildForumDisplayNameMap(state.forumGroups)
+    val forumNameById = buildForumNameMap(state.forumGroups)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -174,7 +174,7 @@ fun ForumScreen(
                 ThreadCard(
                     thread = thread,
                     forumName = if (source?.type == ink.duo3.fogisland.shared.model.CatalogType.TIMELINE) {
-                        resolveForumDisplayName(thread.forumId, forumNameById)
+                        resolveForumName(thread.forumId, forumNameById)
                     } else {
                         null
                     },
@@ -213,7 +213,7 @@ private fun ThreadCard(
 ) {
     val timeSettings = LocalTimeSettings.current
     val postedAtText = formatNmbPostedAtText(
-        raw = thread.postedAt,
+        epochMillis = thread.postedAtEpochMillis,
         options = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
     )
     val displayTitle = resolveNmbDisplayTitle(thread.title)
@@ -262,10 +262,12 @@ private fun ThreadCard(
                     onClick = onClick,
                     label = { Text("回复 ${thread.replyCount}") }
                 )
-                AssistChip(
-                    onClick = onClick,
-                    label = { Text(postedAtText) }
-                )
+                postedAtText?.let { text ->
+                    AssistChip(
+                        onClick = onClick,
+                        label = { Text(text) }
+                    )
+                }
             }
         }
     }

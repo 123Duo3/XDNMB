@@ -30,6 +30,7 @@ import ink.duo3.fogisland.shared.util.htmlToPlainText
 import ink.duo3.fogisland.shared.util.isNmbTipsPost
 import ink.duo3.fogisland.shared.util.normalizeNmbStoredName
 import ink.duo3.fogisland.shared.util.normalizeNmbStoredTitle
+import ink.duo3.fogisland.shared.util.parseNmbPostedAtEpochMillis
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -136,7 +137,7 @@ class ForumRepository(
                 .mapIndexed { index, reply ->
                     reply.toPostEntity(
                         threadId = thread.id,
-                        fallbackForumId = thread.fid,
+                        fallbackForumId = thread.forumId,
                         page = null,
                         position = index,
                         refreshedAt = timestamp
@@ -171,7 +172,7 @@ class ForumRepository(
             thread.replies.mapIndexed { index, reply ->
                 reply.toPostEntity(
                     threadId = threadId,
-                    fallbackForumId = thread.fid,
+                    fallbackForumId = thread.forumId,
                     page = page,
                     position = index,
                     refreshedAt = timestamp
@@ -281,15 +282,15 @@ class ForumRepository(
         val contentHtml = content.orEmpty()
         return ThreadEntity(
             id = id,
-            forumId = fid,
+            forumId = forumId,
             userHash = userHash.orEmpty(),
             name = normalizeNmbStoredName(name),
             title = normalizeNmbStoredTitle(title),
             contentHtml = contentHtml,
             contentText = htmlToPlainText(contentHtml),
-            image = img.orEmpty(),
-            ext = ext.orEmpty(),
-            postedAt = now.orEmpty(),
+            image = image.orEmpty(),
+            ext = imageExtension.orEmpty(),
+            postedAtEpochMillis = postedAtRaw?.let(::parseNmbPostedAtEpochMillis),
             sage = sage ?: 0,
             admin = admin ?: 0,
             hide = hide ?: 0,
@@ -312,16 +313,16 @@ class ForumRepository(
             threadId = threadId,
             id = storageId(page = page, position = position, isTips = isTips),
             remoteId = id,
-            forumId = fid ?: fallbackForumId,
+            forumId = forumId ?: fallbackForumId,
             replyCount = replyCount,
             userHash = userHash.orEmpty(),
             name = normalizeNmbStoredName(name),
             title = normalizeNmbStoredTitle(title),
             contentHtml = contentHtml,
             contentText = htmlToPlainText(contentHtml),
-            image = img.orEmpty(),
-            ext = ext.orEmpty(),
-            postedAt = now.orEmpty(),
+            image = image.orEmpty(),
+            ext = imageExtension.orEmpty(),
+            postedAtEpochMillis = postedAtRaw?.let(::parseNmbPostedAtEpochMillis),
             sage = sage ?: 0,
             admin = admin ?: 0,
             hide = hide ?: 0,
@@ -336,7 +337,7 @@ class ForumRepository(
         return isNmbTipsPost(
             userHash = userHash,
             remotePostId = id,
-            postedAtRaw = now
+            postedAtRaw = postedAtRaw
         )
     }
 

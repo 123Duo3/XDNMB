@@ -71,16 +71,23 @@ fun parseNmbPostedAt(
     }.getOrNull()
 }
 
-fun formatNmbPostedAt(
+fun parseNmbPostedAtEpochMillis(
     raw: String,
+    timeZone: TimeZone = nmbServerTimeZone
+): Long? {
+    return parseNmbPostedAt(raw, timeZone)?.toEpochMilliseconds()
+}
+
+fun formatNmbPostedAt(
+    epochMillis: Long,
     now: Instant = currentInstant(),
-    timeZone: TimeZone = nmbServerTimeZone,
+    sourceTimeZone: TimeZone = nmbServerTimeZone,
     localTimeZone: TimeZone = currentSystemTimeZone(),
     options: NmbTimeFormatOptions = NmbTimeFormatOptions()
 ): NmbFormattedTime? {
-    val targetInstant = parseNmbPostedAt(raw, timeZone) ?: return null
+    val targetInstant = Instant.fromEpochMilliseconds(epochMillis)
     val displayTimeZone = resolveDisplayTimeZone(
-        sourceTimeZone = timeZone,
+        sourceTimeZone = sourceTimeZone,
         localTimeZone = localTimeZone,
         mode = options.timeZoneMode
     )
@@ -104,19 +111,20 @@ fun formatNmbPostedAt(
 }
 
 fun formatNmbPostedAtText(
-    raw: String,
+    epochMillis: Long?,
     now: Instant = currentInstant(),
-    timeZone: TimeZone = nmbServerTimeZone,
+    sourceTimeZone: TimeZone = nmbServerTimeZone,
     localTimeZone: TimeZone = currentSystemTimeZone(),
     options: NmbTimeFormatOptions = NmbTimeFormatOptions()
-): String {
+): String? {
+    val resolvedEpochMillis = epochMillis ?: return null
     return formatNmbPostedAt(
-        raw = raw,
+        epochMillis = resolvedEpochMillis,
         now = now,
-        timeZone = timeZone,
+        sourceTimeZone = sourceTimeZone,
         localTimeZone = localTimeZone,
         options = options
-    )?.displayText ?: raw.trim()
+    )?.displayText
 }
 
 fun currentSystemTimeZone(): TimeZone {

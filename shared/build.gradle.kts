@@ -69,7 +69,7 @@ kotlin {
 }
 
 room {
-    schemaDirectory("$projectDir/schemas")
+    schemaDirectory("$projectDir/build/room-schemas")
 }
 
 dependencies {
