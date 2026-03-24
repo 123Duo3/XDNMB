@@ -72,9 +72,25 @@ class NmbDateTimeTest {
         )
 
         assertNotNull(formatted)
-        assertEquals("2025 年 2 月 1 日", formatted.dateText)
+        assertEquals("2025年2月1日", formatted.dateText)
         assertEquals("12:38:09", formatted.timeText)
-        assertEquals("2025 年 2 月 1 日 12:38:09", formatted.displayText)
+        assertEquals("2025年2月1日 12:38:09", formatted.displayText)
+    }
+
+    @Test
+    fun preciseFormatterKeepsMonthEvenInSameMonth() {
+        val formatted = formatNmbPostedAt(
+            epochMillis = postedAtEpochMillis("2026-03-09(一)12:38:09"),
+            now = Instant.parse("2026-03-24T04:38:00Z"),
+            options = NmbTimeFormatOptions(
+                mode = NmbTimeDisplayMode.PRECISE
+            )
+        )
+
+        assertNotNull(formatted)
+        assertEquals("3月9日", formatted.dateText)
+        assertEquals("12:38", formatted.timeText)
+        assertEquals("3月9日 12:38", formatted.displayText)
     }
 
     @Test

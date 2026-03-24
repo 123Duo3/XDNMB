@@ -16,6 +16,8 @@ object RepositoryProvider {
     private var forumRepository: ForumRepository? = null
     @Volatile
     private var forumPreferences: ForumPreferences? = null
+    @Volatile
+    private var cookieManager: CookieManager? = null
 
     fun provideForumRepository(context: Context): ForumRepository {
         return forumRepository ?: synchronized(this) {
@@ -31,10 +33,19 @@ object RepositoryProvider {
         }
     }
 
+    fun provideCookieManager(context: Context): CookieManager {
+        return cookieManager ?: synchronized(this) {
+            cookieManager ?: CookieManager(context.sharedDataStore).also {
+                cookieManager = it
+            }
+        }
+    }
+
     private fun createForumRepository(context: Context): ForumRepository {
         val database = DatabaseFactory(context).createDatabase()
-        val cookieManager = CookieManager(context.sharedDataStore)
+        val cookieManager = provideCookieManager(context)
         val catalogIndexCache = CatalogIndexCache(context.sharedDataStore)
+        val forumPreferences = provideForumPreferences(context)
         val apiClient = NmbApiClient(cookieManager)
         
         return ForumRepository(
@@ -42,8 +53,10 @@ object RepositoryProvider {
             threadDao = database.threadDao(),
             postDao = database.postDao(),
             catalogDao = database.catalogDao(),
+            subscriptionThreadDao = database.subscriptionThreadDao(),
             threadReadProgressDao = database.threadReadProgressDao(),
-            catalogIndexCache = catalogIndexCache
+            catalogIndexCache = catalogIndexCache,
+            forumPreferences = forumPreferences
         )
     }
 }

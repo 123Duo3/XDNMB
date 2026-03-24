@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import ink.duo3.fogisland.shared.model.CookieCollection
 import ink.duo3.fogisland.shared.model.ForumTimeSettings
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import kotlinx.coroutines.flow.Flow
@@ -40,6 +41,12 @@ val Context.themeSettingsFlow: Flow<ThemeSettings>
 val Context.timeSettingsFlow: Flow<ForumTimeSettings>
     get() = RepositoryProvider.provideForumPreferences(this).timeSettingsFlow
 
+val Context.cookieCollectionFlow: Flow<CookieCollection>
+    get() = RepositoryProvider.provideCookieManager(this).cookieCollectionFlow
+
+val Context.subscriptionUuidFlow: Flow<String?>
+    get() = RepositoryProvider.provideForumRepository(this).observeSubscriptionUuid()
+
 suspend fun Context.updateFollowSystemAppearance(follow: Boolean) {
     dataStore.edit { preferences ->
         preferences[FOLLOW_SYSTEM_APPEARANCE] = follow
@@ -66,4 +73,44 @@ suspend fun Context.updateMonetSeed(seed: Int) {
 
 suspend fun Context.updateUseUtcPlus8Time(useUtcPlus8Time: Boolean) {
     RepositoryProvider.provideForumPreferences(this).updateUseUtcPlus8Time(useUtcPlus8Time)
+}
+
+suspend fun Context.updateUsePreciseTime(usePreciseTime: Boolean) {
+    RepositoryProvider.provideForumPreferences(this).updateUsePreciseTime(usePreciseTime)
+}
+
+suspend fun Context.updateShowSeconds(showSeconds: Boolean) {
+    RepositoryProvider.provideForumPreferences(this).updateShowSeconds(showSeconds)
+}
+
+suspend fun Context.ensureSubscriptionUuid(): String {
+    return RepositoryProvider.provideForumRepository(this).ensureSubscriptionUuid()
+}
+
+suspend fun Context.updateSubscriptionUuid(uuid: String) {
+    RepositoryProvider.provideForumRepository(this).updateSubscriptionUuid(uuid)
+}
+
+suspend fun Context.importCookie(rawPayload: String, remark: String? = null) {
+    RepositoryProvider.provideCookieManager(this).importCookie(rawPayload, remark)
+}
+
+suspend fun Context.updateCookieRemark(id: String, remark: String) {
+    RepositoryProvider.provideCookieManager(this).updateCookieRemark(id, remark)
+}
+
+suspend fun Context.deleteCookie(id: String) {
+    RepositoryProvider.provideCookieManager(this).deleteCookie(id)
+}
+
+suspend fun Context.moveCookie(id: String, toIndex: Int) {
+    RepositoryProvider.provideCookieManager(this).moveCookie(id, toIndex)
+}
+
+suspend fun Context.updateActiveRequestCookie(id: String?) {
+    RepositoryProvider.provideCookieManager(this).setActiveRequestCookie(id)
+}
+
+suspend fun Context.updateActivePostCookie(id: String?) {
+    RepositoryProvider.provideCookieManager(this).setActivePostCookie(id)
 }

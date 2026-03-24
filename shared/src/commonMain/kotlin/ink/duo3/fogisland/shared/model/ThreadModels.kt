@@ -10,6 +10,20 @@ data class ThreadDetail(
     val progress: ThreadReadProgressEntity?
 )
 
+data class ReadHistoryEntry(
+    val threadId: Long,
+    val forumId: Long?,
+    val userHash: String,
+    val name: String,
+    val title: String,
+    val contentText: String,
+    val postedAtEpochMillis: Long?,
+    val replyCount: Int,
+    val lastReadPage: Int,
+    val lastReadPostId: Long?,
+    val lastReadAt: Long
+)
+
 enum class SearchHitType {
     THREAD,
     POST

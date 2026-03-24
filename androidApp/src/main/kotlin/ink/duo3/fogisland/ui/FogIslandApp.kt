@@ -41,7 +41,7 @@ import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toCatalogSource
 import ink.duo3.fogisland.ui.components.NavigationItemGroup
-import ink.duo3.fogisland.ui.forum.ForumBrowseViewModel
+import ink.duo3.fogisland.viewmodel.ForumBrowseViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -59,6 +59,18 @@ fun FogIslandApp() {
     fun showCatalog() {
         backStack.clear()
         backStack.add(AppRoute.Catalog)
+    }
+
+    fun showSubscriptions() {
+        backStack.clear()
+        backStack.add(AppRoute.Catalog)
+        backStack.add(AppRoute.Subscriptions)
+    }
+
+    fun showHistory() {
+        backStack.clear()
+        backStack.add(AppRoute.Catalog)
+        backStack.add(AppRoute.History)
     }
 
     ModalNavigationDrawer(
@@ -79,14 +91,26 @@ fun FogIslandApp() {
                     NavigationDrawerItem(
                         label = { Text("订阅", style = MaterialTheme.typography.labelLarge) },
                         icon = { Icon(Icons.Filled.Bookmarks, null) },
-                        selected = false,
-                        onClick = { }
+                        selected = currentRoute == AppRoute.Subscriptions,
+                        onClick = {
+                            if (currentRoute != AppRoute.Subscriptions) {
+                                showSubscriptions()
+                            }
+                            viewModel.openSubscriptions()
+                            scope.launch { drawerState.close() }
+                        }
                     )
                     NavigationDrawerItem(
                         label = { Text("历史", style = MaterialTheme.typography.labelLarge) },
                         icon = { Icon(Icons.Default.History, null) },
-                        selected = false,
-                        onClick = { }
+                        selected = currentRoute == AppRoute.History,
+                        onClick = {
+                            if (currentRoute != AppRoute.History) {
+                                showHistory()
+                            }
+                            viewModel.openReadHistory()
+                            scope.launch { drawerState.close() }
+                        }
                     )
                     NavigationDrawerItem(
                         label = { Text("发言", style = MaterialTheme.typography.labelLarge) },
@@ -209,6 +233,51 @@ fun FogIslandApp() {
                     )
                 }
 
+                AppRoute.Subscriptions -> NavEntry(key) {
+                    LaunchedEffect(Unit) {
+                        viewModel.openSubscriptions()
+                    }
+                    SubscriptionScreen(
+                        forumGroups = state.forumGroups,
+                        threads = state.subscriptionThreads,
+                        loadedPage = state.loadedSubscriptionPage,
+                        isLoading = state.isLoadingSubscriptions,
+                        error = state.subscriptionError,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        onRefreshClick = { viewModel.refreshSubscriptions() },
+                        onLoadMore = { viewModel.loadMoreSubscriptions() },
+                        onThreadClick = { threadId ->
+                            viewModel.openThread(threadId)
+                            backStack.add(AppRoute.Thread(threadId))
+                        },
+                        onDeleteClick = { threadId ->
+                            viewModel.deleteSubscription(threadId)
+                        }
+                    )
+                }
+
+                AppRoute.History -> NavEntry(key) {
+                    LaunchedEffect(Unit) {
+                        viewModel.openReadHistory()
+                    }
+                    HistoryScreen(
+                        forumGroups = state.forumGroups,
+                        history = state.readHistory,
+                        error = state.historyError,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        onThreadClick = { threadId ->
+                            viewModel.openThread(threadId)
+                            backStack.add(AppRoute.Thread(threadId))
+                        },
+                        onDeleteClick = { threadId ->
+                            viewModel.deleteReadHistoryEntry(threadId)
+                        },
+                        onClearAllClick = {
+                            viewModel.clearReadHistory()
+                        }
+                    )
+                }
+
                 is AppRoute.Thread -> NavEntry(key) {
                     LaunchedEffect(key.threadId) {
                         if (state.activeThreadId != key.threadId) {
@@ -227,10 +296,15 @@ fun FogIslandApp() {
                         loadedPage = if (isRouteThreadActive) state.loadedThreadPage else 0,
                         isLoading = isRouteThreadActive && state.isLoadingThread,
                         canLoadMore = isRouteThreadActive && state.canLoadMoreReplies,
-                        errorMessage = if (isRouteThreadActive) state.errorMessage else null,
+                        error = if (isRouteThreadActive) state.error else null,
                         onBack = {
                             if (backStack.isNotEmpty()) {
                                 backStack.removeAt(backStack.lastIndex)
+                            }
+                        },
+                        onSubscribe = {
+                            routeDetail.thread?.let { thread ->
+                                viewModel.addSubscription(thread.id)
                             }
                         },
                         onRefresh = {
@@ -255,6 +329,8 @@ fun FogIslandApp() {
 
 private sealed interface AppRoute {
     data object Catalog : AppRoute
+    data object Subscriptions : AppRoute
+    data object History : AppRoute
     data class Thread(val threadId: Long) : AppRoute
     data object Settings : AppRoute
 }

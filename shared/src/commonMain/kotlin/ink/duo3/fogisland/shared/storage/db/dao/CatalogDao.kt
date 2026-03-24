@@ -18,4 +18,20 @@ interface CatalogDao {
         """
     )
     suspend fun deletePage(catalogType: String, catalogId: Long, page: Int)
+
+    @Query(
+        """
+        DELETE FROM catalog_entries
+        WHERE catalogType = :catalogType AND catalogId = :catalogId
+        """
+    )
+    suspend fun deleteCatalog(catalogType: String, catalogId: Long)
+
+    @Query(
+        """
+        DELETE FROM catalog_entries
+        WHERE catalogType = :catalogType AND catalogId = :catalogId AND threadId = :threadId
+        """
+    )
+    suspend fun deleteThread(catalogType: String, catalogId: Long, threadId: Long)
 }

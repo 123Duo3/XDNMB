@@ -18,10 +18,11 @@ class ForumSettingsModelsTest {
 
     @Test
     fun timeSettingsCanBuildLocalPreciseOptions() {
-        val options = ForumTimeSettings(useUtcPlus8Time = false).toNmbTimeFormatOptions(
-            mode = NmbTimeDisplayMode.PRECISE,
+        val options = ForumTimeSettings(
+            useUtcPlus8Time = false,
+            usePreciseTime = true,
             showSeconds = true
-        )
+        ).toNmbTimeFormatOptions()
 
         assertEquals(NmbTimeDisplayMode.PRECISE, options.mode)
         assertEquals(true, options.showSeconds)

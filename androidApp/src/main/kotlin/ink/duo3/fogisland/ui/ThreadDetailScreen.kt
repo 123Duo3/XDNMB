@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -32,12 +33,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.data.LocalTimeSettings
+import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.model.ThreadDetail
 import ink.duo3.fogisland.shared.util.NmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayAuthor
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
+import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -51,8 +54,9 @@ fun ThreadDetailScreen(
     loadedPage: Int,
     isLoading: Boolean,
     canLoadMore: Boolean,
-    errorMessage: String?,
+    error: ErrorPresentation?,
     onBack: () -> Unit,
+    onSubscribe: () -> Unit,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onProgressChanged: (Int, Int) -> Unit
@@ -133,6 +137,12 @@ fun ThreadDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = onSubscribe,
+                        enabled = thread != null
+                    ) {
+                        Icon(Icons.Default.Bookmarks, contentDescription = "订阅")
+                    }
                     IconButton(onClick = onRefresh) {
                         Icon(Icons.Default.Refresh, contentDescription = "刷新")
                     }
@@ -150,19 +160,12 @@ fun ThreadDetailScreen(
             contentPadding = innerPadding,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            errorMessage?.let { message ->
+            error?.let { errorState ->
                 item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        Text(
-                            text = message,
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
+                    ErrorMessageCard(
+                        error = errorState,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                 }
             }
 

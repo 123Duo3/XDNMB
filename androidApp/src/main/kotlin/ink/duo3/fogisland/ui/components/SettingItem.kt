@@ -1,9 +1,17 @@
 package ink.duo3.fogisland.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -45,6 +53,40 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.utils.ProvideContentColorTextStyle
 import kotlinx.coroutines.delay
+
+@DslMarker
+annotation class SettingItemGroupScopeMarker
+
+@SettingItemGroupScopeMarker
+interface SettingItemGroupScope {
+    @Composable
+    fun AnimatedVisibility(
+        visible: Boolean,
+        modifier: Modifier = Modifier,
+        enter: EnterTransition = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+        exit: ExitTransition = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+        content: @Composable AnimatedVisibilityScope.() -> Unit,
+    )
+}
+
+private object SettingItemGroupScopeInstance : SettingItemGroupScope {
+    @Composable
+    override fun AnimatedVisibility(
+        visible: Boolean,
+        modifier: Modifier,
+        enter: EnterTransition,
+        exit: ExitTransition,
+        content: @Composable AnimatedVisibilityScope.() -> Unit,
+    ) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = visible,
+            modifier = modifier,
+            enter = enter,
+            exit = exit,
+            content = content,
+        )
+    }
+}
 
 fun Modifier.highlightSetting(
     settingKey: String?,
@@ -99,7 +141,7 @@ fun SettingItemGroup(
     settingKey: String? = null,
     highlightedKey: String = "",
     onPositioned: ((rootY: Int) -> Unit)? = null,
-    content: @Composable () -> Unit,
+    content: @Composable SettingItemGroupScope.() -> Unit,
 ) {
     Column(
         Modifier
@@ -120,7 +162,7 @@ fun SettingItemGroup(
         header?.let { it() }
 
         Layout(
-            content = content,
+            content = { SettingItemGroupScopeInstance.content() },
             modifier = modifier.clip(RoundedCornerShape(16.dp))
         ) { measurables, constraints ->
             val placeables = measurables.map { it.measure(constraints) }

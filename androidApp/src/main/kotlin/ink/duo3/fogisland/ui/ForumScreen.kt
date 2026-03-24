@@ -38,7 +38,8 @@ import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
-import ink.duo3.fogisland.ui.forum.ForumBrowseUiState
+import ink.duo3.fogisland.ui.components.ErrorMessageCard
+import ink.duo3.fogisland.viewmodel.ForumBrowseUiState
 
 @Composable
 fun ForumScreen(
@@ -151,19 +152,12 @@ fun ForumScreen(
                 }
             }
 
-            state.errorMessage?.let { errorMessage ->
+            state.error?.let { error ->
                 item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        Text(
-                            text = errorMessage,
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
+                    ErrorMessageCard(
+                        error = error,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                 }
             }
 

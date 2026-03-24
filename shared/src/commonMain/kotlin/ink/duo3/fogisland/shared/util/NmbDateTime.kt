@@ -168,12 +168,9 @@ private fun formatPreciseDate(
     val targetMonth = targetDate.month.ordinal + 1
     return when {
         targetDate.year != currentDate.year ->
-            "${targetDate.year} 年 ${targetMonth} 月 ${targetDate.day} 日"
+            "${targetDate.year}年${targetMonth}月${targetDate.day}日"
 
-        targetDate.month != currentDate.month ->
-            "${targetMonth} 月 ${targetDate.day} 日"
-
-        else -> "${targetDate.day} 日"
+        else -> "${targetMonth}月${targetDate.day}日"
     }
 }
 

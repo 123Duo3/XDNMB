@@ -1,4 +1,4 @@
-package ink.duo3.fogisland.ui.forum
+package ink.duo3.fogisland.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -6,14 +6,18 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.ReadHistoryEntry
 import ink.duo3.fogisland.shared.model.SiteNotice
 import ink.duo3.fogisland.shared.model.ThreadDetail
 import ink.duo3.fogisland.shared.model.Timeline
 import ink.duo3.fogisland.shared.model.cacheKey
 import ink.duo3.fogisland.shared.model.resolveCatalogSource
+import ink.duo3.fogisland.shared.network.api.toErrorPresentation
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
+import ink.duo3.fogisland.shared.storage.db.entity.SubscriptionThreadEntity
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
 import ink.duo3.fogisland.shared.util.calculateNmbThreadMaxPage
 import kotlinx.coroutines.Job
@@ -28,18 +32,24 @@ import kotlinx.coroutines.supervisorScope
 data class ForumBrowseUiState(
     val isLoadingIndex: Boolean = true,
     val isLoadingCatalog: Boolean = false,
+    val isLoadingSubscriptions: Boolean = false,
     val isLoadingThread: Boolean = false,
     val activeThreadId: Long? = null,
     val forumGroups: List<ForumGroup> = emptyList(),
     val timelines: List<Timeline> = emptyList(),
     val currentSource: CatalogSource? = null,
     val threads: List<ThreadEntity> = emptyList(),
+    val subscriptionThreads: List<SubscriptionThreadEntity> = emptyList(),
+    val readHistory: List<ReadHistoryEntry> = emptyList(),
     val loadedCatalogPage: Int = 0,
+    val loadedSubscriptionPage: Int = 0,
     val siteNotice: SiteNotice? = null,
     val threadDetail: ThreadDetail = ThreadDetail(null, emptyList(), null),
     val loadedThreadPage: Int = 0,
     val hasReachedReplyEnd: Boolean = false,
-    val errorMessage: String? = null
+    val error: ErrorPresentation? = null,
+    val subscriptionError: ErrorPresentation? = null,
+    val historyError: ErrorPresentation? = null
 ) {
     val currentThread = threadDetail.thread
     val currentPosts = threadDetail.posts
@@ -66,10 +76,15 @@ class ForumBrowseViewModel(
     private val catalogPageCache = mutableMapOf<String, Int>()
     private val threadPageCache = mutableMapOf<Long, Int>()
     private val threadEndReachedCache = mutableMapOf<Long, Boolean>()
+    private var subscriptionLoadedPage = 0
+    private var currentSubscriptionUuid: String? = null
     private var catalogObservationJob: Job? = null
+    private var subscriptionObservationJob: Job? = null
+    private var readHistoryObservationJob: Job? = null
     private var threadObservationJob: Job? = null
 
     init {
+        observeSubscriptionUuid()
         hydrateCachedIndex()
         refreshIndex()
     }
@@ -105,7 +120,7 @@ class ForumBrowseViewModel(
             _uiState.update {
                 it.copy(
                     isLoadingIndex = it.forumGroups.isEmpty() && it.timelines.isEmpty(),
-                    errorMessage = null
+                    error = null
                 )
             }
 
@@ -125,7 +140,7 @@ class ForumBrowseViewModel(
                         it.copy(
                             isLoadingIndex = false,
                             siteNotice = siteNotice,
-                            errorMessage = failure.message ?: "加载板块失败"
+                            error = failure.toErrorPresentation("加载板块失败")
                         )
                     }
                     return@supervisorScope
@@ -163,7 +178,7 @@ class ForumBrowseViewModel(
             it.copy(
                 currentSource = source,
                 loadedCatalogPage = catalogPageCache[cacheKey] ?: 0,
-                errorMessage = null
+                error = null
             )
         }
         observeCatalog(source)
@@ -177,6 +192,96 @@ class ForumBrowseViewModel(
         val source = _uiState.value.currentSource ?: return
         val nextPage = (catalogPageCache[source.cacheKey()] ?: 0) + 1
         loadCatalogPage(source, nextPage)
+    }
+
+    fun openSubscriptions(forceRefresh: Boolean = false) {
+        observeSubscriptions()
+        _uiState.update {
+            it.copy(
+                isLoadingSubscriptions = forceRefresh || subscriptionLoadedPage == 0,
+                subscriptionError = null,
+                loadedSubscriptionPage = subscriptionLoadedPage
+            )
+        }
+        if (forceRefresh || subscriptionLoadedPage == 0) {
+            loadSubscriptionsPage(1)
+        }
+    }
+
+    fun openReadHistory() {
+        observeReadHistory()
+        _uiState.update { it.copy(historyError = null) }
+    }
+
+    fun deleteReadHistoryEntry(threadId: Long) {
+        viewModelScope.launch {
+            runCatching {
+                repository.deleteReadHistoryEntry(threadId)
+            }.onSuccess {
+                _uiState.update { it.copy(historyError = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(historyError = throwable.toErrorPresentation("删除阅读记录失败"))
+                }
+            }
+        }
+    }
+
+    fun clearReadHistory() {
+        viewModelScope.launch {
+            runCatching {
+                repository.clearReadHistory()
+            }.onSuccess {
+                _uiState.update { it.copy(historyError = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(historyError = throwable.toErrorPresentation("清空阅读记录失败"))
+                }
+            }
+        }
+    }
+
+    fun refreshSubscriptions() {
+        openSubscriptions(forceRefresh = true)
+    }
+
+    fun loadMoreSubscriptions() {
+        loadSubscriptionsPage(subscriptionLoadedPage + 1)
+    }
+
+    fun addSubscription(threadId: Long) {
+        viewModelScope.launch {
+            runCatching {
+                repository.addSubscription(threadId)
+            }.onSuccess {
+                subscriptionLoadedPage = 1
+                _uiState.update {
+                    it.copy(
+                        loadedSubscriptionPage = subscriptionLoadedPage,
+                        subscriptionError = null
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(error = throwable.toErrorPresentation("订阅失败"))
+                }
+            }
+        }
+    }
+
+    fun deleteSubscription(threadId: Long) {
+        viewModelScope.launch {
+            runCatching {
+                repository.deleteSubscription(threadId)
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isLoadingSubscriptions = false,
+                        subscriptionError = throwable.toErrorPresentation("取消订阅失败")
+                    )
+                }
+            }
+        }
     }
 
     fun openThread(threadId: Long, forceRefresh: Boolean = false) {
@@ -214,7 +319,7 @@ class ForumBrowseViewModel(
                 _uiState.update {
                     it.copy(
                         isLoadingThread = false,
-                        errorMessage = throwable.message ?: "加载串失败"
+                        error = throwable.toErrorPresentation("加载串失败")
                     )
                 }
             }
@@ -237,7 +342,7 @@ class ForumBrowseViewModel(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingThread = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoadingThread = true, error = null) }
             runCatching {
                 repository.refreshThread(threadId, nextPage)
             }.onSuccess { result ->
@@ -256,7 +361,7 @@ class ForumBrowseViewModel(
                 _uiState.update {
                     it.copy(
                         isLoadingThread = false,
-                        errorMessage = throwable.message ?: "加载更多回复失败"
+                        error = throwable.toErrorPresentation("加载更多回复失败")
                     )
                 }
             }
@@ -298,7 +403,7 @@ class ForumBrowseViewModel(
                     loadedPage = threadPageCache[threadId] ?: 0,
                     cachedReachedEnd = threadEndReachedCache[threadId] == true && !forceRefresh
                 ),
-                errorMessage = null
+                error = null
             )
         }
     }
@@ -382,10 +487,67 @@ class ForumBrowseViewModel(
         }
     }
 
+    private fun observeSubscriptionUuid() {
+        viewModelScope.launch {
+            repository.observeSubscriptionUuid().collect { uuid ->
+                if (currentSubscriptionUuid == null) {
+                    currentSubscriptionUuid = uuid
+                    return@collect
+                }
+
+                if (uuid == currentSubscriptionUuid) {
+                    return@collect
+                }
+
+                currentSubscriptionUuid = uuid
+                subscriptionLoadedPage = 0
+                _uiState.update {
+                    it.copy(
+                        subscriptionThreads = emptyList(),
+                        loadedSubscriptionPage = 0,
+                        isLoadingSubscriptions = false,
+                        subscriptionError = null
+                    )
+                }
+            }
+        }
+    }
+
+    private fun observeSubscriptions() {
+        if (subscriptionObservationJob != null) {
+            return
+        }
+
+        subscriptionObservationJob = viewModelScope.launch {
+            repository.observeSubscriptions().collect { threads ->
+                _uiState.update { state ->
+                    state.copy(
+                        subscriptionThreads = threads,
+                        loadedSubscriptionPage = subscriptionLoadedPage
+                    )
+                }
+            }
+        }
+    }
+
+    private fun observeReadHistory() {
+        if (readHistoryObservationJob != null) {
+            return
+        }
+
+        readHistoryObservationJob = viewModelScope.launch {
+            repository.observeReadHistory().collect { entries ->
+                _uiState.update { state ->
+                    state.copy(readHistory = entries)
+                }
+            }
+        }
+    }
+
     private fun loadCatalogPage(source: CatalogSource, page: Int) {
         val cacheKey = source.cacheKey()
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingCatalog = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoadingCatalog = true, error = null) }
             runCatching {
                 repository.refreshCatalog(source, page)
             }.onSuccess {
@@ -400,7 +562,40 @@ class ForumBrowseViewModel(
                 _uiState.update {
                     it.copy(
                         isLoadingCatalog = false,
-                        errorMessage = throwable.message ?: "加载串列表失败"
+                        error = throwable.toErrorPresentation("加载串列表失败")
+                    )
+                }
+            }
+        }
+    }
+
+    private fun loadSubscriptionsPage(page: Int) {
+        if (page <= 0) {
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoadingSubscriptions = true,
+                    subscriptionError = null
+                )
+            }
+            runCatching {
+                repository.refreshSubscriptions(page)
+            }.onSuccess {
+                subscriptionLoadedPage = maxOf(subscriptionLoadedPage, page)
+                _uiState.update {
+                    it.copy(
+                        isLoadingSubscriptions = false,
+                        loadedSubscriptionPage = subscriptionLoadedPage
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isLoadingSubscriptions = false,
+                        subscriptionError = throwable.toErrorPresentation("加载订阅失败")
                     )
                 }
             }

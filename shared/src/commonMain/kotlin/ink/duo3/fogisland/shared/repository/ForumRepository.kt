@@ -4,6 +4,7 @@ import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.CatalogType
 import ink.duo3.fogisland.shared.model.ForumBoard
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.ReadHistoryEntry
 import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SearchHitType
 import ink.duo3.fogisland.shared.model.SiteNotice
@@ -17,14 +18,17 @@ import ink.duo3.fogisland.shared.network.model.ThreadDto
 import ink.duo3.fogisland.shared.network.model.TimelineDto
 import ink.duo3.fogisland.shared.storage.db.dao.CatalogDao
 import ink.duo3.fogisland.shared.storage.db.dao.PostDao
+import ink.duo3.fogisland.shared.storage.db.dao.SubscriptionThreadDao
 import ink.duo3.fogisland.shared.storage.db.dao.ThreadDao
 import ink.duo3.fogisland.shared.storage.db.dao.ThreadReadProgressDao
 import ink.duo3.fogisland.shared.storage.db.entity.CatalogEntryEntity
 import ink.duo3.fogisland.shared.storage.db.entity.PostEntity
+import ink.duo3.fogisland.shared.storage.db.entity.SubscriptionThreadEntity
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadReadProgressEntity
 import ink.duo3.fogisland.shared.storage.preferences.CatalogIndexCache
 import ink.duo3.fogisland.shared.storage.preferences.CatalogIndexSnapshot
+import ink.duo3.fogisland.shared.storage.preferences.ForumPreferences
 import ink.duo3.fogisland.shared.util.calculateNmbThreadMaxPage
 import ink.duo3.fogisland.shared.util.htmlToPlainText
 import ink.duo3.fogisland.shared.util.isNmbTipsPost
@@ -40,8 +44,10 @@ class ForumRepository(
     private val threadDao: ThreadDao,
     private val postDao: PostDao,
     private val catalogDao: CatalogDao,
+    private val subscriptionThreadDao: SubscriptionThreadDao,
     private val threadReadProgressDao: ThreadReadProgressDao,
-    private val catalogIndexCache: CatalogIndexCache
+    private val catalogIndexCache: CatalogIndexCache,
+    private val forumPreferences: ForumPreferences
 ) {
     data class ThreadRefreshResult(
         val page: Int,
@@ -129,34 +135,65 @@ class ForumRepository(
             CatalogType.TIMELINE -> apiClient.getTimelineThreads(source.id, page)
         }
 
-        catalogDao.deletePage(source.type.name, source.id, page)
-        threadDao.insertThreads(threads.map { it.toThreadEntity(timestamp) })
-        val cachedReplies = threads.flatMap { thread ->
-            thread.replies
-                .filterNot { it.isTipsPost() }
-                .mapIndexed { index, reply ->
-                    reply.toPostEntity(
-                        threadId = thread.id,
-                        fallbackForumId = thread.forumId,
-                        page = null,
-                        position = index,
-                        refreshedAt = timestamp
-                    )
-                }
+        cacheCatalogPage(
+            catalogType = source.type.name,
+            catalogId = source.id,
+            page = page,
+            threads = threads,
+            refreshedAt = timestamp,
+            clearAll = false
+        )
+    }
+
+    suspend fun refreshSubscriptions(page: Int) {
+        val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        val uuid = forumPreferences.getOrCreateSubscriptionUuid()
+        val threads = apiClient.getFeedThreads(uuid = uuid, page = page)
+        if (page == 1) {
+            subscriptionThreadDao.deleteAll()
+        } else {
+            subscriptionThreadDao.deletePage(page)
         }
-        postDao.insertPosts(cachedReplies)
-        catalogDao.insertEntries(
+        subscriptionThreadDao.insertThreads(
             threads.mapIndexed { index, thread ->
-                CatalogEntryEntity(
-                    catalogType = source.type.name,
-                    catalogId = source.id,
-                    threadId = thread.id,
+                thread.toSubscriptionThreadEntity(
                     page = page,
                     position = index,
                     refreshedAt = timestamp
                 )
             }
         )
+    }
+
+    fun observeSubscriptions(): Flow<List<SubscriptionThreadEntity>> {
+        return subscriptionThreadDao.observeAll()
+    }
+
+    fun observeSubscriptionUuid(): Flow<String?> {
+        return forumPreferences.subscriptionUuidFlow
+    }
+
+    suspend fun ensureSubscriptionUuid(): String {
+        return forumPreferences.getOrCreateSubscriptionUuid()
+    }
+
+    suspend fun updateSubscriptionUuid(uuid: String) {
+        forumPreferences.updateSubscriptionUuid(uuid)
+        subscriptionThreadDao.deleteAll()
+    }
+
+    suspend fun addSubscription(threadId: Long): String {
+        val uuid = forumPreferences.getOrCreateSubscriptionUuid()
+        val result = apiClient.addFeed(uuid = uuid, threadId = threadId)
+        refreshSubscriptions(page = 1)
+        return result
+    }
+
+    suspend fun deleteSubscription(threadId: Long): String {
+        val uuid = forumPreferences.getOrCreateSubscriptionUuid()
+        val result = apiClient.deleteFeed(uuid = uuid, threadId = threadId)
+        subscriptionThreadDao.deleteThread(threadId)
+        return result
     }
 
     suspend fun refreshThread(threadId: Long, page: Int): ThreadRefreshResult {
@@ -204,6 +241,18 @@ class ForumRepository(
                 progress = progress
             )
         }
+    }
+
+    fun observeReadHistory(): Flow<List<ReadHistoryEntry>> {
+        return threadReadProgressDao.observeReadHistory()
+    }
+
+    suspend fun deleteReadHistoryEntry(threadId: Long) {
+        threadReadProgressDao.deleteByThreadId(threadId)
+    }
+
+    suspend fun clearReadHistory() {
+        threadReadProgressDao.deleteAll()
     }
 
     suspend fun getReadProgress(threadId: Long): ThreadReadProgressEntity? {
@@ -257,6 +306,49 @@ class ForumRepository(
         return (threadHits + postHits).distinctBy { "${it.type}:${it.threadId}:${it.postId}" }
     }
 
+    private suspend fun cacheCatalogPage(
+        catalogType: String,
+        catalogId: Long,
+        page: Int,
+        threads: List<ThreadDto>,
+        refreshedAt: Long,
+        clearAll: Boolean
+    ) {
+        if (clearAll) {
+            catalogDao.deleteCatalog(catalogType, catalogId)
+        } else {
+            catalogDao.deletePage(catalogType, catalogId, page)
+        }
+
+        threadDao.insertThreads(threads.map { it.toThreadEntity(refreshedAt) })
+        val cachedReplies = threads.flatMap { thread ->
+            thread.replies
+                .filterNot { it.isTipsPost() }
+                .mapIndexed { index, reply ->
+                    reply.toPostEntity(
+                        threadId = thread.id,
+                        fallbackForumId = thread.forumId,
+                        page = null,
+                        position = index,
+                        refreshedAt = refreshedAt
+                    )
+                }
+        }
+        postDao.insertPosts(cachedReplies)
+        catalogDao.insertEntries(
+            threads.mapIndexed { index, thread ->
+                CatalogEntryEntity(
+                    catalogType = catalogType,
+                    catalogId = catalogId,
+                    threadId = thread.id,
+                    page = page,
+                    position = index,
+                    refreshedAt = refreshedAt
+                )
+            }
+        )
+    }
+
     private fun ForumBoardDto.toForumBoard(groupId: Long): ForumBoard? {
         val forumId = id.toLongOrNull() ?: return null
         if (forumId <= 0L) {
@@ -296,6 +388,30 @@ class ForumRepository(
             hide = hide ?: 0,
             replyCount = replyCount ?: 0,
             remainReplies = remainReplies,
+            refreshedAt = refreshedAt
+        )
+    }
+
+    private fun ThreadDto.toSubscriptionThreadEntity(
+        page: Int,
+        position: Int,
+        refreshedAt: Long
+    ): SubscriptionThreadEntity {
+        val contentHtml = content.orEmpty()
+        return SubscriptionThreadEntity(
+            threadId = id,
+            forumId = forumId,
+            userHash = userHash.orEmpty(),
+            name = normalizeNmbStoredName(name),
+            title = normalizeNmbStoredTitle(title),
+            contentText = htmlToPlainText(contentHtml),
+            image = image.orEmpty(),
+            ext = imageExtension.orEmpty(),
+            postedAtEpochMillis = postedAtRaw?.let(::parseNmbPostedAtEpochMillis),
+            replyCount = replyCount ?: 0,
+            remainReplies = remainReplies,
+            page = page,
+            positionInPage = position,
             refreshedAt = refreshedAt
         )
     }

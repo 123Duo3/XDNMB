@@ -6,10 +6,12 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import ink.duo3.fogisland.shared.storage.db.dao.CatalogDao
 import ink.duo3.fogisland.shared.storage.db.dao.PostDao
+import ink.duo3.fogisland.shared.storage.db.dao.SubscriptionThreadDao
 import ink.duo3.fogisland.shared.storage.db.dao.ThreadDao
 import ink.duo3.fogisland.shared.storage.db.dao.ThreadReadProgressDao
 import ink.duo3.fogisland.shared.storage.db.entity.CatalogEntryEntity
 import ink.duo3.fogisland.shared.storage.db.entity.PostEntity
+import ink.duo3.fogisland.shared.storage.db.entity.SubscriptionThreadEntity
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadReadProgressEntity
 
@@ -18,9 +20,10 @@ import ink.duo3.fogisland.shared.storage.db.entity.ThreadReadProgressEntity
         ThreadEntity::class,
         PostEntity::class,
         CatalogEntryEntity::class,
-        ThreadReadProgressEntity::class
+        ThreadReadProgressEntity::class,
+        SubscriptionThreadEntity::class
     ],
-    version = 3
+    version = 4
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -28,6 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun postDao(): PostDao
     abstract fun catalogDao(): CatalogDao
     abstract fun threadReadProgressDao(): ThreadReadProgressDao
+    abstract fun subscriptionThreadDao(): SubscriptionThreadDao
 }
 
 @Suppress("KotlinNoActualForExpect", "EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")

@@ -7,8 +7,6 @@ import ink.duo3.fogisland.shared.network.model.TimelineDto
 import ink.duo3.fogisland.shared.network.model.ThreadDto
 import ink.duo3.fogisland.shared.storage.preferences.CookieManager
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.ClientRequestException
-import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
@@ -102,6 +100,27 @@ class NmbApiClient(
         }
     }
 
+    suspend fun getFeedThreads(uuid: String, page: Int): List<ThreadDto> {
+        return requestBody("feed/") {
+            parameter("uuid", uuid)
+            parameter("page", page)
+        }
+    }
+
+    suspend fun addFeed(uuid: String, threadId: Long): String {
+        return requestBody("addFeed") {
+            parameter("uuid", uuid)
+            parameter("tid", threadId)
+        }
+    }
+
+    suspend fun deleteFeed(uuid: String, threadId: Long): String {
+        return requestBody("delFeed") {
+            parameter("uuid", uuid)
+            parameter("tid", threadId)
+        }
+    }
+
     suspend fun getNotice(): NoticeDto {
         return decodeResponse(
             response = client.get(NOTICE_URL),
@@ -139,7 +158,8 @@ class NmbApiClient(
                 path = path,
                 configure = configure,
                 baseUrls = candidateBaseUrls(),
-                attemptedBaseUrls = attemptedBaseUrls
+                attemptedBaseUrls = attemptedBaseUrls,
+                previousFailure = lastFailure
             ).onSuccess { return it }.onFailure { lastFailure = it }
 
             if (lastFailure is NmbApiResponseException) {
@@ -149,7 +169,6 @@ class NmbApiClient(
 
         throw NmbApiException(
             path = path,
-            attemptedBaseUrls = attemptedBaseUrls.toList(),
             cause = lastFailure
         )
     }
@@ -158,9 +177,10 @@ class NmbApiClient(
         path: String,
         configure: HttpRequestBuilder.() -> Unit,
         baseUrls: List<String>,
-        attemptedBaseUrls: MutableSet<String>
+        attemptedBaseUrls: MutableSet<String>,
+        previousFailure: Throwable? = null
     ): Result<T> {
-        var lastFailure: Throwable? = null
+        var lastFailure: Throwable? = previousFailure
 
         for (baseUrl in baseUrls) {
             if (!attemptedBaseUrls.add(baseUrl)) {
@@ -198,7 +218,7 @@ class NmbApiClient(
             }
         }
 
-        return Result.failure(lastFailure ?: IllegalStateException("没有可用的 API 域名"))
+        return Result.failure(lastFailure ?: IllegalStateException("请求前未找到可用的 API 域名"))
     }
 
     private fun candidateBaseUrls(): List<String> {
@@ -287,49 +307,3 @@ class NmbApiClient(
         }
     }
 }
-
-private class NmbApiException(
-    path: String,
-    attemptedBaseUrls: List<String>,
-    cause: Throwable?
-) : IllegalStateException(
-    buildString {
-        append("请求接口失败: ")
-        append(path)
-        if (attemptedBaseUrls.isNotEmpty()) {
-            append("，已尝试 ")
-            append(attemptedBaseUrls.joinToString())
-        }
-        when (cause) {
-            is ClientRequestException,
-            is ServerResponseException -> {
-                append("，最后一次响应状态为 ")
-                append(cause.response.status)
-            }
-            else -> {
-                cause?.message?.takeIf { it.isNotBlank() }?.let { message ->
-                    append("，最后一次错误为 ")
-                    append(message)
-                }
-            }
-        }
-    },
-    cause
-)
-
-private class NmbApiResponseException(
-    path: String,
-    message: String
-) : IllegalStateException(
-    message.ifBlank {
-        "接口请求失败: $path"
-    }
-)
-
-private class NmbApiParseException(
-    path: String,
-    cause: Throwable
-) : IllegalStateException(
-    "接口返回了无法解析的数据: $path",
-    cause
-)
