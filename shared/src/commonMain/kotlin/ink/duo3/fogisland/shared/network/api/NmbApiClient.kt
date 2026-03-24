@@ -123,6 +123,10 @@ class NmbApiClient(
             attemptedBaseUrls = attemptedBaseUrls
         ).onSuccess { return it }.onFailure { lastFailure = it }
 
+        if (lastFailure is NmbApiResponseException) {
+            throw lastFailure
+        }
+
         if (path != BACKUP_URL_PATH) {
             try {
                 refreshBackupUrls()
@@ -137,6 +141,10 @@ class NmbApiClient(
                 baseUrls = candidateBaseUrls(),
                 attemptedBaseUrls = attemptedBaseUrls
             ).onSuccess { return it }.onFailure { lastFailure = it }
+
+            if (lastFailure is NmbApiResponseException) {
+                throw lastFailure
+            }
         }
 
         throw NmbApiException(
