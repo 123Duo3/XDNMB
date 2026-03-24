@@ -33,6 +33,23 @@ data class SearchHit(
     val type: SearchHitType,
     val threadId: Long,
     val postId: Long? = null,
+    val forumId: Long?,
+    val userHash: String,
+    val name: String,
     val title: String,
-    val preview: String
+    val preview: String,
+    val postedAtEpochMillis: Long?,
+    val page: Int?,
+    val refreshedAt: Long
+)
+
+data class DirectThreadShortcut(
+    val threadId: Long,
+    val forumId: Long?,
+    val userHash: String,
+    val name: String,
+    val title: String,
+    val preview: String,
+    val postedAtEpochMillis: Long?,
+    val isCached: Boolean
 )

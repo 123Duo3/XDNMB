@@ -23,6 +23,8 @@ import kotlinx.coroutines.sync.withLock
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlin.concurrent.Volatile
 
 class NmbApiClient(
@@ -300,10 +302,40 @@ class NmbApiClient(
         } catch (_: SerializationException) {
         }
 
+        detectNmbBusinessErrorMessage(
+            json = json,
+            bodyText = bodyText,
+            expectsRawString = T::class == String::class
+        )?.let { message ->
+            throw NmbApiResponseException(path, message)
+        }
+
         return try {
             json.decodeFromString(bodyText)
         } catch (throwable: SerializationException) {
             throw NmbApiParseException(path, throwable)
         }
     }
+}
+
+internal fun detectNmbBusinessErrorMessage(
+    json: Json,
+    bodyText: String,
+    expectsRawString: Boolean
+): String? {
+    if (expectsRawString) {
+        return null
+    }
+
+    val primitive = try {
+        json.parseToJsonElement(bodyText) as? JsonPrimitive
+    } catch (_: SerializationException) {
+        null
+    } ?: return null
+
+    if (!primitive.isString) {
+        return null
+    }
+
+    return primitive.contentOrNull?.takeIf { it.isNotBlank() }
 }

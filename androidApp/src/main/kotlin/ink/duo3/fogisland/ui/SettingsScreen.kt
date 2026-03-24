@@ -48,7 +48,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.data.LocalThemeSettings
 import ink.duo3.fogisland.data.LocalTimeSettings
@@ -57,19 +56,14 @@ import ink.duo3.fogisland.data.subscriptionUuidFlow
 import ink.duo3.fogisland.data.updateFollowSystemAppearance
 import ink.duo3.fogisland.data.updateMonetSeed
 import ink.duo3.fogisland.data.updateShowSeconds
-import ink.duo3.fogisland.data.updateSubscriptionUuid
 import ink.duo3.fogisland.data.updateUseDarkMode
 import ink.duo3.fogisland.data.updateUseMonet
 import ink.duo3.fogisland.data.updateUsePreciseTime
 import ink.duo3.fogisland.data.updateUseUtcPlus8Time
-import ink.duo3.fogisland.shared.storage.preferences.isSubscriptionUuidFormatValid
-import ink.duo3.fogisland.shared.storage.preferences.normalizeSubscriptionUuidInput
 import ink.duo3.fogisland.ui.components.SettingItem
 import ink.duo3.fogisland.ui.components.SettingItemGroup
 import ink.duo3.fogisland.ui.components.SettingItemWithSwitch
 import ink.duo3.fogisland.ui.components.SubscriptionUuidEditorDialog
-import ink.duo3.fogisland.ui.components.normalizeSubscriptionUuidFieldValue
-import ink.duo3.fogisland.ui.components.subscriptionUuidTextFieldValue
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,10 +78,6 @@ fun SettingsScreen(
     val subscriptionUuid by context.subscriptionUuidFlow.collectAsState(initial = null)
     val topAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var isSubscriptionUuidDialogVisible by rememberSaveable { mutableStateOf(false) }
-    var subscriptionUuidDraft by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(subscriptionUuidTextFieldValue(""))
-    }
-    var subscriptionUuidError by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         context.ensureSubscriptionUuid()
@@ -303,13 +293,7 @@ fun SettingsScreen(
                             } ?: Text("用于区分订阅列表。尚未生成。")
                         },
                         icon = { Icon(Icons.Default.Bookmarks, contentDescription = null) },
-                        onClick = {
-                            subscriptionUuidDraft = subscriptionUuidTextFieldValue(
-                                subscriptionUuid.orEmpty()
-                            )
-                            subscriptionUuidError = null
-                            isSubscriptionUuidDialogVisible = true
-                        }
+                        onClick = { isSubscriptionUuidDialogVisible = true }
                     )
                 }
             }
@@ -322,42 +306,8 @@ fun SettingsScreen(
 
     if (isSubscriptionUuidDialogVisible) {
         SubscriptionUuidEditorDialog(
-            draft = subscriptionUuidDraft,
-            errorMessage = subscriptionUuidError,
-            onDraftChange = {
-                val normalizedValue = normalizeSubscriptionUuidFieldValue(it)
-                subscriptionUuidDraft = normalizedValue
-                subscriptionUuidError = when {
-                    normalizedValue.text.isBlank() -> null
-                    isSubscriptionUuidFormatValid(normalizedValue.text) -> null
-                    else -> "订阅 ID 格式无效"
-                }
-            },
-            onDismissRequest = {
-                isSubscriptionUuidDialogVisible = false
-                subscriptionUuidError = null
-            },
-            onConfirm = {
-                val normalizedValue = normalizeSubscriptionUuidInput(
-                    subscriptionUuidDraft.text
-                )
-                if (!isSubscriptionUuidFormatValid(normalizedValue)) {
-                    subscriptionUuidError = "订阅 ID 格式无效"
-                    return@SubscriptionUuidEditorDialog
-                }
-                scope.launch {
-                    runCatching {
-                        context.updateSubscriptionUuid(normalizedValue)
-                    }.onSuccess {
-                        isSubscriptionUuidDialogVisible = false
-                        subscriptionUuidError = null
-                    }.onFailure { throwable ->
-                        subscriptionUuidError = throwable.message
-                            ?.ifBlank { "保存订阅 ID 失败" }
-                            ?: "保存订阅 ID 失败"
-                    }
-                }
-            }
+            currentUuid = subscriptionUuid,
+            onDismissRequest = { isSubscriptionUuidDialogVisible = false }
         )
     }
 }

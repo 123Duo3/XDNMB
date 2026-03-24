@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
@@ -73,6 +74,12 @@ fun FogIslandApp() {
         backStack.add(AppRoute.History)
     }
 
+    fun showSearch() {
+        backStack.clear()
+        backStack.add(AppRoute.Catalog)
+        backStack.add(AppRoute.Search)
+    }
+
     ModalNavigationDrawer(
         modifier = Modifier.fillMaxSize(),
         drawerState = drawerState,
@@ -109,6 +116,18 @@ fun FogIslandApp() {
                                 showHistory()
                             }
                             viewModel.openReadHistory()
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("搜索", style = MaterialTheme.typography.labelLarge) },
+                        icon = { Icon(Icons.Default.Search, null) },
+                        selected = currentRoute == AppRoute.Search,
+                        onClick = {
+                            if (currentRoute != AppRoute.Search) {
+                                showSearch()
+                            }
+                            viewModel.openSearch()
                             scope.launch { drawerState.close() }
                         }
                     )
@@ -278,10 +297,53 @@ fun FogIslandApp() {
                     )
                 }
 
+                AppRoute.Search -> NavEntry(key) {
+                    LaunchedEffect(Unit) {
+                        viewModel.openSearch()
+                    }
+                    SearchScreen(
+                        forumGroups = state.forumGroups,
+                        query = state.searchQuery,
+                        results = state.searchResults,
+                        directThreadShortcut = state.directThreadShortcut,
+                        recentSearches = state.recentSearches,
+                        isSearching = state.isSearching,
+                        error = state.searchError,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        onQueryChange = viewModel::updateSearchQuery,
+                        onQuerySubmit = viewModel::submitSearchQuery,
+                        onClearRecentSearches = viewModel::clearRecentSearches,
+                        onDirectThreadClick = { threadId ->
+                            viewModel.submitSearchQuery(state.searchQuery)
+                            backStack.add(AppRoute.Thread(threadId = threadId))
+                        },
+                        onResultClick = { hit ->
+                            viewModel.submitSearchQuery(state.searchQuery)
+                            backStack.add(
+                                AppRoute.Thread(
+                                    threadId = hit.threadId,
+                                    targetPostId = hit.postId,
+                                    targetPage = if (hit.type == ink.duo3.fogisland.shared.model.SearchHitType.POST) {
+                                        hit.page
+                                    } else {
+                                        null
+                                    }
+                                )
+                            )
+                        }
+                    )
+                }
+
                 is AppRoute.Thread -> NavEntry(key) {
-                    LaunchedEffect(key.threadId) {
-                        if (state.activeThreadId != key.threadId) {
-                            viewModel.openThread(key.threadId)
+                    LaunchedEffect(key.threadId, key.targetPostId, key.targetPage) {
+                        val shouldLoadTargetPage = key.targetPage?.let { targetPage ->
+                            state.activeThreadId != key.threadId || state.loadedThreadPage < targetPage
+                        } ?: false
+                        if (state.activeThreadId != key.threadId || shouldLoadTargetPage) {
+                            viewModel.openThread(
+                                threadId = key.threadId,
+                                targetPage = key.targetPage
+                            )
                         }
                     }
                     val isRouteThreadActive = state.activeThreadId == key.threadId
@@ -297,6 +359,8 @@ fun FogIslandApp() {
                         isLoading = isRouteThreadActive && state.isLoadingThread,
                         canLoadMore = isRouteThreadActive && state.canLoadMoreReplies,
                         error = if (isRouteThreadActive) state.error else null,
+                        focusPostId = key.targetPostId,
+                        focusPage = key.targetPage,
                         onBack = {
                             if (backStack.isNotEmpty()) {
                                 backStack.removeAt(backStack.lastIndex)
@@ -331,6 +395,11 @@ private sealed interface AppRoute {
     data object Catalog : AppRoute
     data object Subscriptions : AppRoute
     data object History : AppRoute
-    data class Thread(val threadId: Long) : AppRoute
+    data object Search : AppRoute
+    data class Thread(
+        val threadId: Long,
+        val targetPostId: Long? = null,
+        val targetPage: Int? = null
+    ) : AppRoute
     data object Settings : AppRoute
 }

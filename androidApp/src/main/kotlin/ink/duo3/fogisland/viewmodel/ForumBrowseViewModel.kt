@@ -8,8 +8,10 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.CatalogSource
+import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumGroup
 import ink.duo3.fogisland.shared.model.ReadHistoryEntry
+import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SiteNotice
 import ink.duo3.fogisland.shared.model.ThreadDetail
 import ink.duo3.fogisland.shared.model.Timeline
@@ -20,8 +22,11 @@ import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import ink.duo3.fogisland.shared.storage.db.entity.SubscriptionThreadEntity
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
 import ink.duo3.fogisland.shared.util.calculateNmbThreadMaxPage
+import ink.duo3.fogisland.shared.util.parseNmbThreadIdInput
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,6 +46,10 @@ data class ForumBrowseUiState(
     val threads: List<ThreadEntity> = emptyList(),
     val subscriptionThreads: List<SubscriptionThreadEntity> = emptyList(),
     val readHistory: List<ReadHistoryEntry> = emptyList(),
+    val searchQuery: String = "",
+    val searchResults: List<SearchHit> = emptyList(),
+    val directThreadShortcut: DirectThreadShortcut? = null,
+    val recentSearches: List<String> = emptyList(),
     val loadedCatalogPage: Int = 0,
     val loadedSubscriptionPage: Int = 0,
     val siteNotice: SiteNotice? = null,
@@ -49,7 +58,9 @@ data class ForumBrowseUiState(
     val hasReachedReplyEnd: Boolean = false,
     val error: ErrorPresentation? = null,
     val subscriptionError: ErrorPresentation? = null,
-    val historyError: ErrorPresentation? = null
+    val historyError: ErrorPresentation? = null,
+    val isSearching: Boolean = false,
+    val searchError: ErrorPresentation? = null
 ) {
     val currentThread = threadDetail.thread
     val currentPosts = threadDetail.posts
@@ -82,9 +93,12 @@ class ForumBrowseViewModel(
     private var subscriptionObservationJob: Job? = null
     private var readHistoryObservationJob: Job? = null
     private var threadObservationJob: Job? = null
+    private var searchJob: Job? = null
+    private var recentSearchObservationJob: Job? = null
 
     init {
         observeSubscriptionUuid()
+        observeRecentSearches()
         hydrateCachedIndex()
         refreshIndex()
     }
@@ -213,6 +227,56 @@ class ForumBrowseViewModel(
         _uiState.update { it.copy(historyError = null) }
     }
 
+    fun openSearch() {
+        _uiState.update { it.copy(searchError = null) }
+    }
+
+    fun submitSearchQuery(query: String) {
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) {
+            return
+        }
+
+        viewModelScope.launch {
+            repository.recordRecentSearch(normalizedQuery)
+        }
+
+        runSearch(
+            inputQuery = normalizedQuery,
+            clearExistingResults = false,
+            debounceMillis = 0L
+        )
+    }
+
+    fun clearRecentSearches() {
+        viewModelScope.launch {
+            repository.clearRecentSearches()
+        }
+    }
+
+    fun updateSearchQuery(query: String) {
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) {
+            searchJob?.cancel()
+            _uiState.update {
+                it.copy(
+                    searchQuery = query,
+                    searchResults = emptyList(),
+                    directThreadShortcut = null,
+                    isSearching = false,
+                    searchError = null
+                )
+            }
+            return
+        }
+
+        runSearch(
+            inputQuery = query,
+            clearExistingResults = true,
+            debounceMillis = 180L
+        )
+    }
+
     fun deleteReadHistoryEntry(threadId: Long) {
         viewModelScope.launch {
             runCatching {
@@ -284,13 +348,17 @@ class ForumBrowseViewModel(
         }
     }
 
-    fun openThread(threadId: Long, forceRefresh: Boolean = false) {
+    fun openThread(
+        threadId: Long,
+        forceRefresh: Boolean = false,
+        targetPage: Int? = null
+    ) {
         prepareThreadState(threadId = threadId, forceRefresh = forceRefresh)
         observeThread(threadId)
 
         viewModelScope.launch {
             val progress = repository.getReadProgress(threadId)
-            val targetPage = (progress?.lastReadPage ?: 1).coerceAtLeast(1)
+            val resolvedTargetPage = (targetPage ?: progress?.lastReadPage ?: 1).coerceAtLeast(1)
             val loadedPage = threadPageCache[threadId] ?: 0
 
             runCatching {
@@ -298,7 +366,7 @@ class ForumBrowseViewModel(
                     threadId = threadId,
                     forceRefresh = forceRefresh,
                     loadedPage = loadedPage,
-                    targetPage = targetPage
+                    targetPage = resolvedTargetPage
                 )
             }.onSuccess { (lastLoadedPage, hasReachedReplyEnd) ->
                 val resolvedLoadedPage = if (forceRefresh) {
@@ -507,6 +575,79 @@ class ForumBrowseViewModel(
                         loadedSubscriptionPage = 0,
                         isLoadingSubscriptions = false,
                         subscriptionError = null
+                    )
+                }
+            }
+        }
+    }
+
+    private fun observeRecentSearches() {
+        if (recentSearchObservationJob != null) {
+            return
+        }
+
+        recentSearchObservationJob = viewModelScope.launch {
+            repository.observeRecentSearches().collect { recentSearches ->
+                _uiState.update { it.copy(recentSearches = recentSearches) }
+            }
+        }
+    }
+
+    private fun runSearch(
+        inputQuery: String,
+        clearExistingResults: Boolean,
+        debounceMillis: Long
+    ) {
+        val normalizedQuery = inputQuery.trim()
+        val directThreadId = parseNmbThreadIdInput(normalizedQuery)
+        searchJob?.cancel()
+        _uiState.update {
+            it.copy(
+                searchQuery = inputQuery,
+                searchResults = if (clearExistingResults) emptyList() else it.searchResults,
+                directThreadShortcut = directThreadId?.let { threadId ->
+                    DirectThreadShortcut(
+                        threadId = threadId,
+                        forumId = null,
+                        userHash = "",
+                        name = "",
+                        title = "",
+                        preview = "",
+                        postedAtEpochMillis = null,
+                        isCached = false
+                    )
+                },
+                isSearching = true,
+                searchError = null
+            )
+        }
+
+        searchJob = viewModelScope.launch {
+            if (debounceMillis > 0L) {
+                delay(debounceMillis)
+            }
+
+            try {
+                val directThreadShortcut = repository.resolveDirectThreadShortcut(normalizedQuery)
+                val results = repository.searchCachedContent(normalizedQuery)
+                _uiState.update {
+                    it.copy(
+                        searchQuery = normalizedQuery,
+                        searchResults = results,
+                        directThreadShortcut = directThreadShortcut,
+                        isSearching = false,
+                        searchError = null
+                    )
+                }
+            } catch (throwable: Throwable) {
+                if (throwable is CancellationException) {
+                    throw throwable
+                }
+                _uiState.update {
+                    it.copy(
+                        searchResults = emptyList(),
+                        isSearching = false,
+                        searchError = throwable.toErrorPresentation("搜索缓存失败")
                     )
                 }
             }

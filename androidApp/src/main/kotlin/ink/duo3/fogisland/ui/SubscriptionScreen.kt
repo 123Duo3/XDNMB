@@ -30,35 +30,27 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.data.LocalTimeSettings
 import ink.duo3.fogisland.data.ensureSubscriptionUuid
 import ink.duo3.fogisland.data.subscriptionUuidFlow
-import ink.duo3.fogisland.data.updateSubscriptionUuid
 import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.ForumGroup
 import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.storage.db.entity.SubscriptionThreadEntity
-import ink.duo3.fogisland.shared.storage.preferences.isSubscriptionUuidFormatValid
-import ink.duo3.fogisland.shared.storage.preferences.normalizeSubscriptionUuidInput
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import ink.duo3.fogisland.ui.components.SubscriptionUuidEditorDialog
-import ink.duo3.fogisland.ui.components.normalizeSubscriptionUuidFieldValue
-import ink.duo3.fogisland.ui.components.subscriptionUuidTextFieldValue
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,15 +67,10 @@ fun SubscriptionScreen(
     onDeleteClick: (Long) -> Unit
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val forumNameById = remember(forumGroups) { buildForumNameMap(forumGroups) }
     val subscriptionUuid by context.subscriptionUuidFlow.collectAsState(initial = null)
     val topAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var isSubscriptionUuidDialogVisible by rememberSaveable { mutableStateOf(false) }
-    var subscriptionUuidDraft by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(subscriptionUuidTextFieldValue(""))
-    }
-    var subscriptionUuidError by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         context.ensureSubscriptionUuid()
@@ -113,15 +100,7 @@ fun SubscriptionScreen(
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            subscriptionUuidDraft = subscriptionUuidTextFieldValue(
-                                subscriptionUuid.orEmpty()
-                            )
-                            subscriptionUuidError = null
-                            isSubscriptionUuidDialogVisible = true
-                        }
-                    ) {
+                    IconButton(onClick = { isSubscriptionUuidDialogVisible = true }) {
                         Icon(Icons.Default.Edit, contentDescription = "修改订阅 ID")
                     }
                     IconButton(onClick = onRefreshClick) {
@@ -198,41 +177,9 @@ fun SubscriptionScreen(
 
     if (isSubscriptionUuidDialogVisible) {
         SubscriptionUuidEditorDialog(
-            draft = subscriptionUuidDraft,
-            errorMessage = subscriptionUuidError,
-            onDraftChange = {
-                val normalizedValue = normalizeSubscriptionUuidFieldValue(it)
-                subscriptionUuidDraft = normalizedValue
-                subscriptionUuidError = when {
-                    normalizedValue.text.isBlank() -> null
-                    isSubscriptionUuidFormatValid(normalizedValue.text) -> null
-                    else -> "订阅 ID 格式无效"
-                }
-            },
-            onDismissRequest = {
-                isSubscriptionUuidDialogVisible = false
-                subscriptionUuidError = null
-            },
-            onConfirm = {
-                val normalizedValue = normalizeSubscriptionUuidInput(subscriptionUuidDraft.text)
-                if (!isSubscriptionUuidFormatValid(normalizedValue)) {
-                    subscriptionUuidError = "订阅 ID 格式无效"
-                    return@SubscriptionUuidEditorDialog
-                }
-                scope.launch {
-                    runCatching {
-                        context.updateSubscriptionUuid(normalizedValue)
-                    }.onSuccess {
-                        isSubscriptionUuidDialogVisible = false
-                        subscriptionUuidError = null
-                        onRefreshClick()
-                    }.onFailure { throwable ->
-                        subscriptionUuidError = throwable.message
-                            ?.ifBlank { "保存订阅 ID 失败" }
-                            ?: "保存订阅 ID 失败"
-                    }
-                }
-            }
+            currentUuid = subscriptionUuid,
+            onDismissRequest = { isSubscriptionUuidDialogVisible = false },
+            onSaved = onRefreshClick
         )
     }
 }

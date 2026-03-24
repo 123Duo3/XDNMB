@@ -2,6 +2,7 @@ package ink.duo3.fogisland.shared.repository
 
 import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.CatalogType
+import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumBoard
 import ink.duo3.fogisland.shared.model.ForumGroup
 import ink.duo3.fogisland.shared.model.ReadHistoryEntry
@@ -35,6 +36,7 @@ import ink.duo3.fogisland.shared.util.isNmbTipsPost
 import ink.duo3.fogisland.shared.util.normalizeNmbStoredName
 import ink.duo3.fogisland.shared.util.normalizeNmbStoredTitle
 import ink.duo3.fogisland.shared.util.parseNmbPostedAtEpochMillis
+import ink.duo3.fogisland.shared.util.parseNmbThreadIdInput
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -173,6 +175,10 @@ class ForumRepository(
         return forumPreferences.subscriptionUuidFlow
     }
 
+    fun observeRecentSearches(): Flow<List<String>> {
+        return forumPreferences.recentSearchesFlow
+    }
+
     suspend fun ensureSubscriptionUuid(): String {
         return forumPreferences.getOrCreateSubscriptionUuid()
     }
@@ -180,6 +186,45 @@ class ForumRepository(
     suspend fun updateSubscriptionUuid(uuid: String) {
         forumPreferences.updateSubscriptionUuid(uuid)
         subscriptionThreadDao.deleteAll()
+    }
+
+    suspend fun recordRecentSearch(query: String) {
+        forumPreferences.recordRecentSearch(query)
+    }
+
+    suspend fun clearRecentSearches() {
+        forumPreferences.clearRecentSearches()
+    }
+
+    suspend fun resolveDirectThreadShortcut(query: String): DirectThreadShortcut? {
+        val threadId = parseNmbThreadIdInput(query) ?: return null
+        val cachedThread = threadDao.getThreadById(threadId)
+        return if (cachedThread != null) {
+            DirectThreadShortcut(
+                threadId = threadId,
+                forumId = cachedThread.forumId,
+                userHash = cachedThread.userHash,
+                name = cachedThread.name,
+                title = cachedThread.title,
+                preview = buildPreviewSnippet(
+                    title = cachedThread.title,
+                    contentText = cachedThread.contentText
+                ),
+                postedAtEpochMillis = cachedThread.postedAtEpochMillis,
+                isCached = true
+            )
+        } else {
+            DirectThreadShortcut(
+                threadId = threadId,
+                forumId = null,
+                userHash = "",
+                name = "",
+                title = "",
+                preview = "",
+                postedAtEpochMillis = null,
+                isCached = false
+            )
+        }
     }
 
     suspend fun addSubscription(threadId: Long): String {
@@ -288,8 +333,18 @@ class ForumRepository(
             SearchHit(
                 type = SearchHitType.THREAD,
                 threadId = thread.id,
-                title = resolveNmbDisplayTitle(thread.title).orEmpty(),
-                preview = thread.contentText
+                forumId = thread.forumId,
+                userHash = thread.userHash,
+                name = thread.name,
+                title = thread.title,
+                preview = buildSearchPreview(
+                    title = thread.title,
+                    contentText = thread.contentText,
+                    query = normalizedQuery
+                ),
+                postedAtEpochMillis = thread.postedAtEpochMillis,
+                page = null,
+                refreshedAt = thread.refreshedAt
             )
         }
 
@@ -298,12 +353,64 @@ class ForumRepository(
                 type = SearchHitType.POST,
                 threadId = post.threadId,
                 postId = post.id,
-                title = resolveNmbDisplayTitle(post.title).orEmpty(),
-                preview = post.contentText
+                forumId = post.forumId,
+                userHash = post.userHash,
+                name = post.name,
+                title = post.title,
+                preview = buildSearchPreview(
+                    title = post.title,
+                    contentText = post.contentText,
+                    query = normalizedQuery
+                ),
+                postedAtEpochMillis = post.postedAtEpochMillis,
+                page = post.page,
+                refreshedAt = post.refreshedAt
             )
         }
 
-        return (threadHits + postHits).distinctBy { "${it.type}:${it.threadId}:${it.postId}" }
+        return (threadHits + postHits)
+            .sortedByDescending { it.postedAtEpochMillis ?: it.refreshedAt }
+            .distinctBy { "${it.type}:${it.threadId}:${it.postId}" }
+    }
+
+    private fun buildSearchPreview(
+        title: String,
+        contentText: String,
+        query: String
+    ): String {
+        val normalizedSource = buildPreviewSnippet(
+            title = title,
+            contentText = contentText
+        )
+        if (normalizedSource.isEmpty()) {
+            return ""
+        }
+        val matchIndex = normalizedSource.indexOf(query, ignoreCase = true)
+        if (matchIndex < 0) {
+            return normalizedSource.take(120)
+        }
+
+        val start = (matchIndex - 24).coerceAtLeast(0)
+        val end = (matchIndex + query.length + 72).coerceAtMost(normalizedSource.length)
+        val prefix = if (start > 0) "…" else ""
+        val suffix = if (end < normalizedSource.length) "…" else ""
+        return prefix + normalizedSource.substring(start, end).trim() + suffix
+    }
+
+    private fun buildPreviewSnippet(
+        title: String,
+        contentText: String
+    ): String {
+        val source = when {
+            contentText.isNotBlank() -> contentText
+            title.isNotBlank() -> resolveNmbDisplayTitle(title).orEmpty()
+            else -> ""
+        }.trim()
+        if (source.isEmpty()) {
+            return ""
+        }
+
+        return source.replace("\n", " ").replace(Regex("\\s+"), " ")
     }
 
     private suspend fun cacheCatalogPage(

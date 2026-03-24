@@ -55,6 +55,8 @@ fun ThreadDetailScreen(
     isLoading: Boolean,
     canLoadMore: Boolean,
     error: ErrorPresentation?,
+    focusPostId: Long? = null,
+    focusPage: Int? = null,
     onBack: () -> Unit,
     onSubscribe: () -> Unit,
     onRefresh: () -> Unit,
@@ -65,11 +67,41 @@ fun ThreadDetailScreen(
     val posts = detail.posts
     val progress = detail.progress
     val listState = rememberLazyListState()
+    var restoredFocusKey by remember { mutableStateOf<Triple<Long?, Long?, Int?>?>(null) }
     var restoredProgressKey by remember { mutableStateOf<Pair<Long?, Long>?>(null) }
     val timeSettings = LocalTimeSettings.current
     val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
+    val locatedFocusPostIndex = remember(posts, focusPostId) {
+        focusPostId?.let { postId -> posts.indexOfFirst { it.id == postId }.takeIf { it >= 0 } }
+    }
+    val shouldSuppressProgressRestore = focusPage != null || locatedFocusPostIndex != null
+
+    LaunchedEffect(thread?.id, posts.size, focusPostId, focusPage) {
+        val threadId = thread?.id ?: return@LaunchedEffect
+        if (focusPostId == null && focusPage == null) {
+            return@LaunchedEffect
+        }
+
+        val focusKey = Triple(threadId, focusPostId, focusPage)
+        if (restoredFocusKey == focusKey) {
+            return@LaunchedEffect
+        }
+
+        val targetIndex = focusPostId
+            ?.let { locatedFocusPostIndex?.plus(1) }
+            ?: focusPage?.let { page ->
+                posts.indexOfFirst { it.page == page }.takeIf { it >= 0 }?.plus(1)
+            }
+            ?: return@LaunchedEffect
+
+        listState.scrollToItem(index = targetIndex.coerceAtLeast(0))
+        restoredFocusKey = focusKey
+    }
 
     LaunchedEffect(thread?.id, posts.size, progress?.updatedAt) {
+        if (shouldSuppressProgressRestore) {
+            return@LaunchedEffect
+        }
         val threadId = thread?.id ?: return@LaunchedEffect
         val readProgress = progress ?: return@LaunchedEffect
         val restoreKey = threadId to readProgress.updatedAt
