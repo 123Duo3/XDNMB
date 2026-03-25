@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import ink.duo3.fogisland.shared.model.CacheCleanupTtlPolicy
 import ink.duo3.fogisland.shared.model.CookieCollection
 import ink.duo3.fogisland.shared.model.ForumTimeSettings
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
@@ -47,6 +48,12 @@ val Context.cookieCollectionFlow: Flow<CookieCollection>
 val Context.subscriptionUuidFlow: Flow<String?>
     get() = RepositoryProvider.provideForumRepository(this).observeSubscriptionUuid()
 
+val Context.cacheCleanupTtlPolicyFlow: Flow<CacheCleanupTtlPolicy>
+    get() = RepositoryProvider.provideForumPreferences(this).cacheCleanupTtlPolicyFlow
+
+val Context.readHistoryCleanupTtlPolicyFlow: Flow<CacheCleanupTtlPolicy>
+    get() = RepositoryProvider.provideForumPreferences(this).readHistoryCleanupTtlPolicyFlow
+
 suspend fun Context.updateFollowSystemAppearance(follow: Boolean) {
     dataStore.edit { preferences ->
         preferences[FOLLOW_SYSTEM_APPEARANCE] = follow
@@ -81,6 +88,14 @@ suspend fun Context.updateUsePreciseTime(usePreciseTime: Boolean) {
 
 suspend fun Context.updateShowSeconds(showSeconds: Boolean) {
     RepositoryProvider.provideForumPreferences(this).updateShowSeconds(showSeconds)
+}
+
+suspend fun Context.updateCacheCleanupTtlPolicy(policy: CacheCleanupTtlPolicy) {
+    RepositoryProvider.provideForumPreferences(this).updateCacheCleanupTtlPolicy(policy)
+}
+
+suspend fun Context.updateReadHistoryCleanupTtlPolicy(policy: CacheCleanupTtlPolicy) {
+    RepositoryProvider.provideForumPreferences(this).updateReadHistoryCleanupTtlPolicy(policy)
 }
 
 suspend fun Context.ensureSubscriptionUuid(): String {

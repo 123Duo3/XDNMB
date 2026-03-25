@@ -55,6 +55,14 @@ interface ForumRefreshDao {
         insertSubscriptionThreads(threads)
     }
 
+    @Transaction
+    suspend fun pruneExpiredCache(expireBefore: Long) {
+        deleteExpiredCatalogEntries(expireBefore)
+        deleteExpiredSubscriptionThreads(expireBefore)
+        deleteExpiredPosts(expireBefore)
+        deleteExpiredOrphanThreads(expireBefore)
+    }
+
     @Upsert
     suspend fun upsertThreads(threads: List<ThreadEntity>)
 
@@ -102,4 +110,41 @@ interface ForumRefreshDao {
 
     @Query("DELETE FROM subscription_threads WHERE page = :page")
     suspend fun deleteSubscriptionPage(page: Int)
+
+    @Query("DELETE FROM catalog_entries WHERE refreshedAt < :expireBefore")
+    suspend fun deleteExpiredCatalogEntries(expireBefore: Long)
+
+    @Query("DELETE FROM subscription_threads WHERE refreshedAt < :expireBefore")
+    suspend fun deleteExpiredSubscriptionThreads(expireBefore: Long)
+
+    @Query("DELETE FROM posts WHERE refreshedAt < :expireBefore")
+    suspend fun deleteExpiredPosts(expireBefore: Long)
+
+    @Query(
+        """
+        DELETE FROM threads
+        WHERE refreshedAt < :expireBefore
+          AND NOT EXISTS (
+              SELECT 1 FROM posts
+              WHERE posts.threadId = threads.id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM catalog_entries
+              WHERE catalog_entries.threadId = threads.id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM thread_read_progress
+              WHERE thread_read_progress.threadId = threads.id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM posting_history
+              WHERE posting_history.threadId = threads.id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM posting_draft
+              WHERE posting_draft.threadId = threads.id
+          )
+        """
+    )
+    suspend fun deleteExpiredOrphanThreads(expireBefore: Long)
 }

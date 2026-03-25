@@ -119,6 +119,10 @@ class ForumBrowseViewModel(
         observeRecentSearches()
         observePostingDrafts()
         viewModelScope.launch {
+            runCatching { repository.cleanupExpiredCache() }
+            runCatching { repository.cleanupExpiredReadHistory() }
+        }
+        viewModelScope.launch {
             hydrateCachedIndex()
             refreshIndexInternal()
         }

@@ -25,6 +25,9 @@ interface ThreadReadProgressDao {
     @Query("DELETE FROM thread_read_progress")
     suspend fun deleteAll()
 
+    @Query("DELETE FROM thread_read_progress WHERE updatedAt < :expireBefore")
+    suspend fun deleteExpired(expireBefore: Long)
+
     @Query(
         """
         SELECT

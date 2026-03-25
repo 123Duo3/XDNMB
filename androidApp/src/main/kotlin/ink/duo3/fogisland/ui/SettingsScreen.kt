@@ -7,13 +7,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrightnessAuto
@@ -25,10 +31,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
@@ -44,14 +53,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import ink.duo3.fogisland.shared.model.CacheCleanupTtlPolicy
 import ink.duo3.fogisland.data.LocalThemeSettings
 import ink.duo3.fogisland.data.LocalTimeSettings
+import ink.duo3.fogisland.data.cacheCleanupTtlPolicyFlow
 import ink.duo3.fogisland.data.ensureSubscriptionUuid
+import ink.duo3.fogisland.data.readHistoryCleanupTtlPolicyFlow
 import ink.duo3.fogisland.data.subscriptionUuidFlow
+import ink.duo3.fogisland.data.updateCacheCleanupTtlPolicy
 import ink.duo3.fogisland.data.updateFollowSystemAppearance
 import ink.duo3.fogisland.data.updateMonetSeed
+import ink.duo3.fogisland.data.updateReadHistoryCleanupTtlPolicy
 import ink.duo3.fogisland.data.updateShowSeconds
 import ink.duo3.fogisland.data.updateUseDarkMode
 import ink.duo3.fogisland.data.updateUseMonet
@@ -74,8 +89,16 @@ fun SettingsScreen(
     val themeSettings = LocalThemeSettings.current
     val timeSettings = LocalTimeSettings.current
     val subscriptionUuid by context.subscriptionUuidFlow.collectAsState(initial = null)
+    val cacheCleanupTtlPolicy by context.cacheCleanupTtlPolicyFlow.collectAsState(
+        initial = CacheCleanupTtlPolicy.NEVER
+    )
+    val readHistoryCleanupTtlPolicy by context.readHistoryCleanupTtlPolicyFlow.collectAsState(
+        initial = CacheCleanupTtlPolicy.NEVER
+    )
     val topAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var isSubscriptionUuidDialogVisible by rememberSaveable { mutableStateOf(false) }
+    var isCacheCleanupDialogVisible by rememberSaveable { mutableStateOf(false) }
+    var isReadHistoryCleanupDialogVisible by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         context.ensureSubscriptionUuid()
@@ -299,6 +322,36 @@ fun SettingsScreen(
             item {
                 CookieSettingsSection()
             }
+
+            item {
+                SettingItemGroup(
+                    title = "缓存",
+                    footer = {
+                        Text("仅清理缓存数据，不会清理阅读历史、发言历史和订阅。")
+                    }
+                ) {
+                    SettingItem(
+                        title = { Text("缓存自动清理") },
+                        description = { Text(cacheCleanupTtlPolicy.toDisplayText()) },
+                        onClick = { isCacheCleanupDialogVisible = true }
+                    )
+                }
+            }
+
+            item {
+                SettingItemGroup(
+                    title = "阅读历史",
+                    footer = {
+                        Text("仅清理阅读历史记录，不会删除本地缓存内容。")
+                    }
+                ) {
+                    SettingItem(
+                        title = { Text("阅读历史自动清理") },
+                        description = { Text(readHistoryCleanupTtlPolicy.toDisplayText()) },
+                        onClick = { isReadHistoryCleanupDialogVisible = true }
+                    )
+                }
+            }
         }
     }
 
@@ -307,5 +360,93 @@ fun SettingsScreen(
             currentUuid = subscriptionUuid,
             onDismissRequest = { isSubscriptionUuidDialogVisible = false }
         )
+    }
+
+    if (isCacheCleanupDialogVisible) {
+        CleanupTtlPolicyDialog(
+            title = "缓存自动清理",
+            selectedPolicy = cacheCleanupTtlPolicy,
+            onSelect = { policy ->
+                scope.launch {
+                    context.updateCacheCleanupTtlPolicy(policy)
+                }
+                isCacheCleanupDialogVisible = false
+            },
+            onDismissRequest = { isCacheCleanupDialogVisible = false }
+        )
+    }
+
+    if (isReadHistoryCleanupDialogVisible) {
+        CleanupTtlPolicyDialog(
+            title = "阅读历史自动清理",
+            selectedPolicy = readHistoryCleanupTtlPolicy,
+            onSelect = { policy ->
+                scope.launch {
+                    context.updateReadHistoryCleanupTtlPolicy(policy)
+                }
+                isReadHistoryCleanupDialogVisible = false
+            },
+            onDismissRequest = { isReadHistoryCleanupDialogVisible = false }
+        )
+    }
+}
+
+@Composable
+private fun CleanupTtlPolicyDialog(
+    title: String,
+    selectedPolicy: CacheCleanupTtlPolicy,
+    onSelect: (CacheCleanupTtlPolicy) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(title) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                CacheCleanupTtlPolicy.entries.forEach { policy ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = selectedPolicy == policy,
+                                onClick = { onSelect(policy) },
+                                role = Role.RadioButton
+                            )
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedPolicy == policy,
+                            onClick = null
+                        )
+                        Text(
+                            text = policy.toDisplayText(),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("关闭")
+            }
+        }
+    )
+}
+
+private fun CacheCleanupTtlPolicy.toDisplayText(): String {
+    return when (this) {
+        CacheCleanupTtlPolicy.NEVER -> "不清理"
+        CacheCleanupTtlPolicy.ONE_WEEK -> "一周"
+        CacheCleanupTtlPolicy.ONE_MONTH -> "一个月"
+        CacheCleanupTtlPolicy.THREE_MONTHS -> "三个月"
+        CacheCleanupTtlPolicy.SIX_MONTHS -> "六个月"
+        CacheCleanupTtlPolicy.ONE_YEAR -> "一年"
     }
 }

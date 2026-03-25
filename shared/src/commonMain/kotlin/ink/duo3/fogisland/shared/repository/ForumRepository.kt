@@ -3,6 +3,7 @@ package ink.duo3.fogisland.shared.repository
 import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.CatalogThread
 import ink.duo3.fogisland.shared.model.CatalogType
+import ink.duo3.fogisland.shared.model.CacheCleanupTtlPolicy
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumBoard
 import ink.duo3.fogisland.shared.model.ForumGroup
@@ -59,6 +60,14 @@ import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+
+internal fun resolveCleanupExpireBefore(
+    policy: CacheCleanupTtlPolicy,
+    nowEpochMillis: Long
+): Long? {
+    val ttlMillis = policy.ttlMillis() ?: return null
+    return nowEpochMillis - ttlMillis
+}
 
 class ForumRepository(
     private val apiClient: NmbApiClient,
@@ -197,6 +206,22 @@ class ForumRepository(
 
     fun observeRecentSearches(): Flow<List<String>> {
         return forumPreferences.recentSearchesFlow
+    }
+
+    suspend fun cleanupExpiredCache() {
+        val expireBefore = resolveCleanupExpireBefore(
+            policy = forumPreferences.getCacheCleanupTtlPolicy(),
+            nowEpochMillis = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        ) ?: return
+        forumRefreshDao.pruneExpiredCache(expireBefore)
+    }
+
+    suspend fun cleanupExpiredReadHistory() {
+        val expireBefore = resolveCleanupExpireBefore(
+            policy = forumPreferences.getReadHistoryCleanupTtlPolicy(),
+            nowEpochMillis = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        ) ?: return
+        threadReadProgressDao.deleteExpired(expireBefore)
     }
 
     suspend fun ensureSubscriptionUuid(): String {

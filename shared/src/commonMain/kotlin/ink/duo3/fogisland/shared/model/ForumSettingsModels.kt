@@ -10,6 +10,21 @@ data class ForumTimeSettings(
     val showSeconds: Boolean = false
 )
 
+enum class CacheCleanupTtlPolicy(
+    val ttlDays: Int?
+) {
+    NEVER(ttlDays = null),
+    ONE_WEEK(ttlDays = 7),
+    ONE_MONTH(ttlDays = 30),
+    THREE_MONTHS(ttlDays = 92),
+    SIX_MONTHS(ttlDays = 183),
+    ONE_YEAR(ttlDays = 365);
+
+    fun ttlMillis(): Long? {
+        return ttlDays?.toLong()?.times(24L * 60L * 60L * 1000L)
+    }
+}
+
 fun ForumTimeSettings.toNmbTimeFormatOptions(
     mode: NmbTimeDisplayMode = if (usePreciseTime) {
         NmbTimeDisplayMode.PRECISE

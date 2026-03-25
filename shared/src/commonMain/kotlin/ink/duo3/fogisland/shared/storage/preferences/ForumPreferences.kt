@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import ink.duo3.fogisland.shared.model.CacheCleanupTtlPolicy
 import ink.duo3.fogisland.shared.model.ForumTimeSettings
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -55,6 +56,15 @@ private fun Char.isSubscriptionUuidChar(): Boolean {
     return this in 'a'..'z' || isDigit() || this == '-'
 }
 
+internal fun decodeCleanupTtlPolicy(rawValue: String?): CacheCleanupTtlPolicy {
+    if (rawValue.isNullOrBlank()) {
+        return CacheCleanupTtlPolicy.NEVER
+    }
+    return runCatching {
+        CacheCleanupTtlPolicy.valueOf(rawValue)
+    }.getOrDefault(CacheCleanupTtlPolicy.NEVER)
+}
+
 class ForumPreferences(
     private val dataStore: DataStore<Preferences>
 ) {
@@ -68,6 +78,9 @@ class ForumPreferences(
         private val SHOW_SECONDS = booleanPreferencesKey("show_seconds")
         private val SUBSCRIPTION_UUID = stringPreferencesKey("subscription_uuid")
         private val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
+        private val CACHE_CLEANUP_TTL_POLICY = stringPreferencesKey("cache_cleanup_ttl_policy")
+        private val READ_HISTORY_CLEANUP_TTL_POLICY =
+            stringPreferencesKey("read_history_cleanup_ttl_policy")
     }
 
     val timeSettingsFlow: Flow<ForumTimeSettings> = dataStore.data.map { preferences ->
@@ -86,6 +99,15 @@ class ForumPreferences(
         decodeRecentSearches(preferences[RECENT_SEARCHES])
     }
 
+    val cacheCleanupTtlPolicyFlow: Flow<CacheCleanupTtlPolicy> = dataStore.data.map { preferences ->
+        decodeCleanupTtlPolicy(preferences[CACHE_CLEANUP_TTL_POLICY])
+    }
+
+    val readHistoryCleanupTtlPolicyFlow: Flow<CacheCleanupTtlPolicy> = dataStore.data.map {
+        preferences ->
+        decodeCleanupTtlPolicy(preferences[READ_HISTORY_CLEANUP_TTL_POLICY])
+    }
+
     suspend fun updateUseUtcPlus8Time(useUtcPlus8Time: Boolean) {
         dataStore.edit { preferences ->
             preferences[USE_UTC_PLUS_8_TIME] = useUtcPlus8Time
@@ -101,6 +123,28 @@ class ForumPreferences(
     suspend fun updateShowSeconds(showSeconds: Boolean) {
         dataStore.edit { preferences ->
             preferences[SHOW_SECONDS] = showSeconds
+        }
+    }
+
+    suspend fun getCacheCleanupTtlPolicy(): CacheCleanupTtlPolicy {
+        val rawValue = dataStore.data.firstOrNull()?.get(CACHE_CLEANUP_TTL_POLICY)
+        return decodeCleanupTtlPolicy(rawValue)
+    }
+
+    suspend fun updateCacheCleanupTtlPolicy(policy: CacheCleanupTtlPolicy) {
+        dataStore.edit { preferences ->
+            preferences[CACHE_CLEANUP_TTL_POLICY] = policy.name
+        }
+    }
+
+    suspend fun getReadHistoryCleanupTtlPolicy(): CacheCleanupTtlPolicy {
+        val rawValue = dataStore.data.firstOrNull()?.get(READ_HISTORY_CLEANUP_TTL_POLICY)
+        return decodeCleanupTtlPolicy(rawValue)
+    }
+
+    suspend fun updateReadHistoryCleanupTtlPolicy(policy: CacheCleanupTtlPolicy) {
+        dataStore.edit { preferences ->
+            preferences[READ_HISTORY_CLEANUP_TTL_POLICY] = policy.name
         }
     }
 
@@ -166,4 +210,5 @@ class ForumPreferences(
             .distinct()
             .take(MAX_RECENT_SEARCHES)
     }
+
 }
