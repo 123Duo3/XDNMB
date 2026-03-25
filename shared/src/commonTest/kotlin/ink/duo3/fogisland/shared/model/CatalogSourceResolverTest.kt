@@ -86,15 +86,6 @@ class CatalogSourceResolverTest {
     }
 
     @Test
-    fun resolveForumDisplayNameUsesFallbackWhenMissing() {
-        val forumNames = buildForumDisplayNameMap(listOf(boardGroup))
-
-        assertEquals("时间胶囊", resolveForumDisplayName(4L, forumNames))
-        assertEquals("板块 No.404", resolveForumDisplayName(404L, forumNames))
-        assertNull(resolveForumDisplayName(null, forumNames))
-    }
-
-    @Test
     fun resolveForumNameUsesShortNameWhenAvailable() {
         val forumNames = buildForumNameMap(listOf(boardGroup))
 

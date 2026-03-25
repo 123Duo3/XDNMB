@@ -1,20 +1,12 @@
 package ink.duo3.fogisland.shared.storage.db.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ThreadDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertThreads(threads: List<ThreadEntity>)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertThread(thread: ThreadEntity)
-
     @Query(
         """
         SELECT threads.* FROM catalog_entries
@@ -34,8 +26,8 @@ interface ThreadDao {
     @Query(
         """
         SELECT * FROM threads
-        WHERE title LIKE '%' || :query || '%'
-           OR contentText LIKE '%' || :query || '%'
+        WHERE title LIKE '%' || :query || '%' ESCAPE '\'
+           OR contentText LIKE '%' || :query || '%' ESCAPE '\'
         ORDER BY refreshedAt DESC
         """
     )

@@ -1,6 +1,7 @@
 package ink.duo3.fogisland.shared.repository
 
 import ink.duo3.fogisland.shared.model.CatalogSource
+import ink.duo3.fogisland.shared.model.CatalogThread
 import ink.duo3.fogisland.shared.model.CatalogType
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumBoard
@@ -15,7 +16,10 @@ import ink.duo3.fogisland.shared.model.ReplyPostResult
 import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SearchHitType
 import ink.duo3.fogisland.shared.model.SiteNotice
+import ink.duo3.fogisland.shared.model.SubscriptionThread
 import ink.duo3.fogisland.shared.model.ThreadDetail
+import ink.duo3.fogisland.shared.model.ThreadPost
+import ink.duo3.fogisland.shared.model.ThreadReadProgress
 import ink.duo3.fogisland.shared.model.ThreadPostRequest
 import ink.duo3.fogisland.shared.model.ThreadPostResult
 import ink.duo3.fogisland.shared.model.Timeline
@@ -25,7 +29,7 @@ import ink.duo3.fogisland.shared.network.model.ForumGroupDto
 import ink.duo3.fogisland.shared.network.model.PostDto
 import ink.duo3.fogisland.shared.network.model.ThreadDto
 import ink.duo3.fogisland.shared.network.model.TimelineDto
-import ink.duo3.fogisland.shared.storage.db.dao.CatalogDao
+import ink.duo3.fogisland.shared.storage.db.dao.ForumRefreshDao
 import ink.duo3.fogisland.shared.storage.db.dao.PostingDraftDao
 import ink.duo3.fogisland.shared.storage.db.dao.PostingHistoryDao
 import ink.duo3.fogisland.shared.storage.db.dao.PostDao
@@ -43,6 +47,7 @@ import ink.duo3.fogisland.shared.storage.preferences.CatalogIndexCache
 import ink.duo3.fogisland.shared.storage.preferences.CatalogIndexSnapshot
 import ink.duo3.fogisland.shared.storage.preferences.ForumPreferences
 import ink.duo3.fogisland.shared.util.calculateNmbThreadMaxPage
+import ink.duo3.fogisland.shared.util.escapeSqlLikeArgument
 import ink.duo3.fogisland.shared.util.htmlToPlainText
 import ink.duo3.fogisland.shared.util.isNmbTipsPost
 import ink.duo3.fogisland.shared.util.normalizeNmbStoredName
@@ -59,7 +64,7 @@ class ForumRepository(
     private val apiClient: NmbApiClient,
     private val threadDao: ThreadDao,
     private val postDao: PostDao,
-    private val catalogDao: CatalogDao,
+    private val forumRefreshDao: ForumRefreshDao,
     private val subscriptionThreadDao: SubscriptionThreadDao,
     private val postingDraftDao: PostingDraftDao,
     private val postingHistoryDao: PostingHistoryDao,
@@ -130,20 +135,23 @@ class ForumRepository(
 
     suspend fun getSiteNotice(): SiteNotice? {
         val notice = apiClient.getNotice()
-        if (notice.enabled != true) {
-            return null
+        val resolvedNotice = if (notice.enabled == true) {
+            notice.content.orEmpty()
+                .trim()
+                .takeIf { it.isNotEmpty() }
+                ?.let { contentHtml ->
+                    SiteNotice(
+                        contentHtml = contentHtml,
+                        contentText = htmlToPlainText(contentHtml),
+                        publishedAt = notice.date?.let(::parseNmbNoticeDateEpochMillis)
+                    )
+                }
+        } else {
+            null
         }
 
-        val contentHtml = notice.content.orEmpty().trim()
-        if (contentHtml.isEmpty()) {
-            return null
-        }
-
-        return SiteNotice(
-            contentHtml = contentHtml,
-            contentText = htmlToPlainText(contentHtml),
-            publishedAt = notice.date?.let(::parseNmbNoticeDateEpochMillis)
-        )
+        catalogIndexCache.updateSiteNotice(resolvedNotice)
+        return resolvedNotice
     }
 
     suspend fun refreshCatalog(source: CatalogSource, page: Int) {
@@ -152,14 +160,12 @@ class ForumRepository(
             CatalogType.FORUM -> apiClient.getForumThreads(source.id, page)
             CatalogType.TIMELINE -> apiClient.getTimelineThreads(source.id, page)
         }
-
         cacheCatalogPage(
             catalogType = source.type.name,
             catalogId = source.id,
             page = page,
             threads = threads,
-            refreshedAt = timestamp,
-            clearAll = false
+            refreshedAt = timestamp
         )
     }
 
@@ -167,13 +173,9 @@ class ForumRepository(
         val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
         val uuid = forumPreferences.getOrCreateSubscriptionUuid()
         val threads = apiClient.getFeedThreads(uuid = uuid, page = page)
-        if (page == 1) {
-            subscriptionThreadDao.deleteAll()
-        } else {
-            subscriptionThreadDao.deletePage(page)
-        }
-        subscriptionThreadDao.insertThreads(
-            threads.mapIndexed { index, thread ->
+        forumRefreshDao.replaceSubscriptionPage(
+            page = page,
+            threads = threads.mapIndexed { index, thread ->
                 thread.toSubscriptionThreadEntity(
                     page = page,
                     position = index,
@@ -183,8 +185,10 @@ class ForumRepository(
         )
     }
 
-    fun observeSubscriptions(): Flow<List<SubscriptionThreadEntity>> {
-        return subscriptionThreadDao.observeAll()
+    fun observeSubscriptions(): Flow<List<SubscriptionThread>> {
+        return subscriptionThreadDao.observeAll().map { entries ->
+            entries.map { it.toModel() }
+        }
     }
 
     fun observeSubscriptionUuid(): Flow<String?> {
@@ -289,11 +293,12 @@ class ForumRepository(
         val realReplies = thread.replies.filterNot { it.isTipsPost() }
         val totalReplyCount = thread.replyCount ?: 0
         val maxPage = calculateNmbThreadMaxPage(totalReplyCount)
-
-        threadDao.insertThread(thread.toThreadEntity(timestamp))
-        postDao.deleteThreadPage(threadId, page)
-        postDao.insertPosts(
-            thread.replies.mapIndexed { index, reply ->
+        forumRefreshDao.replaceThreadPage(
+            thread = thread.toThreadEntity(timestamp),
+            threadId = threadId,
+            page = page,
+            maxPage = maxPage,
+            posts = thread.replies.mapIndexed { index, reply ->
                 reply.toPostEntity(
                     threadId = threadId,
                     fallbackForumId = thread.forumId,
@@ -303,7 +308,6 @@ class ForumRepository(
                 )
             }
         )
-        postDao.deleteThreadPagesAfter(threadId, maxPage)
 
         return ThreadRefreshResult(
             page = page,
@@ -312,8 +316,10 @@ class ForumRepository(
         )
     }
 
-    fun observeCatalog(source: CatalogSource): Flow<List<ThreadEntity>> {
-        return threadDao.observeCatalog(source.type.name, source.id)
+    fun observeCatalog(source: CatalogSource): Flow<List<CatalogThread>> {
+        return threadDao.observeCatalog(source.type.name, source.id).map { entries ->
+            entries.map { it.toModel() }
+        }
     }
 
     fun observeThreadDetail(threadId: Long): Flow<ThreadDetail> {
@@ -323,11 +329,18 @@ class ForumRepository(
             threadReadProgressDao.observeByThreadId(threadId)
         ) { thread, posts, progress ->
             ThreadDetail(
-                thread = thread,
-                posts = posts,
-                progress = progress
+                thread = thread?.toModel(),
+                posts = posts.map { it.toModel() },
+                progress = progress?.toModel()
             )
         }
+    }
+
+    suspend fun getCachedThreadLoadedPage(threadId: Long): Int {
+        if (threadDao.getThreadById(threadId) == null) {
+            return 0
+        }
+        return postDao.getMaxLoadedPageForThread(threadId) ?: 0
     }
 
     fun observeReadHistory(): Flow<List<ReadHistoryEntry>> {
@@ -437,8 +450,8 @@ class ForumRepository(
         postingDraftDao.deleteAll()
     }
 
-    suspend fun getReadProgress(threadId: Long): ThreadReadProgressEntity? {
-        return threadReadProgressDao.getByThreadId(threadId)
+    suspend fun getReadProgress(threadId: Long): ThreadReadProgress? {
+        return threadReadProgressDao.getByThreadId(threadId)?.toModel()
     }
 
     suspend fun updateReadProgress(
@@ -465,8 +478,9 @@ class ForumRepository(
         if (normalizedQuery.isEmpty()) {
             return emptyList()
         }
+        val escapedQuery = escapeSqlLikeArgument(normalizedQuery)
 
-        val threadHits = threadDao.searchThreads(normalizedQuery).map { thread ->
+        val threadHits = threadDao.searchThreads(escapedQuery).map { thread ->
             SearchHit(
                 type = SearchHitType.THREAD,
                 threadId = thread.id,
@@ -485,7 +499,7 @@ class ForumRepository(
             )
         }
 
-        val postHits = postDao.searchPosts(normalizedQuery).map { post ->
+        val postHits = postDao.searchPosts(escapedQuery).map { post ->
             SearchHit(
                 type = SearchHitType.POST,
                 threadId = post.threadId,
@@ -555,16 +569,9 @@ class ForumRepository(
         catalogId: Long,
         page: Int,
         threads: List<ThreadDto>,
-        refreshedAt: Long,
-        clearAll: Boolean
+        refreshedAt: Long
     ) {
-        if (clearAll) {
-            catalogDao.deleteCatalog(catalogType, catalogId)
-        } else {
-            catalogDao.deletePage(catalogType, catalogId, page)
-        }
-
-        threadDao.insertThreads(threads.map { it.toThreadEntity(refreshedAt) })
+        val threadEntities = threads.map { it.toThreadEntity(refreshedAt) }
         val cachedReplies = threads.flatMap { thread ->
             thread.replies
                 .filterNot { it.isTipsPost() }
@@ -578,18 +585,23 @@ class ForumRepository(
                     )
                 }
         }
-        postDao.insertPosts(cachedReplies)
-        catalogDao.insertEntries(
-            threads.mapIndexed { index, thread ->
-                CatalogEntryEntity(
-                    catalogType = catalogType,
-                    catalogId = catalogId,
-                    threadId = thread.id,
-                    page = page,
-                    position = index,
-                    refreshedAt = refreshedAt
-                )
-            }
+        val catalogEntries = threads.mapIndexed { index, thread ->
+            CatalogEntryEntity(
+                catalogType = catalogType,
+                catalogId = catalogId,
+                threadId = thread.id,
+                page = page,
+                position = index,
+                refreshedAt = refreshedAt
+            )
+        }
+        forumRefreshDao.replaceCatalogPage(
+            catalogType = catalogType,
+            catalogId = catalogId,
+            page = page,
+            threads = threadEntities,
+            posts = cachedReplies,
+            entries = catalogEntries
         )
     }
 
@@ -707,6 +719,82 @@ class ForumRepository(
         }
 
         return page?.let { -it.toLong() } ?: (Long.MIN_VALUE + position)
+    }
+
+    private fun ThreadEntity.toModel(): CatalogThread {
+        return CatalogThread(
+            id = id,
+            forumId = forumId,
+            userHash = userHash,
+            name = name,
+            title = title,
+            contentHtml = contentHtml,
+            contentText = contentText,
+            image = image,
+            ext = ext,
+            postedAtEpochMillis = postedAtEpochMillis,
+            sage = sage,
+            admin = admin,
+            hide = hide,
+            replyCount = replyCount,
+            remainReplies = remainReplies,
+            refreshedAt = refreshedAt
+        )
+    }
+
+    private fun PostEntity.toModel(): ThreadPost {
+        return ThreadPost(
+            threadId = threadId,
+            id = id,
+            remoteId = remoteId,
+            forumId = forumId,
+            replyCount = replyCount,
+            userHash = userHash,
+            name = name,
+            title = title,
+            contentHtml = contentHtml,
+            contentText = contentText,
+            image = image,
+            ext = ext,
+            postedAtEpochMillis = postedAtEpochMillis,
+            sage = sage,
+            admin = admin,
+            hide = hide,
+            isTips = isTips,
+            page = page,
+            positionInPage = positionInPage,
+            refreshedAt = refreshedAt
+        )
+    }
+
+    private fun SubscriptionThreadEntity.toModel(): SubscriptionThread {
+        return SubscriptionThread(
+            threadId = threadId,
+            forumId = forumId,
+            userHash = userHash,
+            name = name,
+            title = title,
+            contentText = contentText,
+            image = image,
+            ext = ext,
+            postedAtEpochMillis = postedAtEpochMillis,
+            replyCount = replyCount,
+            remainReplies = remainReplies,
+            page = page,
+            positionInPage = positionInPage,
+            refreshedAt = refreshedAt
+        )
+    }
+
+    private fun ThreadReadProgressEntity.toModel(): ThreadReadProgress {
+        return ThreadReadProgress(
+            threadId = threadId,
+            lastReadPage = lastReadPage,
+            lastReadPostId = lastReadPostId,
+            lastVisibleItemIndex = lastVisibleItemIndex,
+            lastVisibleItemOffset = lastVisibleItemOffset,
+            updatedAt = updatedAt
+        )
     }
 
     private suspend fun recordPostedThread(

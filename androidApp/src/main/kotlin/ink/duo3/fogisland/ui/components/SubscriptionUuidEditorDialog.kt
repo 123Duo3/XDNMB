@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.layout.fillMaxWidth
 import ink.duo3.fogisland.data.updateSubscriptionUuid
+import ink.duo3.fogisland.shared.storage.preferences.MAX_SUBSCRIPTION_UUID_LENGTH
 import ink.duo3.fogisland.shared.storage.preferences.generateSubscriptionUuid
 import ink.duo3.fogisland.shared.storage.preferences.isSubscriptionUuidFormatValid
 import ink.duo3.fogisland.shared.storage.preferences.normalizeSubscriptionUuidInput
@@ -150,6 +151,8 @@ private fun validateSubscriptionUuidText(text: String): String? {
     val normalizedText = normalizeSubscriptionUuidInput(text)
     return when {
         normalizedText.isBlank() -> null
+        normalizedText.length > MAX_SUBSCRIPTION_UUID_LENGTH ->
+            "订阅 ID 最长 $MAX_SUBSCRIPTION_UUID_LENGTH 个字符"
         isSubscriptionUuidFormatValid(normalizedText) -> null
         else -> "订阅 ID 格式无效"
     }

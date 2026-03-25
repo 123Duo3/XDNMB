@@ -52,7 +52,7 @@ object RepositoryProvider {
             apiClient = apiClient,
             threadDao = database.threadDao(),
             postDao = database.postDao(),
-            catalogDao = database.catalogDao(),
+            forumRefreshDao = database.forumRefreshDao(),
             subscriptionThreadDao = database.subscriptionThreadDao(),
             postingDraftDao = database.postingDraftDao(),
             postingHistoryDao = database.postingHistoryDao(),

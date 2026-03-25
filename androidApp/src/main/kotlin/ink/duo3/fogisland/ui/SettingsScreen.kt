@@ -1,7 +1,6 @@
 package ink.duo3.fogisland.ui
 
 import android.os.Build
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -10,7 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.DarkMode
@@ -60,6 +57,7 @@ import ink.duo3.fogisland.data.updateUseDarkMode
 import ink.duo3.fogisland.data.updateUseMonet
 import ink.duo3.fogisland.data.updateUsePreciseTime
 import ink.duo3.fogisland.data.updateUseUtcPlus8Time
+import ink.duo3.fogisland.ui.components.CookieSettingsSection
 import ink.duo3.fogisland.ui.components.SettingItem
 import ink.duo3.fogisland.ui.components.SettingItemGroup
 import ink.duo3.fogisland.ui.components.SettingItemWithSwitch

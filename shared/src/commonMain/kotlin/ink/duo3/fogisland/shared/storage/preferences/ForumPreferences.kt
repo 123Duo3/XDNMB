@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.map
 import kotlin.random.Random
 
 private const val SUBSCRIPTION_UUID_LENGTH = 12
+const val MAX_SUBSCRIPTION_UUID_LENGTH = 64
 private const val MAX_RECENT_SEARCHES = 8
 private const val SUBSCRIPTION_UUID_ALLOWED_CHARS =
     "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -37,7 +38,9 @@ fun normalizeSubscriptionUuidInput(uuid: String): String {
 }
 
 fun isSubscriptionUuidFormatValid(uuid: String): Boolean {
-    return uuid.isNotEmpty() && uuid.all { it.isSubscriptionUuidChar() }
+    return uuid.isNotEmpty() &&
+        uuid.length <= MAX_SUBSCRIPTION_UUID_LENGTH &&
+        uuid.all { it.isSubscriptionUuidChar() }
 }
 
 fun normalizeSubscriptionUuid(uuid: String?): String? {

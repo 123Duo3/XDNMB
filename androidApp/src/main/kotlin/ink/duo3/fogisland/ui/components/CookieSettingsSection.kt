@@ -1,4 +1,4 @@
-package ink.duo3.fogisland.ui
+package ink.duo3.fogisland.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,8 +41,6 @@ import ink.duo3.fogisland.shared.model.CookieCollection
 import ink.duo3.fogisland.shared.model.CookieProfile
 import ink.duo3.fogisland.shared.model.MAX_COOKIE_PROFILE_COUNT
 import ink.duo3.fogisland.shared.storage.preferences.CookieLimitExceededException
-import ink.duo3.fogisland.ui.components.SettingItem
-import ink.duo3.fogisland.ui.components.SettingItemGroup
 import kotlinx.coroutines.launch
 
 @Composable

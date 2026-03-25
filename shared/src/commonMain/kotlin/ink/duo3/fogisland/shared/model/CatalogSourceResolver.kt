@@ -44,12 +44,6 @@ fun defaultCatalogSource(
 
 fun CatalogSource.cacheKey(): String = "${type.name}:$id"
 
-fun buildForumDisplayNameMap(forumGroups: List<ForumGroup>): Map<Long, String> {
-    return forumGroups
-        .flatMap { group -> group.forums.map { forum -> forum.id to forum.displayName } }
-        .toMap()
-}
-
 fun buildForumNameMap(forumGroups: List<ForumGroup>): Map<Long, String> {
     return forumGroups
         .flatMap { group ->
@@ -58,13 +52,6 @@ fun buildForumNameMap(forumGroups: List<ForumGroup>): Map<Long, String> {
             }
         }
         .toMap()
-}
-
-fun resolveForumDisplayName(
-    forumId: Long?,
-    forumDisplayNames: Map<Long, String>
-): String? {
-    return forumId?.let(forumDisplayNames::get) ?: forumId?.let { "板块 No.$it" }
 }
 
 fun resolveForumName(

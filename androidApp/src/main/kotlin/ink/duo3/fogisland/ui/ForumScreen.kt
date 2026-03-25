@@ -33,9 +33,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.data.LocalTimeSettings
 import ink.duo3.fogisland.shared.model.buildForumNameMap
+import ink.duo3.fogisland.shared.model.CatalogThread
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
-import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
 import ink.duo3.fogisland.shared.util.formatNmbPostedAt
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
@@ -217,7 +217,7 @@ fun ForumScreen(
 
 @Composable
 private fun ThreadCard(
-    thread: ThreadEntity,
+    thread: CatalogThread,
     forumName: String?,
     onClick: () -> Unit
 ) {

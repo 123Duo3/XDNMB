@@ -1,13 +1,77 @@
 package ink.duo3.fogisland.shared.model
 
-import ink.duo3.fogisland.shared.storage.db.entity.PostEntity
-import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
-import ink.duo3.fogisland.shared.storage.db.entity.ThreadReadProgressEntity
+data class CatalogThread(
+    val id: Long,
+    val forumId: Long?,
+    val userHash: String,
+    val name: String,
+    val title: String,
+    val contentHtml: String,
+    val contentText: String,
+    val image: String,
+    val ext: String,
+    val postedAtEpochMillis: Long?,
+    val sage: Int,
+    val admin: Int,
+    val hide: Int,
+    val replyCount: Int,
+    val remainReplies: Int?,
+    val refreshedAt: Long
+)
+
+data class ThreadPost(
+    val threadId: Long,
+    val id: Long,
+    val remoteId: Long,
+    val forumId: Long?,
+    val replyCount: Int?,
+    val userHash: String,
+    val name: String,
+    val title: String,
+    val contentHtml: String,
+    val contentText: String,
+    val image: String,
+    val ext: String,
+    val postedAtEpochMillis: Long?,
+    val sage: Int,
+    val admin: Int,
+    val hide: Int,
+    val isTips: Boolean,
+    val page: Int?,
+    val positionInPage: Int,
+    val refreshedAt: Long
+)
+
+data class SubscriptionThread(
+    val threadId: Long,
+    val forumId: Long?,
+    val userHash: String,
+    val name: String,
+    val title: String,
+    val contentText: String,
+    val image: String,
+    val ext: String,
+    val postedAtEpochMillis: Long?,
+    val replyCount: Int,
+    val remainReplies: Int?,
+    val page: Int,
+    val positionInPage: Int,
+    val refreshedAt: Long
+)
+
+data class ThreadReadProgress(
+    val threadId: Long,
+    val lastReadPage: Int,
+    val lastReadPostId: Long?,
+    val lastVisibleItemIndex: Int,
+    val lastVisibleItemOffset: Int,
+    val updatedAt: Long
+)
 
 data class ThreadDetail(
-    val thread: ThreadEntity?,
-    val posts: List<PostEntity>,
-    val progress: ThreadReadProgressEntity?
+    val thread: CatalogThread?,
+    val posts: List<ThreadPost>,
+    val progress: ThreadReadProgress?
 )
 
 data class ReadHistoryEntry(

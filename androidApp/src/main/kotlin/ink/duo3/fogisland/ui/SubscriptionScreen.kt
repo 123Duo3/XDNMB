@@ -43,10 +43,10 @@ import ink.duo3.fogisland.data.ensureSubscriptionUuid
 import ink.duo3.fogisland.data.subscriptionUuidFlow
 import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.SubscriptionThread
 import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
-import ink.duo3.fogisland.shared.storage.db.entity.SubscriptionThreadEntity
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
@@ -56,7 +56,7 @@ import ink.duo3.fogisland.ui.components.SubscriptionUuidEditorDialog
 @Composable
 fun SubscriptionScreen(
     forumGroups: List<ForumGroup>,
-    threads: List<SubscriptionThreadEntity>,
+    threads: List<SubscriptionThread>,
     loadedPage: Int,
     isLoading: Boolean,
     error: ErrorPresentation?,
@@ -186,7 +186,7 @@ fun SubscriptionScreen(
 
 @Composable
 private fun SubscriptionThreadCard(
-    thread: SubscriptionThreadEntity,
+    thread: SubscriptionThread,
     forumName: String?,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit

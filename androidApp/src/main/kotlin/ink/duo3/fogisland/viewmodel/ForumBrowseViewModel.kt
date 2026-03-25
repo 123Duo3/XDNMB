@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.CatalogSource
+import ink.duo3.fogisland.shared.model.CatalogThread
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumGroup
 import ink.duo3.fogisland.shared.model.PostingDraftEntry
@@ -18,6 +19,7 @@ import ink.duo3.fogisland.shared.model.ReplyPostRequest
 import ink.duo3.fogisland.shared.model.ReplyPostResult
 import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SiteNotice
+import ink.duo3.fogisland.shared.model.SubscriptionThread
 import ink.duo3.fogisland.shared.model.ThreadDetail
 import ink.duo3.fogisland.shared.model.ThreadPostRequest
 import ink.duo3.fogisland.shared.model.ThreadPostResult
@@ -26,8 +28,6 @@ import ink.duo3.fogisland.shared.model.cacheKey
 import ink.duo3.fogisland.shared.model.resolveCatalogSource
 import ink.duo3.fogisland.shared.network.api.toErrorPresentation
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
-import ink.duo3.fogisland.shared.storage.db.entity.SubscriptionThreadEntity
-import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
 import ink.duo3.fogisland.shared.util.calculateNmbThreadMaxPage
 import ink.duo3.fogisland.shared.util.parseNmbThreadIdInput
 import kotlinx.coroutines.CancellationException
@@ -52,8 +52,8 @@ data class ForumBrowseUiState(
     val forumGroups: List<ForumGroup> = emptyList(),
     val timelines: List<Timeline> = emptyList(),
     val currentSource: CatalogSource? = null,
-    val threads: List<ThreadEntity> = emptyList(),
-    val subscriptionThreads: List<SubscriptionThreadEntity> = emptyList(),
+    val threads: List<CatalogThread> = emptyList(),
+    val subscriptionThreads: List<SubscriptionThread> = emptyList(),
     val readHistory: List<ReadHistoryEntry> = emptyList(),
     val postingHistory: List<PostingHistoryEntry> = emptyList(),
     val postingDrafts: List<PostingDraftEntry> = emptyList(),
@@ -118,95 +118,127 @@ class ForumBrowseViewModel(
         observeSubscriptionUuid()
         observeRecentSearches()
         observePostingDrafts()
-        hydrateCachedIndex()
-        refreshIndex()
-    }
-
-    private fun hydrateCachedIndex() {
         viewModelScope.launch {
-            val cachedIndex = repository.getCachedCatalogIndex()
-            val lastSelectedSource = repository.getLastSelectedSource()
-            if (cachedIndex.forumGroups.isEmpty() && cachedIndex.timelines.isEmpty()) {
-                return@launch
-            }
-
-            _uiState.update { state ->
-                state.copy(
-                    isLoadingIndex = false,
-                    forumGroups = cachedIndex.forumGroups,
-                    timelines = cachedIndex.timelines,
-                    currentSource = resolveCatalogSource(
-                        preferredSource = state.currentSource,
-                        forumGroups = cachedIndex.forumGroups,
-                        timelines = cachedIndex.timelines,
-                        lastSelectedSource = lastSelectedSource
-                    )
-                )
-            }
-
-            _uiState.value.currentSource?.let(::observeCatalog)
+            hydrateCachedIndex()
+            refreshIndexInternal()
         }
     }
 
-    fun refreshIndex() {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isLoadingIndex = it.forumGroups.isEmpty() && it.timelines.isEmpty(),
-                    error = null
-                )
-            }
+    private suspend fun hydrateCachedIndex() {
+        val cachedIndex = repository.getCachedCatalogIndex()
+        val lastSelectedSource = repository.getLastSelectedSource()
+        if (
+            cachedIndex.forumGroups.isEmpty() &&
+            cachedIndex.timelines.isEmpty() &&
+            cachedIndex.siteNotice == null
+        ) {
+            return
+        }
 
-            supervisorScope {
-                val existingNotice = _uiState.value.siteNotice
-                val forumsDeferred = async { runCatching { repository.getForumList() } }
-                val timelinesDeferred = async { runCatching { repository.getTimelineList() } }
-                val noticeDeferred = async { runCatching { repository.getSiteNotice() } }
-
-                val forumGroupsResult = forumsDeferred.await()
-                val timelinesResult = timelinesDeferred.await()
-                val siteNotice = noticeDeferred.await().getOrElse { existingNotice }
-
-                val failure = forumGroupsResult.exceptionOrNull() ?: timelinesResult.exceptionOrNull()
-                if (failure != null) {
-                    _uiState.update {
-                        it.copy(
-                            isLoadingIndex = false,
-                            siteNotice = siteNotice,
-                            error = failure.toErrorPresentation("加载板块失败")
-                        )
-                    }
-                    return@supervisorScope
-                }
-
-                val forumGroups = forumGroupsResult.getOrThrow()
-                val timelines = timelinesResult.getOrThrow()
-                val lastSelectedSource = repository.getLastSelectedSource()
-                val source = resolveCatalogSource(
-                    preferredSource = _uiState.value.currentSource,
-                    forumGroups = forumGroups,
-                    timelines = timelines,
+        _uiState.update { state ->
+            state.copy(
+                isLoadingIndex = false,
+                forumGroups = cachedIndex.forumGroups,
+                timelines = cachedIndex.timelines,
+                siteNotice = cachedIndex.siteNotice,
+                currentSource = resolveCatalogSource(
+                    preferredSource = state.currentSource,
+                    forumGroups = cachedIndex.forumGroups,
+                    timelines = cachedIndex.timelines,
                     lastSelectedSource = lastSelectedSource
                 )
+            )
+        }
+
+        _uiState.value.currentSource?.let(::observeCatalog)
+    }
+
+    fun refreshIndex() {
+        viewModelScope.launch { refreshIndexInternal() }
+    }
+
+    private suspend fun refreshIndexInternal() {
+        _uiState.update {
+            it.copy(
+                isLoadingIndex = it.forumGroups.isEmpty() && it.timelines.isEmpty(),
+                error = null
+            )
+        }
+
+        supervisorScope {
+            val existingNotice = _uiState.value.siteNotice
+            val forumsDeferred = async { runCatching { repository.getForumList() } }
+            val timelinesDeferred = async { runCatching { repository.getTimelineList() } }
+            val noticeDeferred = async { runCatching { repository.getSiteNotice() } }
+
+            val forumGroupsResult = forumsDeferred.await()
+            val timelinesResult = timelinesDeferred.await()
+
+            val failure = forumGroupsResult.exceptionOrNull() ?: timelinesResult.exceptionOrNull()
+            if (failure != null) {
+                val siteNotice = noticeDeferred.await().getOrElse { existingNotice }
                 _uiState.update {
                     it.copy(
                         isLoadingIndex = false,
-                        forumGroups = forumGroups,
-                        timelines = timelines,
-                        currentSource = source,
-                        siteNotice = siteNotice
+                        siteNotice = siteNotice,
+                        error = failure.toErrorPresentation("加载板块失败")
                     )
                 }
-                if (source != null) {
-                    openSource(source, forceRefresh = catalogPageCache[source.cacheKey()] == null)
+                return@supervisorScope
+            }
+
+            val previousSource = _uiState.value.currentSource
+            val forumGroups = forumGroupsResult.getOrThrow()
+            val timelines = timelinesResult.getOrThrow()
+            val lastSelectedSource = repository.getLastSelectedSource()
+            val source = resolveCatalogSource(
+                preferredSource = previousSource,
+                forumGroups = forumGroups,
+                timelines = timelines,
+                lastSelectedSource = lastSelectedSource
+            )
+            _uiState.update {
+                it.copy(
+                    isLoadingIndex = false,
+                    forumGroups = forumGroups,
+                    timelines = timelines,
+                    currentSource = source,
+                    siteNotice = existingNotice
+                )
+            }
+
+            if (source == null) {
+                val refreshedNotice = noticeDeferred.await().getOrElse { existingNotice }
+                if (refreshedNotice != existingNotice) {
+                    _uiState.update { it.copy(siteNotice = refreshedNotice) }
                 }
+                return@supervisorScope
+            }
+
+            val cacheKey = source.cacheKey()
+            val sourceChanged = previousSource != source
+            if (sourceChanged || catalogObservationJob == null) {
+                observeCatalog(source)
+            }
+            if (sourceChanged) {
+                repository.saveLastSelectedSource(source)
+            }
+            if (catalogPageCache[cacheKey] == null) {
+                loadCatalogPage(source, 1)
+            }
+
+            val refreshedNotice = noticeDeferred.await().getOrElse { existingNotice }
+            if (refreshedNotice != existingNotice) {
+                _uiState.update { it.copy(siteNotice = refreshedNotice) }
             }
         }
     }
 
     fun openSource(source: CatalogSource, forceRefresh: Boolean = false) {
         val cacheKey = source.cacheKey()
-        viewModelScope.launch { repository.saveLastSelectedSource(source) }
+        viewModelScope.launch {
+            repository.saveLastSelectedSource(source)
+        }
         _uiState.update {
             it.copy(
                 currentSource = source,
@@ -517,7 +549,11 @@ class ForumBrowseViewModel(
         viewModelScope.launch {
             val progress = repository.getReadProgress(threadId)
             val resolvedTargetPage = (targetPage ?: progress?.lastReadPage ?: 1).coerceAtLeast(1)
-            val loadedPage = threadPageCache[threadId] ?: 0
+            val persistedLoadedPage = repository.getCachedThreadLoadedPage(threadId)
+            val loadedPage = threadPageCache[threadId]
+                ?.let { minOf(it, persistedLoadedPage) }
+                ?: persistedLoadedPage
+            threadPageCache[threadId] = loadedPage
 
             runCatching {
                 refreshThreadPages(
@@ -640,17 +676,10 @@ class ForumBrowseViewModel(
         loadedPage: Int,
         targetPage: Int
     ): Pair<Int, Boolean> {
-        val refreshThroughPage = if (forceRefresh) {
-            maxOf(loadedPage, targetPage, 1)
-        } else {
-            targetPage
-        }
-        val pageRange = if (!forceRefresh && loadedPage >= targetPage) {
-            IntRange.EMPTY
-        } else if (forceRefresh) {
-            1..refreshThroughPage
-        } else {
-            (loadedPage + 1)..targetPage
+        val pageRange = when {
+            forceRefresh -> 1..maxOf(loadedPage, targetPage, 1)
+            loadedPage > 0 -> loadedPage..maxOf(loadedPage, targetPage)
+            else -> 1..targetPage
         }
 
         var lastLoadedPage = loadedPage

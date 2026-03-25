@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.CatalogType
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.SiteNotice
 import ink.duo3.fogisland.shared.model.Timeline
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.Serializable
@@ -76,6 +77,15 @@ class CatalogIndexCache(
         }
     }
 
+    suspend fun updateSiteNotice(siteNotice: SiteNotice?) {
+        dataStore.edit { preferences ->
+            val snapshot = decodeSnapshot(preferences)
+            preferences[CACHED_CATALOG_INDEX] = json.encodeToString(
+                snapshot.copy(siteNotice = siteNotice)
+            )
+        }
+    }
+
     private fun decodeSnapshot(preferences: Preferences): CatalogIndexSnapshot {
         val raw = preferences[CACHED_CATALOG_INDEX]
         if (raw.isNullOrBlank()) {
@@ -91,7 +101,8 @@ class CatalogIndexCache(
 @Serializable
 data class CatalogIndexSnapshot(
     val forumGroups: List<ForumGroup> = emptyList(),
-    val timelines: List<Timeline> = emptyList()
+    val timelines: List<Timeline> = emptyList(),
+    val siteNotice: SiteNotice? = null
 )
 
 @Serializable

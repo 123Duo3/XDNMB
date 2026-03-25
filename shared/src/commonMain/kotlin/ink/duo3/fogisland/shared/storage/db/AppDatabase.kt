@@ -4,7 +4,7 @@ import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
-import ink.duo3.fogisland.shared.storage.db.dao.CatalogDao
+import ink.duo3.fogisland.shared.storage.db.dao.ForumRefreshDao
 import ink.duo3.fogisland.shared.storage.db.dao.PostingDraftDao
 import ink.duo3.fogisland.shared.storage.db.dao.PostingHistoryDao
 import ink.duo3.fogisland.shared.storage.db.dao.PostDao
@@ -35,7 +35,7 @@ import ink.duo3.fogisland.shared.storage.db.entity.ThreadReadProgressEntity
 abstract class AppDatabase : RoomDatabase() {
     abstract fun threadDao(): ThreadDao
     abstract fun postDao(): PostDao
-    abstract fun catalogDao(): CatalogDao
+    abstract fun forumRefreshDao(): ForumRefreshDao
     abstract fun threadReadProgressDao(): ThreadReadProgressDao
     abstract fun subscriptionThreadDao(): SubscriptionThreadDao
     abstract fun postingDraftDao(): PostingDraftDao

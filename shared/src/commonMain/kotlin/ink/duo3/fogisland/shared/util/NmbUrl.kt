@@ -1,7 +1,8 @@
 package ink.duo3.fogisland.shared.util
 
-import ink.duo3.fogisland.shared.storage.db.entity.PostEntity
-import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
+import ink.duo3.fogisland.shared.model.CatalogThread
+import ink.duo3.fogisland.shared.model.SubscriptionThread
+import ink.duo3.fogisland.shared.model.ThreadPost
 
 const val NMB_IMAGE_CDN_BASE_URL = "https://image.nmb.best/"
 
@@ -25,8 +26,11 @@ fun buildNmbImageUrl(image: String?, ext: String?): String? {
     return "$NMB_IMAGE_CDN_BASE_URL$imageId$normalizedExtension"
 }
 
-val ThreadEntity.imageUrl: String?
+val CatalogThread.imageUrl: String?
     get() = buildNmbImageUrl(image = image, ext = ext)
 
-val PostEntity.imageUrl: String?
+val ThreadPost.imageUrl: String?
+    get() = buildNmbImageUrl(image = image, ext = ext)
+
+val SubscriptionThread.imageUrl: String?
     get() = buildNmbImageUrl(image = image, ext = ext)
