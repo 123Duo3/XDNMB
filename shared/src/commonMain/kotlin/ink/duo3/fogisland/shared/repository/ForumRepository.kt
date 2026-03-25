@@ -5,11 +5,19 @@ import ink.duo3.fogisland.shared.model.CatalogType
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumBoard
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.PostingDraftEntry
+import ink.duo3.fogisland.shared.model.PostingDraftType
+import ink.duo3.fogisland.shared.model.PostingHistoryEntry
+import ink.duo3.fogisland.shared.model.PostingHistoryType
 import ink.duo3.fogisland.shared.model.ReadHistoryEntry
+import ink.duo3.fogisland.shared.model.ReplyPostRequest
+import ink.duo3.fogisland.shared.model.ReplyPostResult
 import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SearchHitType
 import ink.duo3.fogisland.shared.model.SiteNotice
 import ink.duo3.fogisland.shared.model.ThreadDetail
+import ink.duo3.fogisland.shared.model.ThreadPostRequest
+import ink.duo3.fogisland.shared.model.ThreadPostResult
 import ink.duo3.fogisland.shared.model.Timeline
 import ink.duo3.fogisland.shared.network.api.NmbApiClient
 import ink.duo3.fogisland.shared.network.model.ForumBoardDto
@@ -18,11 +26,15 @@ import ink.duo3.fogisland.shared.network.model.PostDto
 import ink.duo3.fogisland.shared.network.model.ThreadDto
 import ink.duo3.fogisland.shared.network.model.TimelineDto
 import ink.duo3.fogisland.shared.storage.db.dao.CatalogDao
+import ink.duo3.fogisland.shared.storage.db.dao.PostingDraftDao
+import ink.duo3.fogisland.shared.storage.db.dao.PostingHistoryDao
 import ink.duo3.fogisland.shared.storage.db.dao.PostDao
 import ink.duo3.fogisland.shared.storage.db.dao.SubscriptionThreadDao
 import ink.duo3.fogisland.shared.storage.db.dao.ThreadDao
 import ink.duo3.fogisland.shared.storage.db.dao.ThreadReadProgressDao
 import ink.duo3.fogisland.shared.storage.db.entity.CatalogEntryEntity
+import ink.duo3.fogisland.shared.storage.db.entity.PostingDraftEntity
+import ink.duo3.fogisland.shared.storage.db.entity.PostingHistoryEntity
 import ink.duo3.fogisland.shared.storage.db.entity.PostEntity
 import ink.duo3.fogisland.shared.storage.db.entity.SubscriptionThreadEntity
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
@@ -35,11 +47,13 @@ import ink.duo3.fogisland.shared.util.htmlToPlainText
 import ink.duo3.fogisland.shared.util.isNmbTipsPost
 import ink.duo3.fogisland.shared.util.normalizeNmbStoredName
 import ink.duo3.fogisland.shared.util.normalizeNmbStoredTitle
+import ink.duo3.fogisland.shared.util.parseNmbNoticeDateEpochMillis
 import ink.duo3.fogisland.shared.util.parseNmbPostedAtEpochMillis
 import ink.duo3.fogisland.shared.util.parseNmbThreadIdInput
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 class ForumRepository(
     private val apiClient: NmbApiClient,
@@ -47,6 +61,8 @@ class ForumRepository(
     private val postDao: PostDao,
     private val catalogDao: CatalogDao,
     private val subscriptionThreadDao: SubscriptionThreadDao,
+    private val postingDraftDao: PostingDraftDao,
+    private val postingHistoryDao: PostingHistoryDao,
     private val threadReadProgressDao: ThreadReadProgressDao,
     private val catalogIndexCache: CatalogIndexCache,
     private val forumPreferences: ForumPreferences
@@ -126,7 +142,7 @@ class ForumRepository(
         return SiteNotice(
             contentHtml = contentHtml,
             contentText = htmlToPlainText(contentHtml),
-            publishedAt = notice.date
+            publishedAt = notice.date?.let(::parseNmbNoticeDateEpochMillis)
         )
     }
 
@@ -241,6 +257,32 @@ class ForumRepository(
         return result
     }
 
+    suspend fun postThread(request: ThreadPostRequest): ThreadPostResult {
+        val result = apiClient.postThread(request)
+        runCatching { recordPostedThread(request, result) }
+        runCatching {
+            refreshCatalog(
+                source = CatalogSource(
+                    type = CatalogType.FORUM,
+                    id = request.forumId,
+                    title = "",
+                    subtitle = null
+                ),
+                page = 1
+            )
+        }
+        return result
+    }
+
+    suspend fun postReply(request: ReplyPostRequest): ReplyPostResult {
+        val result = apiClient.postReply(request)
+        runCatching { recordPostedReply(request, result) }
+        runCatching {
+            refreshThread(request.threadId, page = 1)
+        }
+        return result
+    }
+
     suspend fun refreshThread(threadId: Long, page: Int): ThreadRefreshResult {
         val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
         val thread = apiClient.getThreadDetails(threadId, page)
@@ -292,12 +334,107 @@ class ForumRepository(
         return threadReadProgressDao.observeReadHistory()
     }
 
+    fun observePostingHistory(): Flow<List<PostingHistoryEntry>> {
+        return postingHistoryDao.observeAll().map { entries ->
+            entries.map { it.toPostingHistoryEntry() }
+        }
+    }
+
+    fun observePostingDrafts(): Flow<List<PostingDraftEntry>> {
+        return postingDraftDao.observeAll().map { entries ->
+            entries.map { it.toPostingDraftEntry() }
+        }
+    }
+
+    suspend fun getPostingDrafts(): List<PostingDraftEntry> {
+        return postingDraftDao.getAll().map { it.toPostingDraftEntry() }
+    }
+
+    suspend fun getPostingDraft(id: Long): PostingDraftEntry? {
+        return postingDraftDao.getById(id)?.toPostingDraftEntry()
+    }
+
     suspend fun deleteReadHistoryEntry(threadId: Long) {
         threadReadProgressDao.deleteByThreadId(threadId)
     }
 
     suspend fun clearReadHistory() {
         threadReadProgressDao.deleteAll()
+    }
+
+    suspend fun deletePostingHistoryEntry(id: Long) {
+        postingHistoryDao.deleteById(id)
+    }
+
+    suspend fun clearPostingHistory(type: PostingHistoryType? = null) {
+        if (type == null) {
+            postingHistoryDao.deleteAll()
+        } else {
+            postingHistoryDao.deleteByType(type.name)
+        }
+    }
+
+    suspend fun saveThreadDraft(
+        draftId: Long?,
+        request: ThreadPostRequest,
+        imagePath: String?
+    ): Long {
+        val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        val insertedId = postingDraftDao.insert(
+            PostingDraftEntity(
+                id = draftId ?: 0L,
+                type = PostingDraftType.THREAD.name,
+                threadId = null,
+                forumId = request.forumId,
+                threadTitle = "",
+                name = request.name,
+                email = request.email,
+                title = request.title,
+                contentText = request.content,
+                useWatermark = request.useWatermark,
+                imagePath = imagePath,
+                imageFileName = request.image?.fileName,
+                imageMimeType = request.image?.mimeType,
+                updatedAt = timestamp
+            )
+        )
+        return if (draftId != null && draftId != 0L) draftId else insertedId
+    }
+
+    suspend fun saveReplyDraft(
+        draftId: Long?,
+        request: ReplyPostRequest,
+        imagePath: String?
+    ): Long {
+        val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        val cachedThread = threadDao.getThreadById(request.threadId)
+        val insertedId = postingDraftDao.insert(
+            PostingDraftEntity(
+                id = draftId ?: 0L,
+                type = PostingDraftType.REPLY.name,
+                threadId = request.threadId,
+                forumId = cachedThread?.forumId,
+                threadTitle = cachedThread?.title.orEmpty(),
+                name = request.name,
+                email = request.email,
+                title = request.title,
+                contentText = request.content,
+                useWatermark = request.useWatermark,
+                imagePath = imagePath,
+                imageFileName = request.image?.fileName,
+                imageMimeType = request.image?.mimeType,
+                updatedAt = timestamp
+            )
+        )
+        return if (draftId != null && draftId != 0L) draftId else insertedId
+    }
+
+    suspend fun deletePostingDraft(id: Long) {
+        postingDraftDao.deleteById(id)
+    }
+
+    suspend fun clearPostingDrafts() {
+        postingDraftDao.deleteAll()
     }
 
     suspend fun getReadProgress(threadId: Long): ThreadReadProgressEntity? {
@@ -570,5 +707,83 @@ class ForumRepository(
         }
 
         return page?.let { -it.toLong() } ?: (Long.MIN_VALUE + position)
+    }
+
+    private suspend fun recordPostedThread(
+        request: ThreadPostRequest,
+        result: ThreadPostResult
+    ) {
+        postingHistoryDao.insert(
+            PostingHistoryEntity(
+                type = PostingHistoryType.THREAD.name,
+                threadId = result.threadId,
+                postId = null,
+                forumId = request.forumId,
+                threadTitle = normalizeNmbStoredTitle(request.title),
+                name = normalizeNmbStoredName(request.name),
+                title = normalizeNmbStoredTitle(request.title),
+                contentText = result.contentText,
+                hasImage = request.image != null,
+                createdAt = kotlin.time.Clock.System.now().toEpochMilliseconds()
+            )
+        )
+    }
+
+    private suspend fun recordPostedReply(
+        request: ReplyPostRequest,
+        result: ReplyPostResult
+    ) {
+        val cachedThread = threadDao.getThreadById(request.threadId)
+        postingHistoryDao.insert(
+            PostingHistoryEntity(
+                type = PostingHistoryType.REPLY.name,
+                threadId = request.threadId,
+                postId = result.postId,
+                forumId = cachedThread?.forumId,
+                threadTitle = cachedThread?.title.orEmpty(),
+                name = normalizeNmbStoredName(request.name),
+                title = normalizeNmbStoredTitle(request.title),
+                contentText = result.contentText,
+                hasImage = request.image != null,
+                createdAt = kotlin.time.Clock.System.now().toEpochMilliseconds()
+            )
+        )
+    }
+
+    private fun PostingHistoryEntity.toPostingHistoryEntry(): PostingHistoryEntry {
+        return PostingHistoryEntry(
+            id = id,
+            type = runCatching { PostingHistoryType.valueOf(type) }
+                .getOrDefault(PostingHistoryType.THREAD),
+            threadId = threadId,
+            postId = postId,
+            forumId = forumId,
+            threadTitle = threadTitle,
+            name = name,
+            title = title,
+            contentText = contentText,
+            hasImage = hasImage,
+            createdAt = createdAt
+        )
+    }
+
+    private fun PostingDraftEntity.toPostingDraftEntry(): PostingDraftEntry {
+        return PostingDraftEntry(
+            id = id,
+            type = runCatching { PostingDraftType.valueOf(type) }
+                .getOrDefault(PostingDraftType.THREAD),
+            threadId = threadId,
+            forumId = forumId,
+            threadTitle = threadTitle,
+            name = name,
+            email = email,
+            title = title,
+            contentText = contentText,
+            useWatermark = useWatermark,
+            imagePath = imagePath,
+            imageFileName = imageFileName,
+            imageMimeType = imageMimeType,
+            updatedAt = updatedAt
+        )
     }
 }

@@ -78,6 +78,21 @@ fun parseNmbPostedAtEpochMillis(
     return parseNmbPostedAt(raw, timeZone)?.toEpochMilliseconds()
 }
 
+fun parseNmbNoticeDateEpochMillis(
+    raw: Long,
+    timeZone: TimeZone = nmbServerTimeZone
+): Long? {
+    val rawText = raw.toString()
+
+    parseCompactNoticeDateEpochMillis(rawText, timeZone)?.let { return it }
+
+    return when {
+        raw in 1_000_000_000L..9_999_999_999L -> raw * 1_000
+        raw in 1_000_000_000_000L..9_999_999_999_999L -> raw
+        else -> null
+    }
+}
+
 fun formatNmbPostedAt(
     epochMillis: Long,
     now: Instant = currentInstant(),
@@ -226,4 +241,36 @@ private fun formatClock(
 
 private fun currentInstant(): Instant {
     return Clock.System.now()
+}
+
+private fun parseCompactNoticeDateEpochMillis(
+    raw: String,
+    timeZone: TimeZone
+): Long? {
+    if (raw.length !in 8..14 || !raw.all(Char::isDigit)) {
+        return null
+    }
+
+    val year = raw.substring(0, 4).toIntOrNull() ?: return null
+    val month = raw.substring(4, 6).toIntOrNull() ?: return null
+    val day = raw.substring(6, 8).toIntOrNull() ?: return null
+    val timeText = raw.drop(8).padStart(6, '0')
+
+    val hour = timeText.substring(0, 2).toIntOrNull() ?: return null
+    val minute = timeText.substring(2, 4).toIntOrNull() ?: return null
+    val second = timeText.substring(4, 6).toIntOrNull() ?: return null
+
+    return runCatching {
+        val monthValue = Month.entries.getOrNull(month - 1)
+            ?: return null
+
+        LocalDateTime(
+            year = year,
+            month = monthValue,
+            day = day,
+            hour = hour,
+            minute = minute,
+            second = second
+        ).toInstant(timeZone).toEpochMilliseconds()
+    }.getOrNull()
 }

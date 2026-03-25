@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -58,6 +59,7 @@ fun ThreadDetailScreen(
     focusPostId: Long? = null,
     focusPage: Int? = null,
     onBack: () -> Unit,
+    onReply: () -> Unit,
     onSubscribe: () -> Unit,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
@@ -169,6 +171,12 @@ fun ThreadDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = onReply,
+                        enabled = thread != null
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Comment, contentDescription = "回帖")
+                    }
                     IconButton(
                         onClick = onSubscribe,
                         enabled = thread != null

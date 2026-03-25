@@ -110,4 +110,15 @@ class NmbDateTimeTest {
         assertEquals("1小时后", formatted.timeText)
         assertEquals("1小时后", formatted.displayText)
     }
+
+    @Test
+    fun parseCompactNoticeDateSupportsShortTimeSuffix() {
+        val epochMillis = parseNmbNoticeDateEpochMillis(2026032400006)
+            ?: error("Expected notice date to be parsed")
+
+        assertEquals(
+            "2026-03-23T16:00:06Z",
+            Instant.fromEpochMilliseconds(epochMillis).toString()
+        )
+    }
 }

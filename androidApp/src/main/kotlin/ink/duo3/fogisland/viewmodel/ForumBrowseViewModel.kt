@@ -10,10 +10,17 @@ import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.PostingDraftEntry
+import ink.duo3.fogisland.shared.model.PostingHistoryEntry
+import ink.duo3.fogisland.shared.model.PostingHistoryType
 import ink.duo3.fogisland.shared.model.ReadHistoryEntry
+import ink.duo3.fogisland.shared.model.ReplyPostRequest
+import ink.duo3.fogisland.shared.model.ReplyPostResult
 import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SiteNotice
 import ink.duo3.fogisland.shared.model.ThreadDetail
+import ink.duo3.fogisland.shared.model.ThreadPostRequest
+import ink.duo3.fogisland.shared.model.ThreadPostResult
 import ink.duo3.fogisland.shared.model.Timeline
 import ink.duo3.fogisland.shared.model.cacheKey
 import ink.duo3.fogisland.shared.model.resolveCatalogSource
@@ -39,6 +46,8 @@ data class ForumBrowseUiState(
     val isLoadingCatalog: Boolean = false,
     val isLoadingSubscriptions: Boolean = false,
     val isLoadingThread: Boolean = false,
+    val isPostingThread: Boolean = false,
+    val isPostingReply: Boolean = false,
     val activeThreadId: Long? = null,
     val forumGroups: List<ForumGroup> = emptyList(),
     val timelines: List<Timeline> = emptyList(),
@@ -46,6 +55,8 @@ data class ForumBrowseUiState(
     val threads: List<ThreadEntity> = emptyList(),
     val subscriptionThreads: List<SubscriptionThreadEntity> = emptyList(),
     val readHistory: List<ReadHistoryEntry> = emptyList(),
+    val postingHistory: List<PostingHistoryEntry> = emptyList(),
+    val postingDrafts: List<PostingDraftEntry> = emptyList(),
     val searchQuery: String = "",
     val searchResults: List<SearchHit> = emptyList(),
     val directThreadShortcut: DirectThreadShortcut? = null,
@@ -59,8 +70,13 @@ data class ForumBrowseUiState(
     val error: ErrorPresentation? = null,
     val subscriptionError: ErrorPresentation? = null,
     val historyError: ErrorPresentation? = null,
+    val postingHistoryError: ErrorPresentation? = null,
     val isSearching: Boolean = false,
-    val searchError: ErrorPresentation? = null
+    val searchError: ErrorPresentation? = null,
+    val postThreadError: ErrorPresentation? = null,
+    val postedThreadResult: ThreadPostResult? = null,
+    val postReplyError: ErrorPresentation? = null,
+    val postedReplyResult: ReplyPostResult? = null
 ) {
     val currentThread = threadDetail.thread
     val currentPosts = threadDetail.posts
@@ -92,6 +108,8 @@ class ForumBrowseViewModel(
     private var catalogObservationJob: Job? = null
     private var subscriptionObservationJob: Job? = null
     private var readHistoryObservationJob: Job? = null
+    private var postingDraftObservationJob: Job? = null
+    private var postingHistoryObservationJob: Job? = null
     private var threadObservationJob: Job? = null
     private var searchJob: Job? = null
     private var recentSearchObservationJob: Job? = null
@@ -99,6 +117,7 @@ class ForumBrowseViewModel(
     init {
         observeSubscriptionUuid()
         observeRecentSearches()
+        observePostingDrafts()
         hydrateCachedIndex()
         refreshIndex()
     }
@@ -227,6 +246,11 @@ class ForumBrowseViewModel(
         _uiState.update { it.copy(historyError = null) }
     }
 
+    fun openPostingHistory() {
+        observePostingHistory()
+        _uiState.update { it.copy(postingHistoryError = null) }
+    }
+
     fun openSearch() {
         _uiState.update { it.copy(searchError = null) }
     }
@@ -252,6 +276,84 @@ class ForumBrowseViewModel(
         viewModelScope.launch {
             repository.clearRecentSearches()
         }
+    }
+
+    fun submitThreadPost(request: ThreadPostRequest, draftId: Long?) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isPostingThread = true,
+                    postThreadError = null,
+                    postedThreadResult = null
+                )
+            }
+
+            runCatching {
+                repository.postThread(request)
+            }.onSuccess { result ->
+                _uiState.update {
+                    it.copy(
+                        isPostingThread = false,
+                        postThreadError = null,
+                        postedThreadResult = result
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isPostingThread = false,
+                        postThreadError = throwable.toErrorPresentation("发串失败")
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearPostThreadError() {
+        _uiState.update { it.copy(postThreadError = null) }
+    }
+
+    fun consumePostedThreadResult() {
+        _uiState.update { it.copy(postedThreadResult = null) }
+    }
+
+    fun submitReplyPost(request: ReplyPostRequest, draftId: Long?) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isPostingReply = true,
+                    postReplyError = null,
+                    postedReplyResult = null
+                )
+            }
+
+            runCatching {
+                repository.postReply(request)
+            }.onSuccess { result ->
+                _uiState.update {
+                    it.copy(
+                        isPostingReply = false,
+                        postReplyError = null,
+                        postedReplyResult = result
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isPostingReply = false,
+                        postReplyError = throwable.toErrorPresentation("回帖失败")
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearPostReplyError() {
+        _uiState.update { it.copy(postReplyError = null) }
+    }
+
+    fun consumePostedReplyResult() {
+        _uiState.update { it.copy(postedReplyResult = null) }
     }
 
     fun updateSearchQuery(query: String) {
@@ -300,6 +402,62 @@ class ForumBrowseViewModel(
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(historyError = throwable.toErrorPresentation("清空阅读记录失败"))
+                }
+            }
+        }
+    }
+
+    fun deletePostingHistoryEntry(id: Long) {
+        viewModelScope.launch {
+            runCatching {
+                repository.deletePostingHistoryEntry(id)
+            }.onSuccess {
+                _uiState.update { it.copy(postingHistoryError = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(postingHistoryError = throwable.toErrorPresentation("删除发言记录失败"))
+                }
+            }
+        }
+    }
+
+    fun clearPostingHistory(type: PostingHistoryType) {
+        viewModelScope.launch {
+            runCatching {
+                repository.clearPostingHistory(type)
+            }.onSuccess {
+                _uiState.update { it.copy(postingHistoryError = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(postingHistoryError = throwable.toErrorPresentation("清空发言记录失败"))
+                }
+            }
+        }
+    }
+
+    fun deletePostingDraft(id: Long) {
+        viewModelScope.launch {
+            runCatching {
+                repository.deletePostingDraft(id)
+            }.onSuccess {
+                _uiState.update { it.copy(postingHistoryError = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(postingHistoryError = throwable.toErrorPresentation("删除草稿失败"))
+                }
+            }
+        }
+    }
+
+    fun clearPostingDrafts() {
+        viewModelScope.launch {
+            runCatching {
+                repository.clearPostingDrafts()
+            }.onSuccess {
+                _uiState.update { it.copy(postingHistoryError = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(postingHistoryError = throwable.toErrorPresentation("清空草稿箱失败"))
                 }
             }
         }
@@ -680,6 +838,34 @@ class ForumBrowseViewModel(
             repository.observeReadHistory().collect { entries ->
                 _uiState.update { state ->
                     state.copy(readHistory = entries)
+                }
+            }
+        }
+    }
+
+    private fun observePostingHistory() {
+        if (postingHistoryObservationJob != null) {
+            return
+        }
+
+        postingHistoryObservationJob = viewModelScope.launch {
+            repository.observePostingHistory().collect { entries ->
+                _uiState.update { state ->
+                    state.copy(postingHistory = entries)
+                }
+            }
+        }
+    }
+
+    private fun observePostingDrafts() {
+        if (postingDraftObservationJob != null) {
+            return
+        }
+
+        postingDraftObservationJob = viewModelScope.launch {
+            repository.observePostingDrafts().collect { entries ->
+                _uiState.update { state ->
+                    state.copy(postingDrafts = entries)
                 }
             }
         }

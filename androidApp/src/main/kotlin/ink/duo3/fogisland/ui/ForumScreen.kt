@@ -36,6 +36,7 @@ import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.storage.db.entity.ThreadEntity
+import ink.duo3.fogisland.shared.util.formatNmbPostedAt
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
@@ -46,11 +47,14 @@ fun ForumScreen(
     state: ForumBrowseUiState,
     onMenuClick: () -> Unit,
     onRefreshClick: () -> Unit,
+    onPostClick: () -> Unit,
     onLoadMore: () -> Unit,
     onThreadClick: (Long) -> Unit
 ) {
     val source = state.currentSource
     val forumNameById = buildForumNameMap(state.forumGroups)
+    val timeSettings = LocalTimeSettings.current
+    val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -91,11 +95,11 @@ fun ForumScreen(
                 },
                 floatingActionButton = {
                     FloatingActionButton(
-                        onClick = { },
+                        onClick = onPostClick,
                         containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
                         elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add")
+                        Icon(Icons.Default.Add, contentDescription = "发串")
                     }
                 }
             )
@@ -142,6 +146,18 @@ fun ForumScreen(
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold
                             )
+                            siteNotice.publishedAt?.let { publishedAt ->
+                                formatNmbPostedAt(
+                                    epochMillis = publishedAt,
+                                    options = timeFormatOptions
+                                )?.dateText?.let { publishedAtText ->
+                                    Text(
+                                        text = publishedAtText,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                             Text(
                                 text = siteNotice.contentText,
                                 style = MaterialTheme.typography.bodyMedium,

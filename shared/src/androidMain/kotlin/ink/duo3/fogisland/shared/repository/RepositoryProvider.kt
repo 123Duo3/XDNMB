@@ -54,6 +54,8 @@ object RepositoryProvider {
             postDao = database.postDao(),
             catalogDao = database.catalogDao(),
             subscriptionThreadDao = database.subscriptionThreadDao(),
+            postingDraftDao = database.postingDraftDao(),
+            postingHistoryDao = database.postingHistoryDao(),
             threadReadProgressDao = database.threadReadProgressDao(),
             catalogIndexCache = catalogIndexCache,
             forumPreferences = forumPreferences
