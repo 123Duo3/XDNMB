@@ -213,10 +213,13 @@ private fun formatTimePart(
 
 private fun formatRelativeDelta(diffSeconds: Long): String? {
     val absSeconds = diffSeconds.absoluteValue
+    if (absSeconds < 60) {
+        return "刚刚"
+    }
+
     val suffix = if (diffSeconds >= 0) "后" else "前"
 
     val amount = when {
-        absSeconds < 60 -> maxOf(absSeconds, 1L).toInt() to "秒"
         absSeconds < 60 * 60 -> maxOf(absSeconds / 60, 1L).toInt() to "分钟"
         absSeconds < 6 * 60 * 60 -> maxOf(absSeconds / (60 * 60), 1L).toInt() to "小时"
         else -> return null

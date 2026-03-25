@@ -48,6 +48,19 @@ class NmbDateTimeTest {
     }
 
     @Test
+    fun relativeFormatterUsesJustNowWithinOneMinute() {
+        val formatted = formatNmbPostedAt(
+            epochMillis = postedAtEpochMillis("2026-03-24(二)12:38:20"),
+            now = Instant.parse("2026-03-24T04:38:00Z")
+        )
+
+        assertNotNull(formatted)
+        assertEquals("今天", formatted.dateText)
+        assertEquals("刚刚", formatted.timeText)
+        assertEquals("刚刚", formatted.displayText)
+    }
+
+    @Test
     fun relativeFormatterUsesNamedDays() {
         val formatted = formatNmbPostedAt(
             epochMillis = postedAtEpochMillis("2026-03-26(四)12:38:00"),
