@@ -34,7 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -68,8 +67,7 @@ fun ForumScreen(
     val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize()
-            .clip(RoundedCornerShape(28.dp)),
+        modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
         bottomBar = {
