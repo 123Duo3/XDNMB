@@ -29,3 +29,6 @@ fun resolveNmbDisplayAuthor(userHash: String?, name: String?): String? {
     return normalizeNmbDisplayText(userHash)
         ?: normalizeNmbStoredName(name).takeIf { it.isNotEmpty() }
 }
+
+fun resolveNmbCardNameIdString(forumName: String?, id: Long?): String =
+    "No.$id · $forumName"

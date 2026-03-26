@@ -115,6 +115,8 @@ fun SettingsScreen(
                 title = { Text("设置") },
                 navigationIcon = {
                     IconButton(
+                        modifier = Modifier
+                            .padding(start = 8.dp),
                         onClick = onMenuClick,
                         colors = IconButtonDefaults.iconButtonColors().copy(
                             containerColor = MaterialTheme.colorScheme.surfaceBright
