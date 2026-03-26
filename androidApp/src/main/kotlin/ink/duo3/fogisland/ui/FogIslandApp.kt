@@ -1,5 +1,14 @@
 package ink.duo3.fogisland.ui
 
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -289,6 +298,33 @@ fun FogIslandApp() {
             NavDisplay(
                 backStack = backStack,
                 modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    slideInHorizontally(
+                        initialOffsetX = { it },
+                        animationSpec = tween(1000)
+                    ) togetherWith slideOutHorizontally(
+                        targetOffsetX = { -it / 4 },
+                        animationSpec = tween(1000),
+                    )
+                },
+                popTransitionSpec = {
+                    fadeIn(tween(1000)) + slideInHorizontally(
+                        initialOffsetX = { -it },
+                        animationSpec = tween(1000),
+                    ) togetherWith slideOutHorizontally(
+                        targetOffsetX = { it },
+                        animationSpec = tween(1000),
+                    ) + fadeOut(tween(1000))
+                },
+                predictivePopTransitionSpec = {
+                    slideInHorizontally(
+                        animationSpec = tween(1000),
+                        initialOffsetX = { -it / 4 },
+                    ) togetherWith slideOutHorizontally(
+                        animationSpec = tween(1000),
+                        targetOffsetX = { it },
+                    )
+                }
             ) { key: AppRoute ->
                 when (key) {
                 AppRoute.Catalog -> NavEntry(key) {

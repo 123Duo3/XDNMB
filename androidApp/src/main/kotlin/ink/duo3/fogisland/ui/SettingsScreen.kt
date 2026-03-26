@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Bookmarks
@@ -107,7 +108,8 @@ fun SettingsScreen(
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+            .clip(RoundedCornerShape(28.dp)),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
@@ -28,11 +29,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,7 +73,7 @@ fun PostingHistoryScreen(
     val forumNameById = remember(forumGroups) { buildForumNameMap(forumGroups) }
     val threadHistory = remember(history) { history.filter { it.type == PostingHistoryType.THREAD } }
     val replyHistory = remember(history) { history.filter { it.type == PostingHistoryType.REPLY } }
-    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val topAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var deletingEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingDraftId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -89,7 +92,8 @@ fun PostingHistoryScreen(
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+            .clip(RoundedCornerShape(28.dp)),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
