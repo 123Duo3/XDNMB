@@ -84,20 +84,25 @@ fun ForumScreen(
             contentPadding = innerPadding,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                when {
-                    state.isLoadingIndex && source == null -> {
-                        Text(
-                            text = "正在加载板块和时间线…",
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+            if (state.isLoadingIndex || source == null) {
+                item {
+                    val message = when {
+                        state.isLoadingIndex && source == null ->
+                            "正在加载板块和时间线…"
+
+                        source == null ->
+                            "从左侧菜单选择一个板块或时间线。"
+
+                        else -> null
                     }
 
-                    source == null -> {
+                    message?.let {
                         Text(
-                            text = "从左侧菜单选择一个板块或时间线。",
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            text = it,
+                            modifier = Modifier.padding(
+                                horizontal = 16.dp,
+                                vertical = 8.dp
+                            ),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -109,17 +114,25 @@ fun ForumScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     ) {
                         Column(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(vertical = 12.dp, horizontal = 18.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "公告",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Row(
+                            ) {
+                                Text(
+                                    text = "公告",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
                             siteNotice.publishedAt?.let { publishedAt ->
                                 formatNmbPostedAt(
                                     epochMillis = publishedAt,
@@ -127,15 +140,13 @@ fun ForumScreen(
                                 )?.dateText?.let { publishedAtText ->
                                     Text(
                                         text = publishedAtText,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        style = MaterialTheme.typography.labelMedium
                                     )
                                 }
                             }
                             Text(
                                 text = siteNotice.contentText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
