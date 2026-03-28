@@ -51,6 +51,7 @@ import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import ink.duo3.fogisland.ui.components.SubscriptionUuidEditorDialog
+import ink.duo3.fogisland.ui.components.ThreadImagePreview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +65,8 @@ fun SubscriptionScreen(
     onRefreshClick: () -> Unit,
     onLoadMore: () -> Unit,
     onThreadClick: (Long) -> Unit,
-    onDeleteClick: (Long) -> Unit
+    onDeleteClick: (Long) -> Unit,
+    onImageClick: (String, String?) -> Unit
 ) {
     val context = LocalContext.current
     val forumNameById = remember(forumGroups) { buildForumNameMap(forumGroups) }
@@ -149,7 +151,8 @@ fun SubscriptionScreen(
                     thread = thread,
                     forumName = resolveForumName(thread.forumId, forumNameById),
                     onClick = { onThreadClick(thread.threadId) },
-                    onDeleteClick = { onDeleteClick(thread.threadId) }
+                    onDeleteClick = { onDeleteClick(thread.threadId) },
+                    onImageClick = onImageClick
                 )
             }
 
@@ -189,7 +192,8 @@ private fun SubscriptionThreadCard(
     thread: SubscriptionThread,
     forumName: String?,
     onClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onImageClick: (String, String?) -> Unit
 ) {
     val timeSettings = LocalTimeSettings.current
     val postedAtText = formatNmbPostedAtText(
@@ -223,6 +227,14 @@ private fun SubscriptionThreadCard(
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis
             )
+
+            thread.image.takeIf { it.isNotBlank() }?.let {
+                ThreadImagePreview(
+                    image = thread.image,
+                    ext = thread.ext,
+                    onImageClick = onImageClick
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

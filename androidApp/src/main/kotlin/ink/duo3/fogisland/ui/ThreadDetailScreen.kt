@@ -42,6 +42,7 @@ import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayAuthor
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
+import ink.duo3.fogisland.ui.components.ThreadImagePreview
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -63,7 +64,8 @@ fun ThreadDetailScreen(
     onSubscribe: () -> Unit,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
-    onProgressChanged: (Int, Int) -> Unit
+    onProgressChanged: (Int, Int) -> Unit,
+    onImageClick: (String, String?) -> Unit
 ) {
     val thread = detail.thread
     val posts = detail.posts
@@ -215,8 +217,11 @@ fun ThreadDetailScreen(
                         title = resolveNmbDisplayTitle(root.title),
                         author = resolveNmbDisplayAuthor(root.userHash, root.name),
                         postedAtEpochMillis = root.postedAtEpochMillis,
+                        image = root.image,
+                        ext = root.ext,
                         content = root.contentText,
-                        timeFormatOptions = timeFormatOptions
+                        timeFormatOptions = timeFormatOptions,
+                        onImageClick = onImageClick
                     )
                 }
             }
@@ -229,8 +234,11 @@ fun ThreadDetailScreen(
                     title = resolveNmbDisplayTitle(post.title),
                     author = resolveNmbDisplayAuthor(post.userHash, post.name),
                     postedAtEpochMillis = post.postedAtEpochMillis,
+                    image = post.image,
+                    ext = post.ext,
                     content = post.contentText,
-                    timeFormatOptions = timeFormatOptions
+                    timeFormatOptions = timeFormatOptions,
+                    onImageClick = onImageClick
                 )
             }
 
@@ -263,8 +271,11 @@ private fun PostCard(
     title: String?,
     author: String?,
     postedAtEpochMillis: Long?,
+    image: String,
+    ext: String,
     content: String,
-    timeFormatOptions: NmbTimeFormatOptions
+    timeFormatOptions: NmbTimeFormatOptions,
+    onImageClick: (String, String?) -> Unit
 ) {
     val postedAtText = formatNmbPostedAtText(
         epochMillis = postedAtEpochMillis,
@@ -296,10 +307,19 @@ private fun PostCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
             Text(
                 text = content.ifBlank { "(空内容)" },
                 style = MaterialTheme.typography.bodyMedium
             )
+
+            image.takeIf { it.isNotBlank() }?.let {
+                ThreadImagePreview(
+                    image = image,
+                    ext = ext,
+                    onImageClick = onImageClick
+                )
+            }
         }
     }
 }

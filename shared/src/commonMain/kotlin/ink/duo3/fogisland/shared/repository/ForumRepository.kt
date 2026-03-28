@@ -57,6 +57,7 @@ import ink.duo3.fogisland.shared.util.parseNmbNoticeDateEpochMillis
 import ink.duo3.fogisland.shared.util.parseNmbPostedAtEpochMillis
 import ink.duo3.fogisland.shared.util.parseNmbThreadIdInput
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
+import ink.duo3.fogisland.shared.util.NMB_IMAGE_CDN_BASE_URL
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -222,6 +223,18 @@ class ForumRepository(
             nowEpochMillis = kotlin.time.Clock.System.now().toEpochMilliseconds()
         ) ?: return
         threadReadProgressDao.deleteExpired(expireBefore)
+    }
+
+    suspend fun getImageCdnFallbackBaseUrl(): String? {
+        val preferredBaseUrl = apiClient
+            .getPreferredImageCdnBaseUrl()
+            ?.trim()
+            ?.removeSuffix("/")
+            ?: return null
+        val hardcodedBaseUrl = NMB_IMAGE_CDN_BASE_URL
+            .trim()
+            .removeSuffix("/")
+        return preferredBaseUrl.takeIf { it != hardcodedBaseUrl }
     }
 
     suspend fun ensureSubscriptionUuid(): String {

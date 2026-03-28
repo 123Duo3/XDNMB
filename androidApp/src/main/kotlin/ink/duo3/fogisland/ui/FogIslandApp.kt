@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
@@ -31,8 +30,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -127,6 +128,13 @@ fun FogIslandApp() {
 
     fun showPostReply(threadId: Long, draftId: Long? = null) {
         backStack.add(AppRoute.PostReply(threadId, draftId))
+    }
+
+    fun showImageViewer(
+        image: String,
+        ext: String?
+    ) {
+        backStack.add(AppRoute.ImageViewer(image = image, ext = ext))
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -310,6 +318,9 @@ fun FogIslandApp() {
                         onThreadClick = { threadId ->
                             viewModel.openThread(threadId)
                             backStack.add(AppRoute.Thread(threadId))
+                        },
+                        onImageClick = { image, ext ->
+                            showImageViewer(image = image, ext = ext)
                         }
                     )
                 }
@@ -333,6 +344,9 @@ fun FogIslandApp() {
                         },
                         onDeleteClick = { threadId ->
                             viewModel.deleteSubscription(threadId)
+                        },
+                        onImageClick = { image, ext ->
+                            showImageViewer(image = image, ext = ext)
                         }
                     )
                 }
@@ -592,6 +606,21 @@ fun FogIslandApp() {
                         onLoadMore = { viewModel.loadMoreReplies() },
                         onProgressChanged = { index, offset ->
                             viewModel.saveThreadProgress(key.threadId, index, offset)
+                        },
+                        onImageClick = { image, ext ->
+                            showImageViewer(image = image, ext = ext)
+                        }
+                    )
+                }
+
+                is AppRoute.ImageViewer -> NavEntry(key) {
+                    ImageViewerScreen(
+                        image = key.image,
+                        ext = key.ext,
+                        onBack = {
+                            if (backStack.isNotEmpty()) {
+                                backStack.removeAt(backStack.lastIndex)
+                            }
                         }
                     )
                 }
@@ -626,6 +655,10 @@ private sealed interface AppRoute {
         val threadId: Long,
         val targetPostId: Long? = null,
         val targetPage: Int? = null
+    ) : AppRoute
+    data class ImageViewer(
+        val image: String,
+        val ext: String?
     ) : AppRoute
     data object Settings : AppRoute
 }

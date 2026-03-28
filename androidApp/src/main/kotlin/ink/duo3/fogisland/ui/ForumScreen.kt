@@ -50,6 +50,7 @@ import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.resolveNmbCardNameIdString
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
+import ink.duo3.fogisland.ui.components.ThreadImagePreview
 import ink.duo3.fogisland.viewmodel.ForumBrowseUiState
 
 @Composable
@@ -59,7 +60,8 @@ fun ForumScreen(
     onRefreshClick: () -> Unit,
     onPostClick: () -> Unit,
     onLoadMore: () -> Unit,
-    onThreadClick: (Long) -> Unit
+    onThreadClick: (Long) -> Unit,
+    onImageClick: (String, String?) -> Unit
 ) {
     val source = state.currentSource
     val forumNameById = buildForumNameMap(state.forumGroups)
@@ -174,7 +176,8 @@ fun ForumScreen(
                     } else {
                         null
                     },
-                    onClick = { onThreadClick(thread.id) }
+                    onClick = { onThreadClick(thread.id) },
+                    onImageClick = onImageClick
                 )
             }
 
@@ -205,7 +208,8 @@ fun ForumScreen(
 private fun ThreadCard(
     thread: CatalogThread,
     forumName: String?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onImageClick: (String, String?) -> Unit
 ) {
     val timeSettings = LocalTimeSettings.current
     val postedAtText = formatNmbPostedAtText(
@@ -270,6 +274,14 @@ private fun ThreadCard(
                     maxLines = 6,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                thread.image.takeIf { it.isNotBlank() }?.let {
+                    ThreadImagePreview(
+                        image = thread.image,
+                        ext = thread.ext,
+                        onImageClick = onImageClick
+                    )
+                }
             }
 
             Row(

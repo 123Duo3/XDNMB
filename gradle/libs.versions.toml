@@ -25,6 +25,7 @@ ktor = "3.0.0"
 room = "2.7.0-alpha13"
 sqlite = "2.5.0-alpha13"
 ksp = "2.3.6"
+coil = "2.7.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -54,6 +55,7 @@ androidx-navigation3-ui = { group = "androidx.navigation3", name = "navigation3-
 androidx-adaptive-navigation3 = { group = "androidx.compose.material3.adaptive", name = "adaptive-navigation3", version.ref = "adaptiveNavigation3" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 materialkolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialKolor" }
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }

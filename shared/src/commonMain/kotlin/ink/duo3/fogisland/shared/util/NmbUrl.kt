@@ -1,19 +1,14 @@
 package ink.duo3.fogisland.shared.util
 
-import ink.duo3.fogisland.shared.model.CatalogThread
-import ink.duo3.fogisland.shared.model.SubscriptionThread
-import ink.duo3.fogisland.shared.model.ThreadPost
+const val NMB_IMAGE_CDN_BASE_URL = "https://image.nmb.best"
 
-const val NMB_IMAGE_CDN_BASE_URL = "https://image.nmb.best/"
+private const val NMB_IMAGE_THUMB_SEGMENT = "/thumb/"
+private const val NMB_IMAGE_FULL_SEGMENT = "/image/"
 
-fun buildNmbImageUrl(image: String?, ext: String?): String? {
+private fun normalizeNmbImagePath(image: String?, ext: String?): String? {
     val imageId = image?.trim().orEmpty()
     if (imageId.isEmpty()) {
         return null
-    }
-
-    if (imageId.startsWith("http://") || imageId.startsWith("https://")) {
-        return imageId
     }
 
     val extension = ext?.trim().orEmpty()
@@ -23,14 +18,59 @@ fun buildNmbImageUrl(image: String?, ext: String?): String? {
         else -> ".$extension"
     }
 
-    return "$NMB_IMAGE_CDN_BASE_URL$imageId$normalizedExtension"
+    return "$imageId$normalizedExtension"
 }
 
-val CatalogThread.imageUrl: String?
-    get() = buildNmbImageUrl(image = image, ext = ext)
+private fun String.isHttpUrl(): Boolean {
+    return startsWith("http://") || startsWith("https://")
+}
 
-val ThreadPost.imageUrl: String?
-    get() = buildNmbImageUrl(image = image, ext = ext)
+private fun normalizeNmbImageCdnBaseUrl(cdnBaseUrl: String): String {
+    return cdnBaseUrl
+        .trim()
+        .removeSuffix("/")
+}
 
-val SubscriptionThread.imageUrl: String?
-    get() = buildNmbImageUrl(image = image, ext = ext)
+fun buildNmbThumbImageUrl(
+    image: String?,
+    ext: String?,
+    cdnBaseUrl: String = NMB_IMAGE_CDN_BASE_URL
+): String? {
+    val imageId = image?.trim().orEmpty()
+    if (imageId.isEmpty()) {
+        return null
+    }
+
+    if (imageId.isHttpUrl()) {
+        return if (NMB_IMAGE_FULL_SEGMENT in imageId) {
+            imageId.replace(NMB_IMAGE_FULL_SEGMENT, NMB_IMAGE_THUMB_SEGMENT)
+        } else {
+            imageId
+        }
+    }
+
+    val normalizedPath = normalizeNmbImagePath(image = imageId, ext = ext) ?: return null
+    return "${normalizeNmbImageCdnBaseUrl(cdnBaseUrl)}$NMB_IMAGE_THUMB_SEGMENT$normalizedPath"
+}
+
+fun buildNmbFullImageUrl(
+    image: String?,
+    ext: String?,
+    cdnBaseUrl: String = NMB_IMAGE_CDN_BASE_URL
+): String? {
+    val imageId = image?.trim().orEmpty()
+    if (imageId.isEmpty()) {
+        return null
+    }
+
+    if (imageId.isHttpUrl()) {
+        return if (NMB_IMAGE_THUMB_SEGMENT in imageId) {
+            imageId.replace(NMB_IMAGE_THUMB_SEGMENT, NMB_IMAGE_FULL_SEGMENT)
+        } else {
+            imageId
+        }
+    }
+
+    val normalizedPath = normalizeNmbImagePath(image = imageId, ext = ext) ?: return null
+    return "${normalizeNmbImageCdnBaseUrl(cdnBaseUrl)}$NMB_IMAGE_FULL_SEGMENT$normalizedPath"
+}

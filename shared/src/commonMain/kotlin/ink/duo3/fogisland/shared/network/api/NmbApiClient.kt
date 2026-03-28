@@ -7,6 +7,7 @@ import ink.duo3.fogisland.shared.model.ThreadPostRequest
 import ink.duo3.fogisland.shared.model.ThreadPostResult
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import ink.duo3.fogisland.shared.network.model.CdnPathDto
 import ink.duo3.fogisland.shared.network.model.ForumGroupDto
 import ink.duo3.fogisland.shared.network.model.LastPostDto
 import ink.duo3.fogisland.shared.network.model.NmbApiErrorDto
@@ -50,6 +51,7 @@ class NmbApiClient(
         private const val GET_LAST_POST_PATH = "Api/getLastPost"
         private const val FORUM_LIST_PATH = "Api/getForumList"
         private const val TIMELINE_LIST_PATH = "Api/getTimelineList"
+        private const val CDN_PATH_PATH = "Api/getCdnPath"
         private const val SHOW_FORUM_PATH = "Api/showf"
         private const val THREAD_DETAILS_PATH = "Api/thread"
         private const val FEED_PATH = "Api/feed/"
@@ -170,6 +172,16 @@ class NmbApiClient(
             },
             path = NOTICE_PATH
         )
+    }
+
+    suspend fun getPreferredImageCdnBaseUrl(): String? {
+        return runCatching {
+            requestBody<List<CdnPathDto>>(CDN_PATH_PATH)
+        }.getOrNull()
+            ?.sortedByDescending { it.rate ?: 0.0 }
+            ?.mapNotNull { it.url?.trim()?.takeIf { value -> value.isNotBlank() } }
+            ?.firstOrNull()
+            ?.let(::normalizeImageCdnBaseUrl)
     }
 
     suspend fun postThread(request: ThreadPostRequest): ThreadPostResult {
@@ -355,6 +367,15 @@ class NmbApiClient(
             .removeSuffix("/Api")
             .removeSuffix("/")
             .plus("/")
+    }
+
+    private fun normalizeImageCdnBaseUrl(baseUrl: String): String {
+        return baseUrl
+            .trim()
+            .removeSuffix("/")
+            .removeSuffix("/thumb")
+            .removeSuffix("/image")
+            .removeSuffix("/")
     }
 
     private suspend inline fun <reified T> decodeResponse(
