@@ -1,5 +1,9 @@
 package ink.duo3.fogisland.ui
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,7 +44,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigation3.ui.defaultPopTransitionSpec
+import androidx.navigation3.ui.defaultTransitionSpec
 import ink.duo3.fogisland.data.draft.cleanupOrphanDraftImages
 import ink.duo3.fogisland.data.draft.deleteDraftImage
 import ink.duo3.fogisland.shared.model.CatalogSource
@@ -52,6 +59,7 @@ import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toCatalogSource
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import ink.duo3.fogisland.ui.components.NavigationItemGroup
+import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerPreviewState
 import ink.duo3.fogisland.viewmodel.ForumBrowseViewModel
 import kotlinx.coroutines.launch
 
@@ -66,9 +74,34 @@ fun FogIslandApp() {
     val backStack = remember { mutableStateListOf<AppRoute>(AppRoute.Catalog) }
     val expandedGroups = remember { mutableStateMapOf<Long, Boolean>() }
     val snackbarHostState = remember { SnackbarHostState() }
+    var imageViewerPreviewState by remember { mutableStateOf<ImageViewerPreviewState?>(null) }
     val currentRoute = backStack.lastOrNull() ?: AppRoute.Catalog
     val isCatalogRoute = currentRoute == AppRoute.Catalog
     val forumNameById = remember(state.forumGroups) { buildForumNameMap(state.forumGroups) }
+    val activeImageViewerKey = (currentRoute as? AppRoute.ImageViewer)
+        ?.let { route -> route.image to route.ext }
+    val navTransitionSpec:
+        AnimatedContentTransitionScope<Scene<AppRoute>>.() -> ContentTransform = {
+        if (initialState.isImageViewerScene() || targetState.isImageViewerScene()) {
+            ContentTransform(
+                targetContentEnter = EnterTransition.None,
+                initialContentExit = ExitTransition.None
+            )
+        } else {
+            defaultTransitionSpec<AppRoute>().invoke(this)
+        }
+    }
+    val navPopTransitionSpec:
+        AnimatedContentTransitionScope<Scene<AppRoute>>.() -> ContentTransform = {
+        if (initialState.isImageViewerScene() || targetState.isImageViewerScene()) {
+            ContentTransform(
+                targetContentEnter = EnterTransition.None,
+                initialContentExit = ExitTransition.None
+            )
+        } else {
+            defaultPopTransitionSpec<AppRoute>().invoke(this)
+        }
+    }
 
     LaunchedEffect(Unit) {
         runCatching {
@@ -132,9 +165,17 @@ fun FogIslandApp() {
 
     fun showImageViewer(
         image: String,
-        ext: String?
+        ext: String?,
+        previewState: ImageViewerPreviewState? = null
     ) {
+        imageViewerPreviewState = previewState
         backStack.add(AppRoute.ImageViewer(image = image, ext = ext))
+    }
+
+    LaunchedEffect(currentRoute) {
+        if (currentRoute !is AppRoute.ImageViewer) {
+            imageViewerPreviewState = null
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -297,11 +338,14 @@ fun FogIslandApp() {
             NavDisplay(
                 backStack = backStack,
                 modifier = Modifier.fillMaxSize(),
+                transitionSpec = navTransitionSpec,
+                popTransitionSpec = navPopTransitionSpec,
             ) { key: AppRoute ->
                 when (key) {
                 AppRoute.Catalog -> NavEntry(key) {
                     ForumScreen(
                         state = state,
+                        activeImageViewerKey = activeImageViewerKey,
                         onMenuClick = { scope.launch { drawerState.open() } },
                         onRefreshClick = {
                             state.currentSource?.let { source ->
@@ -319,8 +363,8 @@ fun FogIslandApp() {
                             viewModel.openThread(threadId)
                             backStack.add(AppRoute.Thread(threadId))
                         },
-                        onImageClick = { image, ext ->
-                            showImageViewer(image = image, ext = ext)
+                        onImageClick = { image, ext, previewState ->
+                            showImageViewer(image = image, ext = ext, previewState = previewState)
                         }
                     )
                 }
@@ -335,6 +379,7 @@ fun FogIslandApp() {
                         loadedPage = state.loadedSubscriptionPage,
                         isLoading = state.isLoadingSubscriptions,
                         error = state.subscriptionError,
+                        activeImageViewerKey = activeImageViewerKey,
                         onMenuClick = { scope.launch { drawerState.open() } },
                         onRefreshClick = { viewModel.refreshSubscriptions() },
                         onLoadMore = { viewModel.loadMoreSubscriptions() },
@@ -345,8 +390,8 @@ fun FogIslandApp() {
                         onDeleteClick = { threadId ->
                             viewModel.deleteSubscription(threadId)
                         },
-                        onImageClick = { image, ext ->
-                            showImageViewer(image = image, ext = ext)
+                        onImageClick = { image, ext, previewState ->
+                            showImageViewer(image = image, ext = ext, previewState = previewState)
                         }
                     )
                 }
@@ -583,6 +628,7 @@ fun FogIslandApp() {
                         isLoading = isRouteThreadActive && state.isLoadingThread,
                         canLoadMore = isRouteThreadActive && state.canLoadMoreReplies,
                         error = if (isRouteThreadActive) state.error else null,
+                        activeImageViewerKey = activeImageViewerKey,
                         focusPostId = key.targetPostId,
                         focusPage = key.targetPage,
                         onBack = {
@@ -607,8 +653,8 @@ fun FogIslandApp() {
                         onProgressChanged = { index, offset ->
                             viewModel.saveThreadProgress(key.threadId, index, offset)
                         },
-                        onImageClick = { image, ext ->
-                            showImageViewer(image = image, ext = ext)
+                        onImageClick = { image, ext, previewState ->
+                            showImageViewer(image = image, ext = ext, previewState = previewState)
                         }
                     )
                 }
@@ -617,7 +663,10 @@ fun FogIslandApp() {
                     ImageViewerScreen(
                         image = key.image,
                         ext = key.ext,
+                        previewState = imageViewerPreviewState
+                            ?.takeIf { it.image == key.image && it.ext == key.ext },
                         onBack = {
+                            imageViewerPreviewState = null
                             if (backStack.isNotEmpty()) {
                                 backStack.removeAt(backStack.lastIndex)
                             }
@@ -661,4 +710,8 @@ private sealed interface AppRoute {
         val ext: String?
     ) : AppRoute
     data object Settings : AppRoute
+}
+
+private fun Scene<AppRoute>.isImageViewerScene(): Boolean {
+    return key.toString().startsWith("ImageViewer(")
 }

@@ -18,10 +18,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImagePainter
@@ -29,6 +33,7 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import ink.duo3.fogisland.shared.util.buildNmbThumbImageUrl
+import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerPreviewState
 import kotlinx.coroutines.launch
 import kotlin.math.min
 
@@ -45,7 +50,8 @@ private data class ThreadImagePreviewLayout(
 fun ThreadImagePreview(
     image: String,
     ext: String?,
-    onImageClick: (String, String?) -> Unit,
+    onImageClick: (String, String?, ImageViewerPreviewState?) -> Unit,
+    isHidden: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -81,7 +87,7 @@ fun ThreadImagePreview(
     val painter = rememberAsyncImagePainter(
         model = ImageRequest.Builder(context)
             .data(resolvedPreviewUrl)
-            .crossfade(true)
+            .crossfade(false)
             .build(),
         onError = { _: AsyncImagePainter.State.Error ->
             fetchFallbackCdnIfNeeded()
@@ -111,6 +117,8 @@ fun ThreadImagePreview(
     }
     val previewHeightPx = with(density) { THREAD_IMAGE_PREVIEW_HEIGHT_DP.dp.toPx() }
     val minimumPreviewWidthPx = with(density) { THREAD_IMAGE_PREVIEW_MIN_WIDTH_DP.dp.toPx() }
+    val cornerRadiusPx = with(density) { THREAD_IMAGE_PREVIEW_CORNER_RADIUS_DP.dp.toPx() }
+    var previewBounds by remember(image, ext) { mutableStateOf<Rect?>(null) }
 
     BoxWithConstraints(modifier = modifier) {
         val maximumPreviewWidthPx = constraints.maxWidth.toFloat()
@@ -129,12 +137,37 @@ fun ThreadImagePreview(
                 maximumPreviewWidthPx = maximumPreviewWidthPx
             )
         }
+        val previewState = remember(
+            image,
+            ext,
+            previewBitmap,
+            previewBounds,
+            previewLayout,
+            cornerRadiusPx
+        ) {
+            val bitmap = previewBitmap ?: return@remember null
+            val bounds = previewBounds?.takeIf { !it.isEmpty } ?: return@remember null
+            ImageViewerPreviewState(
+                image = image,
+                ext = ext,
+                bitmap = bitmap,
+                boundsInRoot = bounds,
+                alignment = previewLayout.alignment,
+                cornerRadiusPx = cornerRadiusPx
+            )
+        }
 
         Surface(
             modifier = Modifier
                 .width(with(density) { previewLayout.widthPx.toDp() })
                 .height(THREAD_IMAGE_PREVIEW_HEIGHT_DP.dp)
-                .clickable { onImageClick(image, ext) },
+                .graphicsLayer {
+                    alpha = if (isHidden) 0f else 1f
+                }
+                .onGloballyPositioned { coordinates ->
+                    previewBounds = coordinates.boundsInRoot()
+                }
+                .clickable { onImageClick(image, ext, previewState) },
             color = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(THREAD_IMAGE_PREVIEW_CORNER_RADIUS_DP.dp)
         ) {

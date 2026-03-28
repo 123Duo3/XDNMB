@@ -51,17 +51,19 @@ import ink.duo3.fogisland.shared.util.resolveNmbCardNameIdString
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import ink.duo3.fogisland.ui.components.ThreadImagePreview
+import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerPreviewState
 import ink.duo3.fogisland.viewmodel.ForumBrowseUiState
 
 @Composable
 fun ForumScreen(
     state: ForumBrowseUiState,
+    activeImageViewerKey: Pair<String, String?>? = null,
     onMenuClick: () -> Unit,
     onRefreshClick: () -> Unit,
     onPostClick: () -> Unit,
     onLoadMore: () -> Unit,
     onThreadClick: (Long) -> Unit,
-    onImageClick: (String, String?) -> Unit
+    onImageClick: (String, String?, ImageViewerPreviewState?) -> Unit
 ) {
     val source = state.currentSource
     val forumNameById = buildForumNameMap(state.forumGroups)
@@ -176,6 +178,7 @@ fun ForumScreen(
                     } else {
                         null
                     },
+                    activeImageViewerKey = activeImageViewerKey,
                     onClick = { onThreadClick(thread.id) },
                     onImageClick = onImageClick
                 )
@@ -208,8 +211,9 @@ fun ForumScreen(
 private fun ThreadCard(
     thread: CatalogThread,
     forumName: String?,
+    activeImageViewerKey: Pair<String, String?>?,
     onClick: () -> Unit,
-    onImageClick: (String, String?) -> Unit
+    onImageClick: (String, String?, ImageViewerPreviewState?) -> Unit
 ) {
     val timeSettings = LocalTimeSettings.current
     val postedAtText = formatNmbPostedAtText(
@@ -279,6 +283,7 @@ private fun ThreadCard(
                     ThreadImagePreview(
                         image = thread.image,
                         ext = thread.ext,
+                        isHidden = activeImageViewerKey?.let { it.first == thread.image && it.second == thread.ext } == true,
                         onImageClick = onImageClick
                     )
                 }

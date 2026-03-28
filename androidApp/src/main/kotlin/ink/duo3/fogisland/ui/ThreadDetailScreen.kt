@@ -43,6 +43,7 @@ import ink.duo3.fogisland.shared.util.resolveNmbDisplayAuthor
 import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import ink.duo3.fogisland.ui.components.ThreadImagePreview
+import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerPreviewState
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -57,6 +58,7 @@ fun ThreadDetailScreen(
     isLoading: Boolean,
     canLoadMore: Boolean,
     error: ErrorPresentation?,
+    activeImageViewerKey: Pair<String, String?>? = null,
     focusPostId: Long? = null,
     focusPage: Int? = null,
     onBack: () -> Unit,
@@ -65,7 +67,7 @@ fun ThreadDetailScreen(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onProgressChanged: (Int, Int) -> Unit,
-    onImageClick: (String, String?) -> Unit
+    onImageClick: (String, String?, ImageViewerPreviewState?) -> Unit
 ) {
     val thread = detail.thread
     val posts = detail.posts
@@ -221,6 +223,7 @@ fun ThreadDetailScreen(
                         ext = root.ext,
                         content = root.contentText,
                         timeFormatOptions = timeFormatOptions,
+                        activeImageViewerKey = activeImageViewerKey,
                         onImageClick = onImageClick
                     )
                 }
@@ -238,6 +241,7 @@ fun ThreadDetailScreen(
                     ext = post.ext,
                     content = post.contentText,
                     timeFormatOptions = timeFormatOptions,
+                    activeImageViewerKey = activeImageViewerKey,
                     onImageClick = onImageClick
                 )
             }
@@ -275,7 +279,8 @@ private fun PostCard(
     ext: String,
     content: String,
     timeFormatOptions: NmbTimeFormatOptions,
-    onImageClick: (String, String?) -> Unit
+    activeImageViewerKey: Pair<String, String?>?,
+    onImageClick: (String, String?, ImageViewerPreviewState?) -> Unit
 ) {
     val postedAtText = formatNmbPostedAtText(
         epochMillis = postedAtEpochMillis,
@@ -317,6 +322,7 @@ private fun PostCard(
                 ThreadImagePreview(
                     image = image,
                     ext = ext,
+                    isHidden = activeImageViewerKey?.let { it.first == image && it.second == ext } == true,
                     onImageClick = onImageClick
                 )
             }

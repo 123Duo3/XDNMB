@@ -52,6 +52,7 @@ import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import ink.duo3.fogisland.ui.components.SubscriptionUuidEditorDialog
 import ink.duo3.fogisland.ui.components.ThreadImagePreview
+import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerPreviewState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,12 +62,13 @@ fun SubscriptionScreen(
     loadedPage: Int,
     isLoading: Boolean,
     error: ErrorPresentation?,
+    activeImageViewerKey: Pair<String, String?>? = null,
     onMenuClick: () -> Unit,
     onRefreshClick: () -> Unit,
     onLoadMore: () -> Unit,
     onThreadClick: (Long) -> Unit,
     onDeleteClick: (Long) -> Unit,
-    onImageClick: (String, String?) -> Unit
+    onImageClick: (String, String?, ImageViewerPreviewState?) -> Unit
 ) {
     val context = LocalContext.current
     val forumNameById = remember(forumGroups) { buildForumNameMap(forumGroups) }
@@ -150,6 +152,7 @@ fun SubscriptionScreen(
                 SubscriptionThreadCard(
                     thread = thread,
                     forumName = resolveForumName(thread.forumId, forumNameById),
+                    activeImageViewerKey = activeImageViewerKey,
                     onClick = { onThreadClick(thread.threadId) },
                     onDeleteClick = { onDeleteClick(thread.threadId) },
                     onImageClick = onImageClick
@@ -191,9 +194,10 @@ fun SubscriptionScreen(
 private fun SubscriptionThreadCard(
     thread: SubscriptionThread,
     forumName: String?,
+    activeImageViewerKey: Pair<String, String?>?,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    onImageClick: (String, String?) -> Unit
+    onImageClick: (String, String?, ImageViewerPreviewState?) -> Unit
 ) {
     val timeSettings = LocalTimeSettings.current
     val postedAtText = formatNmbPostedAtText(
@@ -232,6 +236,7 @@ private fun SubscriptionThreadCard(
                 ThreadImagePreview(
                     image = thread.image,
                     ext = thread.ext,
+                    isHidden = activeImageViewerKey?.let { it.first == thread.image && it.second == thread.ext } == true,
                     onImageClick = onImageClick
                 )
             }

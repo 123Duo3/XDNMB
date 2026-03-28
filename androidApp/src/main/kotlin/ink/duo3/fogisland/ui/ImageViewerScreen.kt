@@ -21,6 +21,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -30,6 +31,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,9 +50,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -62,6 +67,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImagePainter
@@ -88,11 +94,14 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import ink.duo3.fogisland.ui.components.imageviewer.IMAGE_VIEWER_MAX_SCALE
 import ink.duo3.fogisland.ui.components.imageviewer.IMAGE_VIEWER_MIN_SCALE
 import ink.duo3.fogisland.ui.components.imageviewer.IMAGE_VIEWER_DOUBLE_TAP_SCALE_MULTIPLIER
 import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerLayout
+import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerPreviewState
 import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerTopBar
+import ink.duo3.fogisland.ui.components.imageviewer.calculateImageViewerContentBounds
 import ink.duo3.fogisland.ui.components.imageviewer.calculateImageViewerLayout
 import ink.duo3.fogisland.ui.components.imageviewer.calculateImageViewerMinimumScale
 import ink.duo3.fogisland.ui.components.imageviewer.calculateImageViewerResetTranslation
@@ -105,6 +114,7 @@ import ink.duo3.fogisland.ui.components.imageviewer.coerceImageViewerSettledScal
 private val ViewerBackground = Color.Black
 private const val MAX_LONG_IMAGE_WIDTH_DP = 600
 private const val DOUBLE_TAP_ANIMATION_MILLIS = 220
+private const val SHARED_ELEMENT_ANIMATION_MILLIS = 320
 private const val SCALE_RESET_THRESHOLD = 0.05f
 private const val ACTION_PROGRESS_DELAY_MILLIS = 150L
 private const val LOADING_INDICATOR_SHOW_DELAY_MILLIS = 120L
@@ -118,6 +128,9 @@ private const val LOADING_INDICATOR_ANIMATION_DURATION_MILLIS = 6000
 private const val LOADING_INDICATOR_SIZE_DP = 40
 private const val LOADING_INDICATOR_CONTAINER_SIZE_DP = 72
 private const val LOADING_INDICATOR_STROKE_WIDTH_DP = 4
+private const val FULL_IMAGE_FADE_IN_MILLIS = 220
+private const val PREVIEW_BACKGROUND_BLUR_DP = 28
+private const val SHARED_ELEMENT_FADE_OUT_START_FRACTION = 0.78f
 private val LoadingIndicatorTrackColor = Color.White.copy(alpha = 0.18f)
 private val LoadingIndicatorBackgroundColor = Color.Black.copy(alpha = 0.42f)
 private val LoadingIndicatorProgressEasing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
@@ -126,6 +139,7 @@ private val LoadingIndicatorProgressEasing = androidx.compose.animation.core.Cub
 fun ImageViewerScreen(
     image: String,
     ext: String?,
+    previewState: ImageViewerPreviewState? = null,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -142,6 +156,22 @@ fun ImageViewerScreen(
     val windowInsetsController = remember(activity, view) {
         activity?.window?.let { window ->
             WindowCompat.getInsetsController(window, view)
+        }
+    }
+    val resolvedPreviewState = remember(image, ext, previewState) {
+        previewState?.takeIf { it.image == image && it.ext == ext }
+    }
+    val previewBitmap = remember(resolvedPreviewState) {
+        resolvedPreviewState
+            ?.bitmap
+            ?.also { bitmap -> bitmap.density = Bitmap.DENSITY_NONE }
+    }
+    val previewImageBitmap = remember(previewBitmap) {
+        previewBitmap?.asImageBitmap()
+    }
+    val previewImageSize = remember(previewBitmap) {
+        previewBitmap?.let { bitmap ->
+            IntSize(width = bitmap.width, height = bitmap.height)
         }
     }
 
@@ -164,6 +194,8 @@ fun ImageViewerScreen(
     var showDownloadingProgress by remember(image, ext) { mutableStateOf(false) }
     var shouldShowLoadingIndicator by remember(image, ext) { mutableStateOf(true) }
     var shouldCompleteLoadingIndicator by remember(image, ext) { mutableStateOf(false) }
+    var hasPlayedSharedElementTransition by remember(image, ext) { mutableStateOf(false) }
+    var hasCompletedFullImageFadeIn by remember(image, ext) { mutableStateOf(false) }
     val imageLoadProgress = remember(image, ext) { MutableStateFlow<HttpTransferProgress?>(null) }
     val currentImageLoadProgress by imageLoadProgress.collectAsState()
     val progressImageLoader = remember(baseImageLoader, imageUrl) {
@@ -498,6 +530,13 @@ fun ImageViewerScreen(
         IntSize(width, height)
     }
     val maxLongImageWidthPx = with(density) { MAX_LONG_IMAGE_WIDTH_DP.dp.toPx() }
+    val transitionLayout = remember(viewportSize, imageSize, previewImageSize, maxLongImageWidthPx) {
+        calculateImageViewerLayout(
+            viewportSize = viewportSize,
+            imageSize = imageSize ?: previewImageSize,
+            maxLongImageWidthPx = maxLongImageWidthPx
+        )
+    }
     val layout = remember(viewportSize, imageSize, maxLongImageWidthPx) {
         calculateImageViewerLayout(
             viewportSize = viewportSize,
@@ -513,6 +552,61 @@ fun ImageViewerScreen(
         } ?: IMAGE_VIEWER_MIN_SCALE
     }
     val canHandleImageFile = sourceBitmap != null && imageUrl != null
+    val previewOverlayTargetLayout = layout ?: transitionLayout
+    val sharedElementProgress = remember(image, ext) {
+        Animatable(
+            initialValue = if (resolvedPreviewState != null) 0f else 1f
+        )
+    }
+    val isSharedElementTransitionRunning =
+        resolvedPreviewState != null &&
+            previewOverlayTargetLayout != null &&
+            sharedElementProgress.value < 0.999f
+    val previewOverlayFullImageBlend by animateFloatAsState(
+        targetValue = if (currentSuccessState != null) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = FULL_IMAGE_FADE_IN_MILLIS,
+            easing = FastOutSlowInEasing
+        ),
+        label = "image_viewer_preview_overlay_full_image_blend"
+    )
+    val fullImageAlpha by animateFloatAsState(
+        targetValue = if (currentSuccessState != null && !isSharedElementTransitionRunning) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = FULL_IMAGE_FADE_IN_MILLIS,
+            easing = FastOutSlowInEasing
+        ),
+        finishedListener = { value ->
+            hasCompletedFullImageFadeIn = value >= 0.999f
+        },
+        label = "image_viewer_full_image_alpha"
+    )
+    val previewOverlayAlpha by animateFloatAsState(
+        targetValue = if (
+            previewImageBitmap != null &&
+            (
+                currentSuccessState == null ||
+                    isSharedElementTransitionRunning ||
+                    !hasCompletedFullImageFadeIn ||
+                    previewOverlayFullImageBlend < 0.999f
+                )
+        ) {
+            1f
+        } else {
+            0f
+        },
+        animationSpec = tween(
+            durationMillis = FULL_IMAGE_FADE_IN_MILLIS,
+            easing = FastOutSlowInEasing
+        ),
+        label = "image_viewer_preview_overlay_alpha"
+    )
+
+    LaunchedEffect(currentSuccessState != null, isSharedElementTransitionRunning) {
+        if (currentSuccessState == null || isSharedElementTransitionRunning) {
+            hasCompletedFullImageFadeIn = false
+        }
+    }
 
     LaunchedEffect(imageUrl, currentSuccessState, hasTerminalError) {
         if (currentSuccessState != null || hasTerminalError) {
@@ -571,6 +665,29 @@ fun ImageViewerScreen(
             translation = translation,
             layout = currentLayout,
             scale = scale
+        )
+    }
+
+    LaunchedEffect(resolvedPreviewState != null, transitionLayout != null) {
+        if (resolvedPreviewState == null) {
+            sharedElementProgress.snapTo(1f)
+            hasPlayedSharedElementTransition = true
+            return@LaunchedEffect
+        }
+        if (transitionLayout == null) {
+            return@LaunchedEffect
+        }
+        if (hasPlayedSharedElementTransition) {
+            return@LaunchedEffect
+        }
+        hasPlayedSharedElementTransition = true
+        sharedElementProgress.snapTo(0f)
+        sharedElementProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = SHARED_ELEMENT_ANIMATION_MILLIS,
+                easing = FastOutSlowInEasing
+            )
         )
     }
 
@@ -755,7 +872,11 @@ fun ImageViewerScreen(
                 val displayedScale = resolveDisplayedScale(currentLayout)
                 val displayedTranslation = resolveDisplayedTranslation(currentLayout)
                 Canvas(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            alpha = fullImageAlpha
+                        }
                 ) {
                     withTransform({
                         translate(
@@ -782,6 +903,24 @@ fun ImageViewerScreen(
                         }
                     }
                 }
+            }
+
+            if (
+                previewImageBitmap != null &&
+                previewOverlayTargetLayout != null &&
+                previewOverlayAlpha > 0.001f
+            ) {
+                ImageViewerPreviewOverlay(
+                    previewState = resolvedPreviewState,
+                    previewImageBitmap = previewImageBitmap,
+                    fullImagePainter = painter,
+                    showFullImage = currentSuccessState != null,
+                    fullImageBlend = previewOverlayFullImageBlend,
+                    overlayAlpha = previewOverlayAlpha,
+                    targetLayout = previewOverlayTargetLayout,
+                    isSharedElementTransitionRunning = isSharedElementTransitionRunning,
+                    progress = sharedElementProgress.value
+                )
             }
 
             when {
@@ -873,6 +1012,113 @@ fun ImageViewerScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun ImageViewerPreviewOverlay(
+    previewState: ImageViewerPreviewState?,
+    previewImageBitmap: androidx.compose.ui.graphics.ImageBitmap?,
+    fullImagePainter: AsyncImagePainter,
+    showFullImage: Boolean,
+    fullImageBlend: Float,
+    overlayAlpha: Float,
+    targetLayout: ImageViewerLayout,
+    isSharedElementTransitionRunning: Boolean,
+    progress: Float
+) {
+    val bitmap = previewImageBitmap ?: return
+    val density = LocalDensity.current
+    val targetBounds = calculateImageViewerContentBounds(
+        layout = targetLayout,
+        scale = targetLayout.resetScale,
+        translation = calculateImageViewerResetTranslation(targetLayout)
+    )
+    val currentLeft = if (previewState != null && isSharedElementTransitionRunning) {
+        lerp(previewState.boundsInRoot.left, targetBounds.left, progress)
+    } else {
+        targetBounds.left
+    }
+    val currentTop = if (previewState != null && isSharedElementTransitionRunning) {
+        lerp(previewState.boundsInRoot.top, targetBounds.top, progress)
+    } else {
+        targetBounds.top
+    }
+    val currentWidth = if (previewState != null && isSharedElementTransitionRunning) {
+        lerp(previewState.boundsInRoot.width, targetBounds.width, progress)
+    } else {
+        targetBounds.width
+    }
+    val currentHeight = if (previewState != null && isSharedElementTransitionRunning) {
+        lerp(previewState.boundsInRoot.height, targetBounds.height, progress)
+    } else {
+        targetBounds.height
+    }
+    val cornerRadiusPx = if (previewState != null && isSharedElementTransitionRunning) {
+        lerp(previewState.cornerRadiusPx, 0f, progress)
+    } else {
+        0f
+    }
+    val currentWidthDp = with(density) { currentWidth.toDp() }
+    val currentHeightDp = with(density) { currentHeight.toDp() }
+    val cornerRadiusDp = with(density) { cornerRadiusPx.toDp() }
+    val previewBlurDp = if (isSharedElementTransitionRunning) {
+        PREVIEW_BACKGROUND_BLUR_DP.dp * progress.coerceIn(0f, 1f)
+    } else {
+        PREVIEW_BACKGROUND_BLUR_DP.dp
+    }
+    val previewContentScale = if (previewState != null && isSharedElementTransitionRunning) {
+        ContentScale.Crop
+    } else {
+        ContentScale.FillBounds
+    }
+    val previewAlignment = if (previewState != null && isSharedElementTransitionRunning) {
+        previewState.alignment
+    } else {
+        Alignment.Center
+    }
+
+    Box(
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    x = currentLeft.roundToInt(),
+                    y = currentTop.roundToInt()
+                )
+            }
+            .size(
+                width = currentWidthDp,
+                height = currentHeightDp
+            )
+            .graphicsLayer {
+                alpha = overlayAlpha
+            }
+            .clip(RoundedCornerShape(cornerRadiusDp))
+    ) {
+        Image(
+            bitmap = bitmap,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(previewBlurDp)
+                .graphicsLayer {
+                    alpha = 1f
+                },
+            contentScale = previewContentScale,
+            alignment = previewAlignment
+        )
+        if (showFullImage) {
+            Image(
+                painter = fullImagePainter,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = fullImageBlend
+                    },
+                contentScale = ContentScale.FillBounds
+            )
+        }
     }
 }
 
