@@ -1,6 +1,5 @@
 package ink.duo3.fogisland.ui.components
 
-import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -29,6 +28,7 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import ink.duo3.fogisland.shared.util.buildNmbThumbImageUrl
+import ink.duo3.fogisland.utils.resolveNmbImageFallbackUrl
 import kotlinx.coroutines.launch
 import kotlin.math.min
 
@@ -51,6 +51,9 @@ fun ThreadImagePreview(
     val context = LocalContext.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+    val repository = remember(context) {
+        RepositoryProvider.provideForumRepository(context.applicationContext)
+    }
     var previewImageUrl by remember(image, ext) {
         mutableStateOf(buildNmbThumbImageUrl(image = image, ext = ext))
     }
@@ -62,17 +65,16 @@ fun ThreadImagePreview(
         }
         hasTriedApiFallback = true
         scope.launch {
-            val repository = RepositoryProvider.provideForumRepository(
-                context.applicationContext
-            )
-            val fallbackCdnBaseUrl = runCatching {
-                repository.getImageCdnFallbackBaseUrl()
-            }.getOrNull() ?: return@launch
-            val fallbackPreviewImageUrl = buildNmbThumbImageUrl(
-                image = image,
-                ext = ext,
-                cdnBaseUrl = fallbackCdnBaseUrl
-            ) ?: return@launch
+            val fallbackPreviewImageUrl = resolveNmbImageFallbackUrl(
+                repository = repository,
+                currentUrl = previewImageUrl
+            ) { fallbackCdnBaseUrl ->
+                buildNmbThumbImageUrl(
+                    image = image,
+                    ext = ext,
+                    cdnBaseUrl = fallbackCdnBaseUrl
+                )
+            } ?: return@launch
             previewImageUrl = fallbackPreviewImageUrl
         }
     }
@@ -91,11 +93,6 @@ fun ThreadImagePreview(
         (painter.state as? AsyncImagePainter.State.Success)
             ?.result
             ?.drawable
-    }
-    val previewBitmap = remember(drawable) {
-        (drawable as? BitmapDrawable)
-            ?.bitmap
-            ?.also { bitmap -> bitmap.density = Bitmap.DENSITY_NONE }
     }
     val imageSize = remember(drawable) {
         val resolvedDrawable = drawable ?: return@remember null

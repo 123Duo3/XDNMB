@@ -31,10 +31,6 @@ private enum class ImageViewerExportFormat(
     Png(
         fileExtension = "png",
         mimeType = "image/png"
-    ),
-    Webp(
-        fileExtension = "webp",
-        mimeType = "image/webp"
     )
 }
 
@@ -169,7 +165,6 @@ private fun resolveImageViewerExportFormat(
 
     return when (normalizedExtension?.lowercase()) {
         "png" -> ImageViewerExportFormat.Png
-        "webp" -> ImageViewerExportFormat.Webp
         else -> ImageViewerExportFormat.Jpeg
     }
 }
@@ -196,13 +191,6 @@ private fun writeImageViewerBitmap(
     val compressFormat = when (exportFormat) {
         ImageViewerExportFormat.Jpeg -> Bitmap.CompressFormat.JPEG
         ImageViewerExportFormat.Png -> Bitmap.CompressFormat.PNG
-        ImageViewerExportFormat.Webp -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                Bitmap.CompressFormat.WEBP_LOSSLESS
-            } else {
-                Bitmap.CompressFormat.PNG
-            }
-        }
     }
     val success = bitmap.compress(
         compressFormat,

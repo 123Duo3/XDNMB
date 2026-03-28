@@ -10,19 +10,12 @@ import android.view.ViewConfiguration
 import android.widget.OverScroller
 import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculateZoom
@@ -31,9 +24,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -50,10 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.input.pointer.pointerInput
@@ -76,6 +64,7 @@ import ink.duo3.fogisland.utils.HttpProgressInterceptor
 import ink.duo3.fogisland.utils.HttpTransferProgress
 import ink.duo3.fogisland.utils.ImageDownloadResult
 import ink.duo3.fogisland.utils.downloadBitmapImage
+import ink.duo3.fogisland.utils.resolveNmbImageFallbackUrl
 import ink.duo3.fogisland.utils.shareBitmapImage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -87,11 +76,12 @@ import kotlin.math.roundToInt
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowCompat
-import androidx.compose.foundation.shape.CircleShape
 import ink.duo3.fogisland.ui.components.imageviewer.IMAGE_VIEWER_MAX_SCALE
 import ink.duo3.fogisland.ui.components.imageviewer.IMAGE_VIEWER_MIN_SCALE
 import ink.duo3.fogisland.ui.components.imageviewer.IMAGE_VIEWER_DOUBLE_TAP_SCALE_MULTIPLIER
+import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerCanvas
 import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerLayout
+import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerLoadingIndicator
 import ink.duo3.fogisland.ui.components.imageviewer.ImageViewerTopBar
 import ink.duo3.fogisland.ui.components.imageviewer.calculateImageViewerLayout
 import ink.duo3.fogisland.ui.components.imageviewer.calculateImageViewerMinimumScale
@@ -108,19 +98,7 @@ private const val DOUBLE_TAP_ANIMATION_MILLIS = 220
 private const val SCALE_RESET_THRESHOLD = 0.05f
 private const val ACTION_PROGRESS_DELAY_MILLIS = 150L
 private const val LOADING_INDICATOR_SHOW_DELAY_MILLIS = 120L
-private const val LOADING_PROGRESS_COMPLETION_HOLD_MILLIS = 240L
 private const val LOADING_INDICATOR_FADE_OUT_MILLIS = 180
-private const val LOADING_PROGRESS_FULL_FRACTION = 1f
-private const val LOADING_INDICATOR_GLOBAL_ROTATION_TARGET = 1080f
-private const val LOADING_INDICATOR_MIN_PROGRESS = 0.1f
-private const val LOADING_INDICATOR_MAX_PROGRESS = 0.87f
-private const val LOADING_INDICATOR_ANIMATION_DURATION_MILLIS = 6000
-private const val LOADING_INDICATOR_SIZE_DP = 40
-private const val LOADING_INDICATOR_CONTAINER_SIZE_DP = 72
-private const val LOADING_INDICATOR_STROKE_WIDTH_DP = 4
-private val LoadingIndicatorTrackColor = Color.White.copy(alpha = 0.18f)
-private val LoadingIndicatorBackgroundColor = Color.Black.copy(alpha = 0.42f)
-private val LoadingIndicatorProgressEasing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
 @Composable
 fun ImageViewerScreen(
@@ -162,10 +140,17 @@ fun ImageViewerScreen(
     var isDownloadingImage by remember(image, ext) { mutableStateOf(false) }
     var showSharingProgress by remember(image, ext) { mutableStateOf(false) }
     var showDownloadingProgress by remember(image, ext) { mutableStateOf(false) }
-    var shouldShowLoadingIndicator by remember(image, ext) { mutableStateOf(true) }
-    var shouldCompleteLoadingIndicator by remember(image, ext) { mutableStateOf(false) }
+    var shouldShowLoadingIndicator by remember(image, ext) { mutableStateOf(false) }
     val imageLoadProgress = remember(image, ext) { MutableStateFlow<HttpTransferProgress?>(null) }
     val currentImageLoadProgress by imageLoadProgress.collectAsState()
+    val loadingIndicatorAlpha by animateFloatAsState(
+        targetValue = if (shouldShowLoadingIndicator) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = LOADING_INDICATOR_FADE_OUT_MILLIS,
+            easing = FastOutSlowInEasing
+        ),
+        label = "image_viewer_loading_indicator_alpha"
+    )
     val progressImageLoader = remember(baseImageLoader, imageUrl) {
         if (imageUrl == null) {
             baseImageLoader
@@ -215,14 +200,7 @@ fun ImageViewerScreen(
 
     LaunchedEffect(imageUrl) {
         shouldShowLoadingIndicator = false
-        shouldCompleteLoadingIndicator = false
-        imageLoadProgress.value = imageUrl?.let { trackedUrl ->
-            HttpTransferProgress(
-                url = trackedUrl,
-                bytesRead = 0L,
-                totalBytes = -1L
-            )
-        }
+        imageLoadProgress.value = null
     }
 
     fun resolveDisplayedScale(layout: ImageViewerLayout?): Float {
@@ -396,10 +374,10 @@ fun ImageViewerScreen(
         isFetchingFallback = true
         hasTerminalError = false
         scope.launch {
-            val fallbackBaseUrl = runCatching {
-                repository.getImageCdnFallbackBaseUrl()
-            }.getOrNull()
-            val fallbackUrl = fallbackBaseUrl?.let { baseUrl ->
+            val fallbackUrl = resolveNmbImageFallbackUrl(
+                repository = repository,
+                currentUrl = imageUrl
+            ) { baseUrl ->
                 buildNmbFullImageUrl(
                     image = image,
                     ext = ext,
@@ -407,7 +385,7 @@ fun ImageViewerScreen(
                 )
             }
 
-            if (fallbackUrl.isNullOrBlank() || fallbackUrl == imageUrl) {
+            if (fallbackUrl == null) {
                 hasTerminalError = true
             } else {
                 imageUrl = fallbackUrl
@@ -515,7 +493,11 @@ fun ImageViewerScreen(
     val canHandleImageFile = sourceBitmap != null && imageUrl != null
 
     LaunchedEffect(imageUrl, currentSuccessState, hasTerminalError) {
-        if (currentSuccessState != null || hasTerminalError) {
+        if (hasTerminalError) {
+            shouldShowLoadingIndicator = false
+            return@LaunchedEffect
+        }
+        if (currentSuccessState != null) {
             shouldShowLoadingIndicator = false
             return@LaunchedEffect
         }
@@ -533,7 +515,6 @@ fun ImageViewerScreen(
             painterState is AsyncImagePainter.State.Error -> {
                 imageLoadProgress.value = null
                 shouldShowLoadingIndicator = false
-                shouldCompleteLoadingIndicator = false
                 if (!hasRequestedFallback) {
                     fetchFallbackCdnIfNeeded()
                 } else {
@@ -542,18 +523,6 @@ fun ImageViewerScreen(
                 }
             }
         }
-    }
-    LaunchedEffect(currentSuccessState, imageUrl) {
-        if (currentSuccessState == null) {
-            return@LaunchedEffect
-        }
-        val resolvedUrl = imageUrl ?: return@LaunchedEffect
-        shouldCompleteLoadingIndicator = true
-        imageLoadProgress.value = HttpTransferProgress(
-            url = resolvedUrl,
-            bytesRead = 1L,
-            totalBytes = 1L
-        )
     }
 
     LaunchedEffect(layout, minimumScale) {
@@ -754,34 +723,14 @@ fun ImageViewerScreen(
                 val currentLayout = layout
                 val displayedScale = resolveDisplayedScale(currentLayout)
                 val displayedTranslation = resolveDisplayedTranslation(currentLayout)
-                Canvas(
+                ImageViewerCanvas(
+                    layout = currentLayout,
+                    displayedScale = displayedScale,
+                    displayedTranslation = displayedTranslation,
+                    imageBitmap = imageBitmap,
+                    painter = painter,
                     modifier = Modifier.fillMaxSize()
-                ) {
-                    withTransform({
-                        translate(
-                            left = displayedTranslation.x,
-                            top = displayedTranslation.y
-                        )
-                        scale(
-                            scaleX = displayedScale,
-                            scaleY = displayedScale,
-                            pivot = Offset.Zero
-                        )
-                    }) {
-                        imageBitmap?.let { bitmap ->
-                            drawImage(
-                                image = bitmap
-                            )
-                        } ?: with(painter) {
-                            draw(
-                                size = Size(
-                                    width = currentLayout.baseSize.width,
-                                    height = currentLayout.baseSize.height
-                                )
-                            )
-                        }
-                    }
-                }
+                )
             }
 
             when {
@@ -796,22 +745,20 @@ fun ImageViewerScreen(
                     )
                 }
 
-                !hasTerminalError && shouldShowLoadingIndicator -> {
+                !hasTerminalError && (shouldShowLoadingIndicator || loadingIndicatorAlpha > 0.001f) -> {
                     val progressFraction = currentImageLoadProgress
                         ?.takeIf { it.url == imageUrl }
                         ?.fraction
                     Box(
-                        modifier = Modifier.align(Alignment.Center),
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .graphicsLayer {
+                                alpha = loadingIndicatorAlpha
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         ImageViewerLoadingIndicator(
-                            progressFraction = progressFraction,
-                            shouldComplete = shouldCompleteLoadingIndicator,
-                            onDismissed = {
-                                shouldCompleteLoadingIndicator = false
-                                imageLoadProgress.value = null
-                                shouldShowLoadingIndicator = false
-                            }
+                            progressFraction = progressFraction
                         )
                     }
                 }
@@ -886,117 +833,4 @@ private tailrec fun Context.findActivity(): Activity? {
 
 private fun lerp(start: Float, stop: Float, fraction: Float): Float {
     return start + (stop - start) * fraction
-}
-
-@Composable
-private fun ImageViewerLoadingIndicator(
-    progressFraction: Float?,
-    shouldComplete: Boolean,
-    onDismissed: () -> Unit
-) {
-    val transition = rememberInfiniteTransition(label = "image_loading_indicator")
-    val globalRotation by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = LOADING_INDICATOR_GLOBAL_ROTATION_TARGET,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = LOADING_INDICATOR_ANIMATION_DURATION_MILLIS,
-                easing = LinearEasing
-            )
-        ),
-        label = "image_loading_global_rotation"
-    )
-    val indeterminateProgress by transition.animateFloat(
-        initialValue = LOADING_INDICATOR_MIN_PROGRESS,
-        targetValue = LOADING_INDICATOR_MAX_PROGRESS,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = LOADING_INDICATOR_ANIMATION_DURATION_MILLIS
-                LOADING_INDICATOR_MAX_PROGRESS at
-                    (LOADING_INDICATOR_ANIMATION_DURATION_MILLIS / 2) using
-                    LoadingIndicatorProgressEasing
-                LOADING_INDICATOR_MIN_PROGRESS at LOADING_INDICATOR_ANIMATION_DURATION_MILLIS
-            }
-        ),
-        label = "image_loading_indeterminate_progress"
-    )
-    val determinateProgress = remember { Animatable(LOADING_INDICATOR_MIN_PROGRESS) }
-    val indicatorAlpha = remember { Animatable(1f) }
-    var hasDeterminateProgress by remember { mutableStateOf(false) }
-    var completionShown by remember { mutableStateOf(false) }
-
-    LaunchedEffect(progressFraction) {
-        if (progressFraction == null) {
-            indicatorAlpha.snapTo(1f)
-            hasDeterminateProgress = false
-            completionShown = false
-            return@LaunchedEffect
-        }
-
-        val targetProgress = progressFraction.coerceIn(0f, LOADING_PROGRESS_FULL_FRACTION)
-        if (!hasDeterminateProgress) {
-            determinateProgress.snapTo(
-                indeterminateProgress.coerceIn(
-                    LOADING_INDICATOR_MIN_PROGRESS,
-                    LOADING_INDICATOR_MAX_PROGRESS
-                )
-            )
-            hasDeterminateProgress = true
-        }
-        determinateProgress.animateTo(
-            targetValue = targetProgress,
-            animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
-        )
-    }
-
-    LaunchedEffect(shouldComplete, hasDeterminateProgress, determinateProgress.value) {
-        if (
-            !shouldComplete ||
-            !hasDeterminateProgress ||
-            completionShown ||
-            determinateProgress.value < 0.999f
-        ) {
-            return@LaunchedEffect
-        }
-        completionShown = true
-        delay(LOADING_PROGRESS_COMPLETION_HOLD_MILLIS)
-        indicatorAlpha.animateTo(
-            targetValue = 0f,
-            animationSpec = tween(
-                durationMillis = LOADING_INDICATOR_FADE_OUT_MILLIS,
-                easing = FastOutSlowInEasing
-            )
-        )
-        onDismissed()
-    }
-
-    val displayedProgress = if (hasDeterminateProgress) {
-        determinateProgress.value.coerceIn(0f, LOADING_PROGRESS_FULL_FRACTION)
-    } else {
-        indeterminateProgress.coerceIn(LOADING_INDICATOR_MIN_PROGRESS, LOADING_INDICATOR_MAX_PROGRESS)
-    }
-    Box(
-        modifier = Modifier
-            .size(LOADING_INDICATOR_CONTAINER_SIZE_DP.dp)
-            .graphicsLayer {
-                alpha = indicatorAlpha.value
-            }
-            .background(
-                color = LoadingIndicatorBackgroundColor,
-                shape = CircleShape
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator(
-            progress = { displayedProgress },
-            modifier = Modifier
-                .size(LOADING_INDICATOR_SIZE_DP.dp)
-                .graphicsLayer {
-                    rotationZ = globalRotation
-                },
-            color = Color.White,
-            strokeWidth = LOADING_INDICATOR_STROKE_WIDTH_DP.dp,
-            trackColor = LoadingIndicatorTrackColor
-        )
-    }
 }

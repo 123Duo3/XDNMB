@@ -1,7 +1,6 @@
 package ink.duo3.fogisland.ui.components.imageviewer
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.min
@@ -136,19 +135,6 @@ internal fun clampImageViewerTranslation(
 
 internal fun calculateImageViewerResetTranslation(layout: ImageViewerLayout): Offset {
     return layout.baseOrigin
-}
-
-internal fun calculateImageViewerContentBounds(
-    layout: ImageViewerLayout,
-    scale: Float,
-    translation: Offset
-): Rect {
-    return Rect(
-        left = translation.x,
-        top = translation.y,
-        right = translation.x + (layout.baseSize.width * scale),
-        bottom = translation.y + (layout.baseSize.height * scale)
-    )
 }
 
 internal fun calculateImageViewerTranslationBounds(
