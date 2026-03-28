@@ -36,6 +36,9 @@ google-services.json
 # Kotlin
 .kotlin/
 
+# Local planning docs
+.local/
+
 #Xcode
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
@@ -51,4 +54,3 @@ xcuserdata/
 Pods/
 DerivedData/
 .LSOverride
-
