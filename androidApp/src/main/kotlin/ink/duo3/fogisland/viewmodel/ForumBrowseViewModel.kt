@@ -10,6 +10,7 @@ import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.HiddenTimelineForumFilter
 import ink.duo3.fogisland.shared.model.NmbPost
 import ink.duo3.fogisland.shared.model.PostingDraftEntry
 import ink.duo3.fogisland.shared.model.PostingHistoryEntry
@@ -53,6 +54,8 @@ data class ForumBrowseUiState(
     val threads: List<NmbPost> = emptyList(),
     val subscriptionThreads: List<NmbPost> = emptyList(),
     val readHistory: List<NmbPost> = emptyList(),
+    val hiddenThreadIds: Set<Long> = emptySet(),
+    val hiddenTimelineForumFilters: Set<HiddenTimelineForumFilter> = emptySet(),
     val postingHistory: List<PostingHistoryEntry> = emptyList(),
     val postingDrafts: List<PostingDraftEntry> = emptyList(),
     val searchQuery: String = "",
@@ -103,11 +106,15 @@ class ForumBrowseViewModel(
     private val threadEndReachedCache = mutableMapOf<Long, Boolean>()
     private var subscriptionLoadedPage = 0
     private var currentSubscriptionUuid: String? = null
+    private var latestObservedSubscriptionThreads: List<NmbPost> = emptyList()
+    private val pendingSubscriptionDeletionIds = mutableSetOf<Long>()
     private var catalogObservationJob: Job? = null
     private var subscriptionObservationJob: Job? = null
     private var readHistoryObservationJob: Job? = null
     private var postingDraftObservationJob: Job? = null
     private var postingHistoryObservationJob: Job? = null
+    private var hiddenThreadObservationJob: Job? = null
+    private var hiddenTimelineForumObservationJob: Job? = null
     private var threadObservationJob: Job? = null
     private var searchJob: Job? = null
     private var recentSearchObservationJob: Job? = null
@@ -118,6 +125,7 @@ class ForumBrowseViewModel(
         observeSubscriptionUuid()
         observeRecentSearches()
         observePostingDrafts()
+        observeHiddenContent()
         viewModelScope.launch {
             runCatching { repository.cleanupExpiredCache() }
             runCatching { repository.cleanupExpiredReadHistory() }
@@ -142,6 +150,58 @@ class ForumBrowseViewModel(
         _uiState.update { it.copy(siteNotice = null) }
         viewModelScope.launch {
             repository.updateDismissedSiteNoticeContent(hiddenContent)
+        }
+    }
+
+    fun hideThread(threadId: Long) {
+        viewModelScope.launch {
+            runCatching {
+                repository.hideThread(threadId)
+                _uiState.update { it.copy(error = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(error = throwable.toErrorPresentation("屏蔽串失败"))
+                }
+            }
+        }
+    }
+
+    fun hideTimelineForum(timelineId: Long, forumId: Long) {
+        viewModelScope.launch {
+            runCatching {
+                repository.hideTimelineForum(timelineId, forumId)
+                _uiState.update { it.copy(error = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(error = throwable.toErrorPresentation("屏蔽板块失败"))
+                }
+            }
+        }
+    }
+
+    fun unhideThread(threadId: Long) {
+        viewModelScope.launch {
+            runCatching {
+                repository.unhideThread(threadId)
+                _uiState.update { it.copy(error = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(error = throwable.toErrorPresentation("恢复屏蔽串失败"))
+                }
+            }
+        }
+    }
+
+    fun unhideTimelineForum(timelineId: Long, forumId: Long) {
+        viewModelScope.launch {
+            runCatching {
+                repository.unhideTimelineForum(timelineId, forumId)
+                _uiState.update { it.copy(error = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(error = throwable.toErrorPresentation("恢复屏蔽板块失败"))
+                }
+            }
         }
     }
 
@@ -570,12 +630,40 @@ class ForumBrowseViewModel(
     }
 
     fun deleteSubscription(threadId: Long) {
+        if (!pendingSubscriptionDeletionIds.add(threadId)) {
+            return
+        }
+        _uiState.update {
+            it.copy(
+                subscriptionThreads = latestObservedSubscriptionThreads.filterNot { post ->
+                    post.id in pendingSubscriptionDeletionIds
+                },
+                subscriptionError = null
+            )
+        }
         viewModelScope.launch {
             runCatching {
                 repository.deleteSubscription(threadId)
-            }.onFailure { throwable ->
+            }.onSuccess {
+                latestObservedSubscriptionThreads = latestObservedSubscriptionThreads.filterNot {
+                    it.id == threadId
+                }
+                pendingSubscriptionDeletionIds.remove(threadId)
                 _uiState.update {
                     it.copy(
+                        subscriptionThreads = latestObservedSubscriptionThreads.filterNot { post ->
+                            post.id in pendingSubscriptionDeletionIds
+                        },
+                        subscriptionError = null
+                    )
+                }
+            }.onFailure { throwable ->
+                pendingSubscriptionDeletionIds.remove(threadId)
+                _uiState.update {
+                    it.copy(
+                        subscriptionThreads = latestObservedSubscriptionThreads.filterNot { post ->
+                            post.id in pendingSubscriptionDeletionIds
+                        },
                         isLoadingSubscriptions = false,
                         subscriptionError = throwable.toErrorPresentation("取消订阅失败")
                     )
@@ -802,6 +890,8 @@ class ForumBrowseViewModel(
 
                 currentSubscriptionUuid = uuid
                 subscriptionLoadedPage = 0
+                latestObservedSubscriptionThreads = emptyList()
+                pendingSubscriptionDeletionIds.clear()
                 _uiState.update {
                     it.copy(
                         subscriptionThreads = emptyList(),
@@ -894,9 +984,12 @@ class ForumBrowseViewModel(
 
         subscriptionObservationJob = viewModelScope.launch {
             repository.observeSubscriptions().collect { threads ->
+                latestObservedSubscriptionThreads = threads
                 _uiState.update { state ->
                     state.copy(
-                        subscriptionThreads = threads,
+                        subscriptionThreads = threads.filterNot { thread ->
+                            thread.id in pendingSubscriptionDeletionIds
+                        },
                         loadedSubscriptionPage = subscriptionLoadedPage
                     )
                 }
@@ -941,6 +1034,26 @@ class ForumBrowseViewModel(
             repository.observePostingDrafts().collect { entries ->
                 _uiState.update { state ->
                     state.copy(postingDrafts = entries)
+                }
+            }
+        }
+    }
+
+    private fun observeHiddenContent() {
+        if (hiddenThreadObservationJob == null) {
+            hiddenThreadObservationJob = viewModelScope.launch {
+                repository.observeHiddenThreadIds().collect { hiddenThreadIds ->
+                    _uiState.update { it.copy(hiddenThreadIds = hiddenThreadIds) }
+                }
+            }
+        }
+
+        if (hiddenTimelineForumObservationJob == null) {
+            hiddenTimelineForumObservationJob = viewModelScope.launch {
+                repository.observeHiddenTimelineForumFilters().collect { hiddenTimelineForumFilters ->
+                    _uiState.update {
+                        it.copy(hiddenTimelineForumFilters = hiddenTimelineForumFilters)
+                    }
                 }
             }
         }

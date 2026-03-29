@@ -6,6 +6,7 @@ import ink.duo3.fogisland.shared.model.CacheCleanupTtlPolicy
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumBoard
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.HiddenTimelineForumFilter
 import ink.duo3.fogisland.shared.model.NmbPost
 import ink.duo3.fogisland.shared.model.PostingDraftEntry
 import ink.duo3.fogisland.shared.model.PostingDraftType
@@ -166,6 +167,30 @@ class ForumRepository(
 
     suspend fun updateDismissedSiteNoticeContent(content: String?) {
         forumPreferences.updateDismissedSiteNoticeContent(content)
+    }
+
+    suspend fun hideThread(threadId: Long) {
+        forumPreferences.addHiddenThreadId(threadId)
+    }
+
+    suspend fun unhideThread(threadId: Long) {
+        forumPreferences.removeHiddenThreadId(threadId)
+    }
+
+    suspend fun hideTimelineForum(timelineId: Long, forumId: Long) {
+        forumPreferences.addHiddenTimelineForumFilter(timelineId, forumId)
+    }
+
+    suspend fun unhideTimelineForum(timelineId: Long, forumId: Long) {
+        forumPreferences.removeHiddenTimelineForumFilter(timelineId, forumId)
+    }
+
+    fun observeHiddenThreadIds(): Flow<Set<Long>> {
+        return forumPreferences.hiddenThreadIdsFlow
+    }
+
+    fun observeHiddenTimelineForumFilters(): Flow<Set<HiddenTimelineForumFilter>> {
+        return forumPreferences.hiddenTimelineForumFiltersFlow
     }
 
     suspend fun refreshCatalog(source: CatalogSource, page: Int) {
@@ -359,8 +384,23 @@ class ForumRepository(
     }
 
     fun observeCatalog(source: CatalogSource): Flow<List<NmbPost>> {
-        return threadDao.observeCatalog(source.type.name, source.id).map { entries ->
+        return combine(
+            threadDao.observeCatalog(source.type.name, source.id),
+            forumPreferences.hiddenThreadIdsFlow,
+            forumPreferences.hiddenTimelineForumFiltersFlow
+        ) { entries, hiddenThreadIds, hiddenTimelineForumFilters ->
             entries.map { it.toModel() }
+                .filterNot { thread ->
+                    thread.threadId in hiddenThreadIds ||
+                        (
+                            source.type == CatalogType.TIMELINE &&
+                                thread.forumId != null &&
+                                HiddenTimelineForumFilter(
+                                    timelineId = source.id,
+                                    forumId = thread.forumId
+                                ) in hiddenTimelineForumFilters
+                            )
+                }
         }
     }
 

@@ -35,6 +35,12 @@ data class Timeline(
 )
 
 @Serializable
+data class HiddenTimelineForumFilter(
+    val timelineId: Long,
+    val forumId: Long
+)
+
+@Serializable
 enum class CatalogType {
     FORUM,
     TIMELINE

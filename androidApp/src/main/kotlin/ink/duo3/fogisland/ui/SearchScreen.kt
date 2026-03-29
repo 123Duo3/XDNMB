@@ -121,8 +121,7 @@ fun SearchScreen(
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = innerPadding,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = innerPadding
         ) {
             item {
                 OutlinedTextField(
@@ -340,8 +339,7 @@ private fun SearchResultCard(
         query = query,
         forumName = forumName,
         onClick = onClick,
-        modifier = Modifier
-            .padding(horizontal = 16.dp),
+        modifier = Modifier,
         bodyMaxLines = 6,
         bodyOverflow = TextOverflow.Ellipsis
     )

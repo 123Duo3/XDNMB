@@ -21,6 +21,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +42,7 @@ import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import ink.duo3.fogisland.ui.components.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.ListItemAnimatedVisibility
 import ink.duo3.fogisland.ui.components.NmbPostCard
 import ink.duo3.fogisland.ui.components.NmbPreviewSamples
 
@@ -60,6 +63,16 @@ fun HistoryScreen(
     val topAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var deletingThreadId by rememberSaveable { mutableStateOf<Long?>(null) }
     var isClearAllDialogVisible by rememberSaveable { mutableStateOf(false) }
+    var displayedHistory by remember { mutableStateOf(history) }
+    var removingThreadIds by remember { mutableStateOf(emptySet<Long>()) }
+
+    LaunchedEffect(history, error) {
+        displayedHistory = mergeAnimatedPosts(
+            current = displayedHistory,
+            source = history,
+            removingIds = removingThreadIds
+        )
+    }
 
     Scaffold(
         modifier = Modifier
@@ -73,7 +86,7 @@ fun HistoryScreen(
                     Column {
                         Text("历史")
                         Text(
-                            text = if (history.isEmpty()) "还没有阅读记录" else "共 ${history.size} 条阅读记录",
+                            text = if (displayedHistory.isEmpty()) "还没有阅读记录" else "共 ${displayedHistory.size} 条阅读记录",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -87,7 +100,7 @@ fun HistoryScreen(
                 actions = {
                     IconButton(
                         onClick = { isClearAllDialogVisible = true },
-                        enabled = history.isNotEmpty()
+                        enabled = displayedHistory.isNotEmpty()
                     ) {
                         Icon(Icons.Default.Delete, contentDescription = "清空历史")
                     }
@@ -104,8 +117,7 @@ fun HistoryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 0.dp),
-            contentPadding = innerPadding,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = innerPadding
         ) {
             error?.let { errorState ->
                 item {
@@ -116,7 +128,7 @@ fun HistoryScreen(
                 }
             }
 
-            if (history.isEmpty()) {
+            if (displayedHistory.isEmpty()) {
                 item {
                     Text(
                         text = "开始阅读串之后，这里会按最近阅读时间记录历史。",
@@ -127,20 +139,44 @@ fun HistoryScreen(
             }
 
             items(
-                items = history,
+                items = displayedHistory,
                 key = { thread -> thread.id }
             ) { thread ->
-                HistoryThreadCard(
-                    thread = thread,
-                    forumName = resolveForumName(thread.forumId, forumNameById),
-                    onClick = { onThreadClick(thread.id) },
-                    onImageClick = onImageClick,
-                    onLongClick = {
-                        onThreadLongClick?.invoke(thread.id) ?: run {
-                            deletingThreadId = thread.id
-                        }
+                val visibilityState = remember(thread.id) {
+                    MutableTransitionState(thread.id !in removingThreadIds)
+                }
+                LaunchedEffect(thread.id, removingThreadIds) {
+                    visibilityState.targetState = thread.id !in removingThreadIds
+                }
+                LaunchedEffect(
+                    thread.id,
+                    removingThreadIds,
+                    visibilityState.currentState,
+                    visibilityState.targetState
+                ) {
+                    if (
+                        thread.id in removingThreadIds &&
+                        !visibilityState.currentState &&
+                        !visibilityState.targetState
+                    ) {
+                        displayedHistory = displayedHistory.filterNot { it.id == thread.id }
+                        removingThreadIds = removingThreadIds - thread.id
+                        onDeleteClick(thread.id)
                     }
-                )
+                }
+                ListItemAnimatedVisibility(visibleState = visibilityState) {
+                    HistoryThreadCard(
+                        thread = thread,
+                        forumName = resolveForumName(thread.forumId, forumNameById),
+                        onClick = { onThreadClick(thread.id) },
+                        onImageClick = onImageClick,
+                        onLongClick = {
+                            onThreadLongClick?.invoke(thread.id) ?: run {
+                                deletingThreadId = thread.id
+                            }
+                        }
+                    )
+                }
             }
         }
     }
@@ -154,7 +190,7 @@ fun HistoryScreen(
                 TextButton(
                     onClick = {
                         deletingThreadId = null
-                        onDeleteClick(threadId)
+                        removingThreadIds = removingThreadIds + threadId
                     }
                 ) {
                     Text("删除")
@@ -192,6 +228,33 @@ fun HistoryScreen(
     }
 }
 
+private fun mergeAnimatedPosts(
+    current: List<NmbPost>,
+    source: List<NmbPost>,
+    removingIds: Set<Long>
+): List<NmbPost> {
+    val sourceById = source.associateBy { it.id }
+    val consumedIds = mutableSetOf<Long>()
+    return buildList {
+        current.forEach { post ->
+            when {
+                post.id in sourceById -> {
+                    add(sourceById.getValue(post.id))
+                    consumedIds += post.id
+                }
+
+                post.id in removingIds -> add(post)
+            }
+        }
+
+        source.forEach { post ->
+            if (post.id !in consumedIds) {
+                add(post)
+            }
+        }
+    }
+}
+
 @Composable
 private fun HistoryThreadCard(
     thread: NmbPost,
@@ -205,8 +268,7 @@ private fun HistoryThreadCard(
         forumName = forumName,
         onClick = onClick,
         onImageClick = onImageClick,
-        modifier = Modifier
-            .padding(horizontal = 16.dp),
+        modifier = Modifier,
         onLongClick = onLongClick,
         bodyMaxLines = 6,
         bodyOverflow = TextOverflow.Ellipsis

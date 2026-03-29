@@ -83,6 +83,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     onMenuClick: () -> Unit,
+    hiddenThreadCount: Int,
+    hiddenTimelineForumCount: Int,
+    onHiddenContentClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -317,6 +320,18 @@ fun SettingsScreen(
                         },
                         icon = { Icon(Icons.Default.Bookmarks, contentDescription = null) },
                         onClick = { isSubscriptionUuidDialogVisible = true }
+                    )
+                }
+            }
+
+            item {
+                SettingItemGroup(title = "内容过滤") {
+                    SettingItem(
+                        title = { Text("屏蔽管理") },
+                        description = {
+                            Text("已屏蔽 $hiddenThreadCount 个串，$hiddenTimelineForumCount 个时间线板块。")
+                        },
+                        onClick = onHiddenContentClick
                     )
                 }
             }

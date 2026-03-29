@@ -120,6 +120,17 @@ fun FogIslandApp() {
         backStack.add(AppRoute.Search)
     }
 
+    fun showHiddenContent() {
+        if (backStack.lastOrNull() != AppRoute.Settings) {
+            backStack.clear()
+            backStack.add(AppRoute.Catalog)
+            backStack.add(AppRoute.Settings)
+        }
+        if (backStack.lastOrNull() != AppRoute.HiddenContent) {
+            backStack.add(AppRoute.HiddenContent)
+        }
+    }
+
     fun showPostThread(defaultForumId: Long?, draftId: Long? = null) {
         backStack.clear()
         backStack.add(AppRoute.Catalog)
@@ -318,6 +329,12 @@ fun FogIslandApp() {
                         onThreadClick = { threadId ->
                             viewModel.openThread(threadId)
                             backStack.add(AppRoute.Thread(threadId))
+                        },
+                        onHideThreadClick = { threadId ->
+                            viewModel.hideThread(threadId)
+                        },
+                        onHideTimelineForumClick = { timelineId, forumId ->
+                            viewModel.hideTimelineForum(timelineId, forumId)
                         },
                         onDismissSiteNotice = { viewModel.dismissSiteNotice() },
                         onDismissSiteNoticeUntilChanged = {
@@ -634,7 +651,31 @@ fun FogIslandApp() {
 
                 AppRoute.Settings -> NavEntry(key) {
                     SettingsScreen(
-                        onMenuClick = { scope.launch { drawerState.open() } }
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        hiddenThreadCount = state.hiddenThreadIds.size,
+                        hiddenTimelineForumCount = state.hiddenTimelineForumFilters.size,
+                        onHiddenContentClick = ::showHiddenContent
+                    )
+                }
+
+                AppRoute.HiddenContent -> NavEntry(key) {
+                    HiddenContentScreen(
+                        forumGroups = state.forumGroups,
+                        timelines = state.timelines,
+                        hiddenThreadIds = state.hiddenThreadIds,
+                        hiddenTimelineForumFilters = state.hiddenTimelineForumFilters,
+                        error = state.error,
+                        onBack = {
+                            if (backStack.isNotEmpty()) {
+                                backStack.removeAt(backStack.lastIndex)
+                            }
+                        },
+                        onUnhideThreadClick = { threadId ->
+                            viewModel.unhideThread(threadId)
+                        },
+                        onUnhideTimelineForumClick = { timelineId, forumId ->
+                            viewModel.unhideTimelineForum(timelineId, forumId)
+                        }
                     )
                 }
                 }
@@ -668,4 +709,5 @@ private sealed interface AppRoute {
         val ext: String?
     ) : AppRoute
     data object Settings : AppRoute
+    data object HiddenContent : AppRoute
 }

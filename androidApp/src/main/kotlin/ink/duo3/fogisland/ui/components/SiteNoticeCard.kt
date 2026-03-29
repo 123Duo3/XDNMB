@@ -3,8 +3,15 @@ package ink.duo3.fogisland.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -13,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,35 +35,41 @@ fun SiteNoticeCard(
     onDismissPermanentlyClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val cardShape = MaterialTheme.shapes.large
+    val selectionColors = TextSelectionColors(
+        handleColor = MaterialTheme.colorScheme.onSurface,
+        backgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)
+    )
     Card(
         modifier = modifier,
-        shape = cardShape,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Column {
+            Text(
+                text = "来自X岛的公告",
+                style = MaterialTheme.typography.titleLarge
+            )
+            publishedAtText?.let { publishedAt ->
                 Text(
-                    text = "公告",
-                    style = MaterialTheme.typography.titleLarge
+                    text = publishedAt,
+                    style = MaterialTheme.typography.labelMedium
                 )
-                publishedAtText?.let { publishedAt ->
+            }
+            Spacer(Modifier.height(8.dp))
+            CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
+                SelectionContainer {
                     Text(
-                        text = publishedAt,
-                        style = MaterialTheme.typography.labelMedium
+                        text = notice.contentText,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
-            Text(
-                text = notice.contentText,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Spacer(Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -68,6 +82,7 @@ fun SiteNoticeCard(
                 ) {
                     Text("不再提醒")
                 }
+                Spacer(Modifier.width(8.dp))
                 Button(
                     onClick = onDismissClick,
                     colors = ButtonDefaults.buttonColors().copy(

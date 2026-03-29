@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -51,6 +52,7 @@ import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import ink.duo3.fogisland.ui.components.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.ListItemAnimatedVisibility
 import ink.duo3.fogisland.ui.components.NmbPostCard
 import ink.duo3.fogisland.ui.components.NmbPreviewSamples
 import ink.duo3.fogisland.ui.components.SubscriptionUuidEditorDialog
@@ -82,11 +84,21 @@ fun SubscriptionScreen(
     val topAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var isSubscriptionUuidDialogVisible by rememberSaveable { mutableStateOf(false) }
     var deletingThreadId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var displayedThreads by remember { mutableStateOf(threads) }
+    var removingThreadIds by remember { mutableStateOf(emptySet<Long>()) }
 
     LaunchedEffect(context, inspectionMode) {
         if (!inspectionMode) {
             context.ensureSubscriptionUuid()
         }
+    }
+
+    LaunchedEffect(threads, error) {
+        displayedThreads = mergeAnimatedPosts(
+            current = displayedThreads,
+            source = threads,
+            removingIds = removingThreadIds
+        )
     }
 
     Scaffold(
@@ -144,7 +156,7 @@ fun SubscriptionScreen(
                 }
             }
 
-            if (threads.isEmpty()) {
+            if (displayedThreads.isEmpty()) {
                 item {
                     Text(
                         text = if (isLoading) "正在加载订阅…" else "还没有订阅任何串。",
@@ -155,23 +167,47 @@ fun SubscriptionScreen(
             }
 
             items(
-                items = threads,
+                items = displayedThreads,
                 key = { thread -> thread.id }
             ) { thread ->
-                SubscriptionThreadCard(
-                    thread = thread,
-                    forumName = resolveForumName(thread.forumId, forumNameById),
-                    onClick = { onThreadClick(thread.id) },
-                    onImageClick = onImageClick,
-                    onLongClick = {
-                        onThreadLongClick?.invoke(thread.id) ?: run {
-                            deletingThreadId = thread.id
-                        }
+                val visibilityState = remember(thread.id) {
+                    MutableTransitionState(thread.id !in removingThreadIds)
+                }
+                LaunchedEffect(thread.id, removingThreadIds) {
+                    visibilityState.targetState = thread.id !in removingThreadIds
+                }
+                LaunchedEffect(
+                    thread.id,
+                    removingThreadIds,
+                    visibilityState.currentState,
+                    visibilityState.targetState
+                ) {
+                    if (
+                        thread.id in removingThreadIds &&
+                        !visibilityState.currentState &&
+                        !visibilityState.targetState
+                    ) {
+                        displayedThreads = displayedThreads.filterNot { it.id == thread.id }
+                        removingThreadIds = removingThreadIds - thread.id
+                        onDeleteClick(thread.id)
                     }
-                )
+                }
+                ListItemAnimatedVisibility(visibleState = visibilityState) {
+                    SubscriptionThreadCard(
+                        thread = thread,
+                        forumName = resolveForumName(thread.forumId, forumNameById),
+                        onClick = { onThreadClick(thread.id) },
+                        onImageClick = onImageClick,
+                        onLongClick = {
+                            onThreadLongClick?.invoke(thread.id) ?: run {
+                                deletingThreadId = thread.id
+                            }
+                        }
+                    )
+                }
             }
 
-            if (threads.isNotEmpty()) {
+            if (displayedThreads.isNotEmpty()) {
                 item {
                     Row(
                         modifier = Modifier
@@ -210,7 +246,7 @@ fun SubscriptionScreen(
                 TextButton(
                     onClick = {
                         deletingThreadId = null
-                        onDeleteClick(threadId)
+                        removingThreadIds = removingThreadIds + threadId
                     }
                 ) {
                     Text("取消订阅")
@@ -222,6 +258,33 @@ fun SubscriptionScreen(
                 }
             }
         )
+    }
+}
+
+private fun mergeAnimatedPosts(
+    current: List<NmbPost>,
+    source: List<NmbPost>,
+    removingIds: Set<Long>
+): List<NmbPost> {
+    val sourceById = source.associateBy { it.id }
+    val consumedIds = mutableSetOf<Long>()
+    return buildList {
+        current.forEach { post ->
+            when {
+                post.id in sourceById -> {
+                    add(sourceById.getValue(post.id))
+                    consumedIds += post.id
+                }
+
+                post.id in removingIds -> add(post)
+            }
+        }
+
+        source.forEach { post ->
+            if (post.id !in consumedIds) {
+                add(post)
+            }
+        }
     }
 }
 

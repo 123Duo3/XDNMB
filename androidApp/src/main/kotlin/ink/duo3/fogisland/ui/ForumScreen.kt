@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Message
 import androidx.compose.material.icons.filled.Add
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -30,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.data.LocalTimeSettings
 import ink.duo3.fogisland.shared.model.CatalogSource
+import ink.duo3.fogisland.shared.model.CatalogType
 import ink.duo3.fogisland.shared.model.NmbPost
 import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
@@ -65,17 +69,44 @@ fun ForumScreen(
     onPostClick: () -> Unit,
     onLoadMore: () -> Unit,
     onThreadClick: (Long) -> Unit,
+    onHideThreadClick: (Long) -> Unit,
+    onHideTimelineForumClick: (Long, Long) -> Unit,
     onDismissSiteNotice: () -> Unit,
     onDismissSiteNoticeUntilChanged: () -> Unit,
-    onImageClick: (String, String?) -> Unit,
-    onThreadLongClick: ((Long) -> Unit)? = null
+    onImageClick: (String, String?) -> Unit
 ) {
     val source = state.currentSource
+    val timelineId = source
+        ?.takeIf { it.type == CatalogType.TIMELINE }
+        ?.id
+    val sourceKey = remember(source) { source?.let { "${it.type}:${it.id}" } }
     val forumNameById = buildForumNameMap(state.forumGroups)
     val timeSettings = LocalTimeSettings.current
     val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
     var renderedSiteNotice by remember { mutableStateOf(state.siteNotice) }
+    var actionTarget by remember { mutableStateOf<NmbPost?>(null) }
+    var displayedThreads by remember { mutableStateOf(state.threads) }
+    var removingThreadIds by remember { mutableStateOf(emptySet<Long>()) }
+    var removingTimelineForumThreadIds by remember { mutableStateOf(emptySet<Long>()) }
+    val listState = rememberLazyListState()
     val siteNoticeVisibility = remember { MutableTransitionState(state.siteNotice != null) }
+
+    LaunchedEffect(sourceKey) {
+        displayedThreads = state.threads
+        removingThreadIds = emptySet()
+        removingTimelineForumThreadIds = emptySet()
+        actionTarget = null
+    }
+
+    LaunchedEffect(state.threads, state.error) {
+        displayedThreads = mergeAnimatedPosts(
+            current = displayedThreads,
+            source = state.threads,
+            shouldKeep = { post ->
+                post.id in removingThreadIds || post.id in removingTimelineForumThreadIds
+            }
+        )
+    }
 
     LaunchedEffect(state.siteNotice) {
         if (state.siteNotice != null) {
@@ -114,6 +145,7 @@ fun ForumScreen(
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
+            state = listState,
             contentPadding = innerPadding
         ) {
             if (state.isLoadingIndex || source == null) {
@@ -177,23 +209,63 @@ fun ForumScreen(
             }
 
             items(
-                items = state.threads,
+                items = displayedThreads,
                 key = { thread -> thread.id },
-
             ) { thread ->
-                ThreadCard(
-                    thread = thread,
-                    forumName = if (source?.type == ink.duo3.fogisland.shared.model.CatalogType.TIMELINE) {
-                        resolveForumName(thread.forumId, forumNameById)
-                    } else {
-                        null
-                    },
-                    onClick = { onThreadClick(thread.id) },
-                    onImageClick = onImageClick,
-                    onLongClick = onThreadLongClick?.let { callback ->
-                        { callback(thread.id) }
+                val visibilityState = remember(thread.id, thread.forumId) {
+                    MutableTransitionState(
+                        thread.id !in removingThreadIds &&
+                            thread.id !in removingTimelineForumThreadIds
+                    )
+                }
+                LaunchedEffect(
+                    thread.id,
+                    removingThreadIds,
+                    removingTimelineForumThreadIds
+                ) {
+                    visibilityState.targetState =
+                        thread.id !in removingThreadIds &&
+                            thread.id !in removingTimelineForumThreadIds
+                }
+                LaunchedEffect(
+                    thread.id,
+                    thread.threadId,
+                    removingThreadIds,
+                    removingTimelineForumThreadIds,
+                    visibilityState.currentState,
+                    visibilityState.targetState
+                ) {
+                    if (visibilityState.currentState || visibilityState.targetState) {
+                        return@LaunchedEffect
                     }
-                )
+
+                    if (thread.id in removingThreadIds) {
+                        displayedThreads = displayedThreads.filterNot { it.id == thread.id }
+                        removingThreadIds = removingThreadIds - thread.id
+                        onHideThreadClick(thread.threadId)
+                        return@LaunchedEffect
+                    }
+
+                    if (thread.id !in removingTimelineForumThreadIds) {
+                        return@LaunchedEffect
+                    }
+
+                    displayedThreads = displayedThreads.filterNot { it.id == thread.id }
+                    removingTimelineForumThreadIds = removingTimelineForumThreadIds - thread.id
+                }
+                ListItemAnimatedVisibility(visibleState = visibilityState) {
+                    ThreadCard(
+                        thread = thread,
+                        forumName = if (source?.type == ink.duo3.fogisland.shared.model.CatalogType.TIMELINE) {
+                            resolveForumName(thread.forumId, forumNameById)
+                        } else {
+                            null
+                        },
+                        onClick = { onThreadClick(thread.id) },
+                        onImageClick = onImageClick,
+                        onLongClick = { actionTarget = thread }
+                    )
+                }
             }
 
             if (source != null) {
@@ -214,6 +286,90 @@ fun ForumScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    actionTarget?.let { thread ->
+        val canHideTimelineForum =
+            source?.type == CatalogType.TIMELINE &&
+                timelineId != null &&
+                thread.forumId != null
+        val forumName = resolveForumName(thread.forumId, forumNameById)
+        AlertDialog(
+            onDismissRequest = { actionTarget = null },
+            title = { Text("更多操作") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("选择对 No.${thread.remoteId} 的操作")
+                    TextButton(
+                        onClick = {
+                            actionTarget = null
+                            removingThreadIds = removingThreadIds + thread.id
+                        }
+                    ) {
+                        Text("屏蔽串")
+                    }
+                    if (canHideTimelineForum) {
+                        TextButton(
+                            onClick = {
+                                val forumId = requireNotNull(thread.forumId)
+                                val resolvedTimelineId = requireNotNull(timelineId)
+                                val visibleThreadIds = listState.layoutInfo.visibleItemsInfo
+                                    .mapNotNull { item -> item.key as? Long }
+                                    .toSet()
+                                val animatedThreadIds = displayedThreads
+                                    .filter { post ->
+                                        post.forumId == forumId && post.id in visibleThreadIds
+                                    }
+                                    .map { it.id }
+                                    .toSet()
+                                actionTarget = null
+                                onHideTimelineForumClick(resolvedTimelineId, forumId)
+                                removingTimelineForumThreadIds =
+                                    removingTimelineForumThreadIds + animatedThreadIds
+                            }
+                        ) {
+                            Text(
+                                forumName?.let { "在时间线中屏蔽「$it」" }
+                                    ?: "在时间线中屏蔽此板块"
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { actionTarget = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+}
+
+private fun mergeAnimatedPosts(
+    current: List<NmbPost>,
+    source: List<NmbPost>,
+    shouldKeep: (NmbPost) -> Boolean
+): List<NmbPost> {
+    val sourceById = source.associateBy { it.id }
+    val consumedIds = mutableSetOf<Long>()
+    return buildList {
+        current.forEach { post ->
+            when {
+                post.id in sourceById -> {
+                    add(sourceById.getValue(post.id))
+                    consumedIds += post.id
+                }
+
+                shouldKeep(post) -> add(post)
+            }
+        }
+
+        source.forEach { post ->
+            if (post.id !in consumedIds) {
+                add(post)
             }
         }
     }

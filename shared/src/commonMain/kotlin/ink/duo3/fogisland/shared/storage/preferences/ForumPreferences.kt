@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import ink.duo3.fogisland.shared.model.CacheCleanupTtlPolicy
 import ink.duo3.fogisland.shared.model.ForumTimeSettings
+import ink.duo3.fogisland.shared.model.HiddenTimelineForumFilter
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encodeToString
@@ -80,6 +81,8 @@ class ForumPreferences(
         private val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
         private val DISMISSED_SITE_NOTICE_CONTENT =
             stringPreferencesKey("dismissed_site_notice_content")
+        private val HIDDEN_THREAD_IDS = stringPreferencesKey("hidden_thread_ids")
+        private val HIDDEN_TIMELINE_FORUM_IDS = stringPreferencesKey("hidden_timeline_forum_ids")
         private val CACHE_CLEANUP_TTL_POLICY = stringPreferencesKey("cache_cleanup_ttl_policy")
         private val READ_HISTORY_CLEANUP_TTL_POLICY =
             stringPreferencesKey("read_history_cleanup_ttl_policy")
@@ -99,6 +102,15 @@ class ForumPreferences(
 
     val recentSearchesFlow: Flow<List<String>> = dataStore.data.map { preferences ->
         decodeRecentSearches(preferences[RECENT_SEARCHES])
+    }
+
+    val hiddenThreadIdsFlow: Flow<Set<Long>> = dataStore.data.map { preferences ->
+        decodeLongIdSet(preferences[HIDDEN_THREAD_IDS])
+    }
+
+    val hiddenTimelineForumFiltersFlow: Flow<Set<HiddenTimelineForumFilter>> = dataStore.data.map {
+        preferences ->
+        decodeHiddenTimelineForumFilters(preferences[HIDDEN_TIMELINE_FORUM_IDS])
     }
 
     val cacheCleanupTtlPolicyFlow: Flow<CacheCleanupTtlPolicy> = dataStore.data.map { preferences ->
@@ -218,6 +230,66 @@ class ForumPreferences(
         }
     }
 
+    suspend fun addHiddenThreadId(threadId: Long) {
+        if (threadId <= 0L) {
+            return
+        }
+        dataStore.edit { preferences ->
+            preferences[HIDDEN_THREAD_IDS] = encodeLongIdSet(
+                decodeLongIdSet(preferences[HIDDEN_THREAD_IDS]) + threadId
+            )
+        }
+    }
+
+    suspend fun removeHiddenThreadId(threadId: Long) {
+        if (threadId <= 0L) {
+            return
+        }
+        dataStore.edit { preferences ->
+            val updatedValues = decodeLongIdSet(preferences[HIDDEN_THREAD_IDS]) - threadId
+            if (updatedValues.isEmpty()) {
+                preferences.remove(HIDDEN_THREAD_IDS)
+            } else {
+                preferences[HIDDEN_THREAD_IDS] = encodeLongIdSet(updatedValues)
+            }
+        }
+    }
+
+    suspend fun addHiddenTimelineForumFilter(timelineId: Long, forumId: Long) {
+        if (timelineId <= 0L || forumId <= 0L) {
+            return
+        }
+        dataStore.edit { preferences ->
+            preferences[HIDDEN_TIMELINE_FORUM_IDS] = encodeHiddenTimelineForumFilters(
+                decodeHiddenTimelineForumFilters(
+                    preferences[HIDDEN_TIMELINE_FORUM_IDS]
+                ) + HiddenTimelineForumFilter(
+                    timelineId = timelineId,
+                    forumId = forumId
+                )
+            )
+        }
+    }
+
+    suspend fun removeHiddenTimelineForumFilter(timelineId: Long, forumId: Long) {
+        if (timelineId <= 0L || forumId <= 0L) {
+            return
+        }
+        dataStore.edit { preferences ->
+            val updatedValues = decodeHiddenTimelineForumFilters(
+                preferences[HIDDEN_TIMELINE_FORUM_IDS]
+            ) - HiddenTimelineForumFilter(
+                timelineId = timelineId,
+                forumId = forumId
+            )
+            if (updatedValues.isEmpty()) {
+                preferences.remove(HIDDEN_TIMELINE_FORUM_IDS)
+            } else {
+                preferences[HIDDEN_TIMELINE_FORUM_IDS] = encodeHiddenTimelineForumFilters(updatedValues)
+            }
+        }
+    }
+
     private fun decodeRecentSearches(value: String?): List<String> {
         if (value.isNullOrBlank()) {
             return emptyList()
@@ -229,6 +301,52 @@ class ForumPreferences(
             .filter { it.isNotEmpty() }
             .distinct()
             .take(MAX_RECENT_SEARCHES)
+    }
+
+    private fun decodeLongIdSet(value: String?): Set<Long> {
+        if (value.isNullOrBlank()) {
+            return emptySet()
+        }
+        return runCatching {
+            json.decodeFromString(ListSerializer(Long.serializer()), value)
+        }.getOrDefault(emptyList())
+            .filter { it > 0L }
+            .toSet()
+    }
+
+    private fun encodeLongIdSet(values: Set<Long>): String {
+        return json.encodeToString(
+            ListSerializer(Long.serializer()),
+            values.filter { it > 0L }.sorted()
+        )
+    }
+
+    private fun decodeHiddenTimelineForumFilters(value: String?): Set<HiddenTimelineForumFilter> {
+        if (value.isNullOrBlank()) {
+            return emptySet()
+        }
+        return runCatching {
+            json.decodeFromString(
+                ListSerializer(HiddenTimelineForumFilter.serializer()),
+                value
+            )
+        }.getOrDefault(emptyList())
+            .filter { it.timelineId > 0L && it.forumId > 0L }
+            .toSet()
+    }
+
+    private fun encodeHiddenTimelineForumFilters(
+        values: Set<HiddenTimelineForumFilter>
+    ): String {
+        return json.encodeToString(
+            ListSerializer(HiddenTimelineForumFilter.serializer()),
+            values
+                .filter { it.timelineId > 0L && it.forumId > 0L }
+                .sortedWith(
+                    compareBy<HiddenTimelineForumFilter> { it.timelineId }
+                        .thenBy { it.forumId }
+                )
+        )
     }
 
 }
