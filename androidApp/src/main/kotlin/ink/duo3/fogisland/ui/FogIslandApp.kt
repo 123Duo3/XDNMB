@@ -121,6 +121,7 @@ fun FogIslandApp() {
     }
 
     fun showHiddenContent() {
+        viewModel.clearHiddenContentError()
         if (backStack.lastOrNull() != AppRoute.Settings) {
             backStack.clear()
             backStack.add(AppRoute.Catalog)
@@ -333,8 +334,12 @@ fun FogIslandApp() {
                         onHideThreadClick = { threadId ->
                             viewModel.hideThread(threadId)
                         },
-                        onHideTimelineForumClick = { timelineId, forumId ->
-                            viewModel.hideTimelineForum(timelineId, forumId)
+                        onHideTimelineForumClick = { timelineId, forumId, onCompleted ->
+                            viewModel.hideTimelineForum(
+                                timelineId = timelineId,
+                                forumId = forumId,
+                                onCompleted = onCompleted
+                            )
                         },
                         onDismissSiteNotice = { viewModel.dismissSiteNotice() },
                         onDismissSiteNoticeUntilChanged = {
@@ -664,7 +669,7 @@ fun FogIslandApp() {
                         timelines = state.timelines,
                         hiddenThreadIds = state.hiddenThreadIds,
                         hiddenTimelineForumFilters = state.hiddenTimelineForumFilters,
-                        error = state.error,
+                        error = state.hiddenContentError,
                         onBack = {
                             if (backStack.isNotEmpty()) {
                                 backStack.removeAt(backStack.lastIndex)

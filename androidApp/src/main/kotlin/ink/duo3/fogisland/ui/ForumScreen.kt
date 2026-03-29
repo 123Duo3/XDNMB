@@ -70,7 +70,7 @@ fun ForumScreen(
     onLoadMore: () -> Unit,
     onThreadClick: (Long) -> Unit,
     onHideThreadClick: (Long) -> Unit,
-    onHideTimelineForumClick: (Long, Long) -> Unit,
+    onHideTimelineForumClick: (Long, Long, (Boolean) -> Unit) -> Unit,
     onDismissSiteNotice: () -> Unit,
     onDismissSiteNoticeUntilChanged: () -> Unit,
     onImageClick: (String, String?) -> Unit
@@ -325,9 +325,25 @@ fun ForumScreen(
                                     .map { it.id }
                                     .toSet()
                                 actionTarget = null
-                                onHideTimelineForumClick(resolvedTimelineId, forumId)
                                 removingTimelineForumThreadIds =
                                     removingTimelineForumThreadIds + animatedThreadIds
+                                onHideTimelineForumClick(
+                                    resolvedTimelineId,
+                                    forumId
+                                ) { success ->
+                                    if (!success) {
+                                        removingTimelineForumThreadIds =
+                                            removingTimelineForumThreadIds - animatedThreadIds
+                                        displayedThreads = mergeAnimatedPosts(
+                                            current = displayedThreads,
+                                            source = state.threads,
+                                            shouldKeep = { post ->
+                                                post.id in removingThreadIds ||
+                                                    post.id in removingTimelineForumThreadIds
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         ) {
                             Text(

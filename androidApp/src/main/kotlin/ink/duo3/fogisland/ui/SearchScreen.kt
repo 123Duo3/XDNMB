@@ -73,6 +73,7 @@ fun SearchScreen(
     val topAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val surfacedResultCount = results.size + if (directThreadShortcut != null) 1 else 0
 
     fun submitSearch() {
         onQuerySubmit(query)
@@ -99,7 +100,7 @@ fun SearchScreen(
                             text = when {
                                 query.isBlank() -> "搜索已缓存的串和回复"
                                 isSearching -> "正在搜索…"
-                                else -> "共 ${results.size} 条结果"
+                                else -> "共 $surfacedResultCount 条结果"
                             },
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -220,7 +221,7 @@ fun SearchScreen(
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
-            } else if (results.isEmpty()) {
+            } else if (results.isEmpty() && directThreadShortcut == null) {
                 item {
                     Text(
                         text = "没有找到匹配内容。",

@@ -56,6 +56,7 @@ data class ForumBrowseUiState(
     val readHistory: List<NmbPost> = emptyList(),
     val hiddenThreadIds: Set<Long> = emptySet(),
     val hiddenTimelineForumFilters: Set<HiddenTimelineForumFilter> = emptySet(),
+    val hiddenContentError: ErrorPresentation? = null,
     val postingHistory: List<PostingHistoryEntry> = emptyList(),
     val postingDrafts: List<PostingDraftEntry> = emptyList(),
     val searchQuery: String = "",
@@ -167,14 +168,24 @@ class ForumBrowseViewModel(
     }
 
     fun hideTimelineForum(timelineId: Long, forumId: Long) {
+        hideTimelineForum(timelineId = timelineId, forumId = forumId, onCompleted = {})
+    }
+
+    fun hideTimelineForum(
+        timelineId: Long,
+        forumId: Long,
+        onCompleted: (Boolean) -> Unit
+    ) {
         viewModelScope.launch {
             runCatching {
                 repository.hideTimelineForum(timelineId, forumId)
                 _uiState.update { it.copy(error = null) }
+                onCompleted(true)
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(error = throwable.toErrorPresentation("屏蔽板块失败"))
                 }
+                onCompleted(false)
             }
         }
     }
@@ -183,10 +194,12 @@ class ForumBrowseViewModel(
         viewModelScope.launch {
             runCatching {
                 repository.unhideThread(threadId)
-                _uiState.update { it.copy(error = null) }
+                _uiState.update { it.copy(hiddenContentError = null) }
             }.onFailure { throwable ->
                 _uiState.update {
-                    it.copy(error = throwable.toErrorPresentation("恢复屏蔽串失败"))
+                    it.copy(
+                        hiddenContentError = throwable.toErrorPresentation("恢复屏蔽串失败")
+                    )
                 }
             }
         }
@@ -196,13 +209,19 @@ class ForumBrowseViewModel(
         viewModelScope.launch {
             runCatching {
                 repository.unhideTimelineForum(timelineId, forumId)
-                _uiState.update { it.copy(error = null) }
+                _uiState.update { it.copy(hiddenContentError = null) }
             }.onFailure { throwable ->
                 _uiState.update {
-                    it.copy(error = throwable.toErrorPresentation("恢复屏蔽板块失败"))
+                    it.copy(
+                        hiddenContentError = throwable.toErrorPresentation("恢复屏蔽板块失败")
+                    )
                 }
             }
         }
+    }
+
+    fun clearHiddenContentError() {
+        _uiState.update { it.copy(hiddenContentError = null) }
     }
 
     private suspend fun hydrateCachedIndex() {
