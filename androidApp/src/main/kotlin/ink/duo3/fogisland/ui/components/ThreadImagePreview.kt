@@ -1,15 +1,22 @@
 package ink.duo3.fogisland.ui.components
 
 import android.graphics.drawable.BitmapDrawable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +28,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
@@ -30,6 +41,7 @@ import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import ink.duo3.fogisland.shared.util.buildNmbThumbImageUrl
 import ink.duo3.fogisland.utils.resolveNmbImageFallbackUrl
 import kotlinx.coroutines.launch
+import kotlin.math.max
 import kotlin.math.min
 
 private const val THREAD_IMAGE_PREVIEW_HEIGHT_DP = 128
@@ -41,6 +53,11 @@ private data class ThreadImagePreviewLayout(
     val alignment: Alignment
 )
 
+private data class ThreadImagePreviewSpec(
+    val imageSize: IntSize,
+    val brush: Brush
+)
+
 @Composable
 fun ThreadImagePreview(
     image: String,
@@ -50,6 +67,79 @@ fun ThreadImagePreview(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val inspectionMode = LocalInspectionMode.current
+    val previewSpec = remember(image) { resolveThreadImagePreviewSpec(image) }
+    val previewHeightPx = with(density) { THREAD_IMAGE_PREVIEW_HEIGHT_DP.dp.toPx() }
+    val minimumPreviewWidthPx = with(density) { THREAD_IMAGE_PREVIEW_MIN_WIDTH_DP.dp.toPx() }
+
+    if (inspectionMode && previewSpec != null) {
+        BoxWithConstraints(modifier = modifier) {
+            val maximumPreviewWidthPx = constraints.maxWidth.toFloat()
+                .takeIf { it > 0f }
+                ?: minimumPreviewWidthPx
+            val previewLayout = remember(
+                previewSpec,
+                previewHeightPx,
+                minimumPreviewWidthPx,
+                maximumPreviewWidthPx
+            ) {
+                calculateThreadImagePreviewLayout(
+                    imageSize = previewSpec.imageSize,
+                    previewHeightPx = previewHeightPx,
+                    minimumPreviewWidthPx = minimumPreviewWidthPx,
+                    maximumPreviewWidthPx = maximumPreviewWidthPx
+                )
+            }
+            val cropScale = max(
+                previewLayout.widthPx / previewSpec.imageSize.width.toFloat(),
+                previewHeightPx / previewSpec.imageSize.height.toFloat()
+            )
+            val contentWidthPx = previewSpec.imageSize.width * cropScale
+            val contentHeightPx = previewSpec.imageSize.height * cropScale
+
+            Surface(
+                modifier = Modifier
+                    .width(with(density) { previewLayout.widthPx.toDp() })
+                    .height(THREAD_IMAGE_PREVIEW_HEIGHT_DP.dp)
+                    .clickable { onImageClick(image, ext) },
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(THREAD_IMAGE_PREVIEW_CORNER_RADIUS_DP.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .align(previewLayout.alignment)
+                            .width(with(density) { contentWidthPx.toDp() })
+                            .height(with(density) { contentHeightPx.toDp() })
+                            .background(previewSpec.brush)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(10.dp)
+                                .size(18.dp)
+                                .background(
+                                    color = Color.White.copy(alpha = 0.92f),
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(12.dp)
+                                .size(width = 34.dp, height = 10.dp)
+                                .background(
+                                    color = Color.Black.copy(alpha = 0.18f),
+                                    shape = RoundedCornerShape(999.dp)
+                                )
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
+
     val scope = rememberCoroutineScope()
     val repository = remember(context) {
         RepositoryProvider.provideForumRepository(context.applicationContext)
@@ -106,8 +196,6 @@ fun ThreadImagePreview(
         }.takeIf { it > 0 } ?: return@remember null
         IntSize(width = width, height = height)
     }
-    val previewHeightPx = with(density) { THREAD_IMAGE_PREVIEW_HEIGHT_DP.dp.toPx() }
-    val minimumPreviewWidthPx = with(density) { THREAD_IMAGE_PREVIEW_MIN_WIDTH_DP.dp.toPx() }
 
     BoxWithConstraints(modifier = modifier) {
         val maximumPreviewWidthPx = constraints.maxWidth.toFloat()
@@ -143,6 +231,40 @@ fun ThreadImagePreview(
                 alignment = previewLayout.alignment
             )
         }
+    }
+}
+
+private fun resolveThreadImagePreviewSpec(image: String): ThreadImagePreviewSpec? {
+    return when (image) {
+        NmbPreviewImages.Normal -> ThreadImagePreviewSpec(
+            imageSize = IntSize(width = 1280, height = 1280),
+            brush = Brush.linearGradient(
+                listOf(Color(0xFF7FB3FF), Color(0xFFB8E0D2))
+            )
+        )
+
+        NmbPreviewImages.Wide -> ThreadImagePreviewSpec(
+            imageSize = IntSize(width = 2200, height = 1080),
+            brush = Brush.linearGradient(
+                listOf(Color(0xFFF5B971), Color(0xFFE57C73))
+            )
+        )
+
+        NmbPreviewImages.Tall -> ThreadImagePreviewSpec(
+            imageSize = IntSize(width = 720, height = 2200),
+            brush = Brush.linearGradient(
+                listOf(Color(0xFF9BC1BC), Color(0xFF5D576B))
+            )
+        )
+
+        NmbPreviewImages.Long -> ThreadImagePreviewSpec(
+            imageSize = IntSize(width = 720, height = 4200),
+            brush = Brush.linearGradient(
+                listOf(Color(0xFF9AD1D4), Color(0xFF102542))
+            )
+        )
+
+        else -> null
     }
 }
 
@@ -186,6 +308,36 @@ private fun calculateThreadImagePreviewLayout(
             ThreadImagePreviewLayout(
                 widthPx = widthAtTargetHeightPx,
                 alignment = Alignment.CenterStart
+            )
+        }
+    }
+}
+
+@Preview(name = "Thread Image Preview", widthDp = 412, heightDp = 560)
+@Composable
+private fun ThreadImagePreviewGalleryPreview() {
+    FogIslandPreviewColumn {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("宽图")
+            ThreadImagePreview(
+                image = NmbPreviewImages.Wide,
+                ext = "jpg",
+                onImageClick = { _, _ -> }
+            )
+            Text("正常图")
+            ThreadImagePreview(
+                image = NmbPreviewImages.Normal,
+                ext = "jpg",
+                onImageClick = { _, _ -> }
+            )
+            Text("窄长图")
+            ThreadImagePreview(
+                image = NmbPreviewImages.Tall,
+                ext = "jpg",
+                onImageClick = { _, _ -> }
             )
         }
     }

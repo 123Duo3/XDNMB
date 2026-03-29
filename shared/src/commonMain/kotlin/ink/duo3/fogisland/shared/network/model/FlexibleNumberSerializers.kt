@@ -11,6 +11,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.longOrNull
 
 object FlexibleLongSerializer : KSerializer<Long> {
@@ -88,6 +89,31 @@ object FlexibleIntSerializer : KSerializer<Int> {
     }
 }
 
+object FlexibleBooleanSerializer : KSerializer<Boolean> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("FlexibleBoolean", PrimitiveKind.BOOLEAN)
+
+    override fun serialize(encoder: Encoder, value: Boolean) {
+        encoder.encodeBoolean(value)
+    }
+
+    override fun deserialize(decoder: Decoder): Boolean {
+        if (decoder is JsonDecoder) {
+            val primitive = decoder.decodeJsonElement() as? JsonPrimitive
+                ?: throw SerializationException("Expected a JSON primitive")
+            primitive.booleanOrNull?.let { return it }
+
+            return when (primitive.content.trim().lowercase()) {
+                "1", "true" -> true
+                "0", "false" -> false
+                else -> throw SerializationException("Expected a Boolean-compatible value")
+            }
+        }
+
+        return decoder.decodeBoolean()
+    }
+}
+
 @OptIn(ExperimentalSerializationApi::class)
 object FlexibleNullableIntSerializer : KSerializer<Int?> {
     override val descriptor: SerialDescriptor =
@@ -117,5 +143,40 @@ object FlexibleNullableIntSerializer : KSerializer<Int?> {
         }
 
         return decoder.decodeNullableSerializableValue(FlexibleIntSerializer)
+    }
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+object FlexibleNullableBooleanSerializer : KSerializer<Boolean?> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("FlexibleNullableBoolean", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: Boolean?) {
+        if (value == null) {
+            encoder.encodeNull()
+        } else {
+            encoder.encodeBoolean(value)
+        }
+    }
+
+    override fun deserialize(decoder: Decoder): Boolean? {
+        if (decoder is JsonDecoder) {
+            val element = decoder.decodeJsonElement()
+            if (element is JsonNull) {
+                return null
+            }
+
+            val primitive = element as? JsonPrimitive
+                ?: throw SerializationException("Expected a JSON primitive")
+            primitive.booleanOrNull?.let { return it }
+
+            return when (primitive.content.trim().lowercase()) {
+                "1", "true" -> true
+                "0", "false" -> false
+                else -> null
+            }
+        }
+
+        return decoder.decodeNullableSerializableValue(FlexibleBooleanSerializer)
     }
 }

@@ -1,61 +1,28 @@
 package ink.duo3.fogisland.shared.model
 
-data class CatalogThread(
+data class NmbPost(
     val id: Long,
-    val forumId: Long?,
-    val userHash: String,
-    val name: String,
-    val title: String,
-    val contentHtml: String,
-    val contentText: String,
-    val image: String,
-    val ext: String,
-    val postedAtEpochMillis: Long?,
-    val sage: Int,
-    val admin: Int,
-    val hide: Int,
-    val replyCount: Int,
-    val remainReplies: Int?,
-    val refreshedAt: Long
-)
-
-data class ThreadPost(
-    val threadId: Long,
-    val id: Long,
-    val remoteId: Long,
+    val threadId: Long = id,
+    val remoteId: Long = id,
     val forumId: Long?,
     val replyCount: Int?,
     val userHash: String,
-    val name: String,
-    val title: String,
+    val name: String?,
+    val title: String?,
     val contentHtml: String,
     val contentText: String,
-    val image: String,
-    val ext: String,
+    val image: String?,
+    val ext: String?,
     val postedAtEpochMillis: Long?,
-    val sage: Int,
-    val admin: Int,
-    val hide: Int,
+    val sage: Boolean,
+    val admin: Boolean,
+    val hide: Boolean,
     val isTips: Boolean,
-    val page: Int?,
-    val positionInPage: Int,
-    val refreshedAt: Long
-)
-
-data class SubscriptionThread(
-    val threadId: Long,
-    val forumId: Long?,
-    val userHash: String,
-    val name: String,
-    val title: String,
-    val contentText: String,
-    val image: String,
-    val ext: String,
-    val postedAtEpochMillis: Long?,
-    val replyCount: Int,
-    val remainReplies: Int?,
-    val page: Int,
-    val positionInPage: Int,
+    val isPoster: Boolean = true,
+    val isThread: Boolean = true,
+    val page: Int? = null,
+    val positionInPage: Int = 0,
+    val remainReplies: Int? = null,
     val refreshedAt: Long
 )
 
@@ -69,23 +36,9 @@ data class ThreadReadProgress(
 )
 
 data class ThreadDetail(
-    val thread: CatalogThread?,
-    val posts: List<ThreadPost>,
+    val thread: NmbPost?,
+    val posts: List<NmbPost>,
     val progress: ThreadReadProgress?
-)
-
-data class ReadHistoryEntry(
-    val threadId: Long,
-    val forumId: Long?,
-    val userHash: String,
-    val name: String,
-    val title: String,
-    val contentText: String,
-    val postedAtEpochMillis: Long?,
-    val replyCount: Int,
-    val lastReadPage: Int,
-    val lastReadPostId: Long?,
-    val lastReadAt: Long
 )
 
 enum class SearchHitType {
@@ -99,10 +52,13 @@ data class SearchHit(
     val postId: Long? = null,
     val forumId: Long?,
     val userHash: String,
-    val name: String,
-    val title: String,
+    val name: String?,
+    val title: String?,
     val preview: String,
     val postedAtEpochMillis: Long?,
+    val sage: Boolean,
+    val admin: Boolean,
+    val hide: Boolean,
     val page: Int?,
     val refreshedAt: Long
 )
@@ -111,8 +67,8 @@ data class DirectThreadShortcut(
     val threadId: Long,
     val forumId: Long?,
     val userHash: String,
-    val name: String,
-    val title: String,
+    val name: String?,
+    val title: String?,
     val preview: String,
     val postedAtEpochMillis: Long?,
     val isCached: Boolean

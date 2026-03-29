@@ -7,34 +7,32 @@ import kotlin.test.assertNull
 class NmbDisplayTest {
 
     @Test
-    fun titleReturnsNullWhenBlank() {
-        assertNull(resolveNmbDisplayTitle("   "))
+    fun titleBlankIsNormalizedAway() {
+        assertNull(normalizeNmbStoredTitle("   "))
     }
 
     @Test
-    fun authorPrefersUserHashWhenPresent() {
-        assertEquals("Abc123", resolveNmbDisplayAuthor("Abc123", "无名氏"))
+    fun titleTrimsNormalContent() {
+        assertEquals("标题", normalizeNmbStoredTitle("  标题  "))
     }
 
     @Test
     fun titlePlaceholderIsNormalizedAway() {
-        assertEquals("", normalizeNmbStoredTitle("无标题"))
-        assertNull(resolveNmbDisplayTitle("无标题"))
+        assertNull(normalizeNmbStoredTitle("无标题"))
     }
 
     @Test
     fun namePlaceholderIsNormalizedAway() {
-        assertEquals("", normalizeNmbStoredName("无名氏"))
-        assertNull(resolveNmbDisplayAuthor("", "无名氏"))
+        assertNull(normalizeNmbStoredName("无名氏"))
     }
 
     @Test
-    fun authorFallsBackToNameWhenUserHashBlank() {
-        assertEquals("张三", resolveNmbDisplayAuthor("   ", "张三"))
+    fun nameBlankIsNormalizedAway() {
+        assertNull(normalizeNmbStoredName("   "))
     }
 
     @Test
-    fun authorReturnsNullWhenBothFieldsBlank() {
-        assertNull(resolveNmbDisplayAuthor("", "   "))
+    fun nameTrimsNormalContent() {
+        assertEquals("张三", normalizeNmbStoredName("  张三  "))
     }
 }

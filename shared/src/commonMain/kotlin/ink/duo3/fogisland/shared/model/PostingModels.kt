@@ -59,9 +59,9 @@ data class PostingHistoryEntry(
     val threadId: Long?,
     val postId: Long?,
     val forumId: Long?,
-    val threadTitle: String,
-    val name: String,
-    val title: String,
+    val threadTitle: String?,
+    val name: String?,
+    val title: String?,
     val contentText: String,
     val hasImage: Boolean,
     val createdAt: Long

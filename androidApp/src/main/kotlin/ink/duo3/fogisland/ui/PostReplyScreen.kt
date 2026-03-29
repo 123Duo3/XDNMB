@@ -45,7 +45,6 @@ import ink.duo3.fogisland.shared.model.ReplyPostRequest
 import ink.duo3.fogisland.shared.model.ThreadPostImage
 import ink.duo3.fogisland.shared.network.api.toErrorPresentation
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
-import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ActivePostCookieCard
 import ink.duo3.fogisland.ui.components.compressPostImage
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
@@ -107,7 +106,7 @@ fun PostReplyScreen(
     val isContentInvalid = hasTriedSubmit && !hasContentOrImage
     val canSubmit = !isPosting && hasContentOrImage && activePostCookie != null
     val isSelectedImageTooLarge = remember(selectedImage) { isPostImageTooLarge(selectedImage) }
-    val displayTitle = resolveNmbDisplayTitle(threadTitle)
+    val displayTitle = threadTitle?.takeIf { it.isNotBlank() }
         ?: "串 No.$threadId"
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri == null) {

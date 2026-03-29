@@ -78,6 +78,8 @@ class ForumPreferences(
         private val SHOW_SECONDS = booleanPreferencesKey("show_seconds")
         private val SUBSCRIPTION_UUID = stringPreferencesKey("subscription_uuid")
         private val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
+        private val DISMISSED_SITE_NOTICE_CONTENT =
+            stringPreferencesKey("dismissed_site_notice_content")
         private val CACHE_CLEANUP_TTL_POLICY = stringPreferencesKey("cache_cleanup_ttl_policy")
         private val READ_HISTORY_CLEANUP_TTL_POLICY =
             stringPreferencesKey("read_history_cleanup_ttl_policy")
@@ -195,6 +197,24 @@ class ForumPreferences(
     suspend fun clearRecentSearches() {
         dataStore.edit { preferences ->
             preferences.remove(RECENT_SEARCHES)
+        }
+    }
+
+    suspend fun getDismissedSiteNoticeContent(): String? {
+        return dataStore.data.firstOrNull()
+            ?.get(DISMISSED_SITE_NOTICE_CONTENT)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    }
+
+    suspend fun updateDismissedSiteNoticeContent(content: String?) {
+        val normalizedContent = content?.trim()?.takeIf { it.isNotEmpty() }
+        dataStore.edit { preferences ->
+            if (normalizedContent == null) {
+                preferences.remove(DISMISSED_SITE_NOTICE_CONTENT)
+            } else {
+                preferences[DISMISSED_SITE_NOTICE_CONTENT] = normalizedContent
+            }
         }
     }
 

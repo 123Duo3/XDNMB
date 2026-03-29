@@ -28,7 +28,9 @@ class ThreadDtoSerializationTest {
                 "name":"",
                 "title":"",
                 "content":"test",
-                "admin":"1"
+                "sage":"0",
+                "admin":"1",
+                "Hide":"1"
               }
             ]
         """.trimIndent()
@@ -38,7 +40,9 @@ class ThreadDtoSerializationTest {
 
         assertEquals(50000002L, thread.id)
         assertEquals(4L, thread.forumId)
-        assertEquals(1, thread.admin)
+        assertEquals(false, thread.sage)
+        assertEquals(true, thread.admin)
+        assertEquals(true, thread.hide)
         assertNotNull(thread.postedAtRaw)
     }
 }

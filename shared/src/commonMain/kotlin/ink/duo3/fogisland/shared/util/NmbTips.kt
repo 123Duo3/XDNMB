@@ -7,7 +7,7 @@ private const val NMB_TIPS_USER_HASH = "Tips"
 private val NMB_TIPS_POSTED_AT = Instant.parse("2098-12-31T16:00:01Z")
 
 fun isNmbTipsPost(userHash: String?, remotePostId: Long, postedAtRaw: String?): Boolean {
-    if (normalizeNmbDisplayText(userHash) != NMB_TIPS_USER_HASH || remotePostId != NMB_TIPS_REMOTE_POST_ID) {
+    if (userHash != NMB_TIPS_USER_HASH || remotePostId != NMB_TIPS_REMOTE_POST_ID) {
         return false
     }
 

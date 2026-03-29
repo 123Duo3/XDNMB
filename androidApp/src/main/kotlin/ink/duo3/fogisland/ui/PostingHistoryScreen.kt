@@ -48,8 +48,6 @@ import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
-import ink.duo3.fogisland.shared.util.resolveNmbDisplayAuthor
-import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -324,8 +322,8 @@ private fun PostingDraftCard(
 ) {
     val timeSettings = LocalTimeSettings.current
     val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
-    val displayTitle = resolveNmbDisplayTitle(entry.title)
-        ?: resolveNmbDisplayTitle(entry.threadTitle)
+    val displayTitle = entry.title.takeIf { it.isNotBlank() }
+        ?: entry.threadTitle.takeIf { it.isNotBlank() }
         ?: when (entry.type) {
             PostingDraftType.THREAD -> "发串草稿"
             PostingDraftType.REPLY -> entry.threadId?.let { "回复至串 No.$it" } ?: "回帖草稿"
@@ -419,13 +417,13 @@ private fun PostingHistoryCard(
 ) {
     val timeSettings = LocalTimeSettings.current
     val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
-    val displayTitle = resolveNmbDisplayTitle(entry.title)
-        ?: resolveNmbDisplayTitle(entry.threadTitle)
+    val displayTitle = entry.title
+        ?: entry.threadTitle
         ?: when (entry.type) {
             PostingHistoryType.THREAD -> entry.threadId?.let { "串 No.$it" } ?: "发串记录"
             PostingHistoryType.REPLY -> entry.threadId?.let { "回复至串 No.$it" } ?: "回帖记录"
         }
-    val displayAuthor = resolveNmbDisplayAuthor(userHash = null, name = entry.name)
+    val displayAuthor = entry.name
     val createdAtText = formatNmbPostedAtText(
         epochMillis = entry.createdAt,
         options = timeFormatOptions

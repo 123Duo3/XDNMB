@@ -319,6 +319,10 @@ fun FogIslandApp() {
                             viewModel.openThread(threadId)
                             backStack.add(AppRoute.Thread(threadId))
                         },
+                        onDismissSiteNotice = { viewModel.dismissSiteNotice() },
+                        onDismissSiteNoticeUntilChanged = {
+                            viewModel.dismissSiteNoticeUntilChanged()
+                        },
                         onImageClick = { image, ext ->
                             showImageViewer(image = image, ext = ext)
                         }
@@ -369,6 +373,9 @@ fun FogIslandApp() {
                         },
                         onClearAllClick = {
                             viewModel.clearReadHistory()
+                        },
+                        onImageClick = { image, ext ->
+                            showImageViewer(image = image, ext = ext)
                         }
                     )
                 }

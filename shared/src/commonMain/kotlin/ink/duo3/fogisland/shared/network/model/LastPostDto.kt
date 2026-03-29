@@ -15,8 +15,8 @@ data class LastPostDto(
     @SerialName("email") val email: String? = null,
     @SerialName("title") val title: String? = null,
     @SerialName("content") val content: String? = null,
-    @Serializable(with = FlexibleNullableIntSerializer::class)
-    @SerialName("sage") val sage: Int? = null,
-    @Serializable(with = FlexibleNullableIntSerializer::class)
-    @SerialName("admin") val admin: Int? = null
+    @Serializable(with = FlexibleNullableBooleanSerializer::class)
+    @SerialName("sage") val sage: Boolean? = null,
+    @Serializable(with = FlexibleNullableBooleanSerializer::class)
+    @SerialName("admin") val admin: Boolean? = null
 )

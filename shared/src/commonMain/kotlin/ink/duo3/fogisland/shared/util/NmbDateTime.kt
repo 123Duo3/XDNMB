@@ -197,7 +197,11 @@ private fun formatTimePart(
     options: NmbTimeFormatOptions
 ): String {
     if (options.mode == NmbTimeDisplayMode.PRECISE) {
-        return formatClock(targetDateTime, showSeconds = options.showSeconds)
+        return formatClock(
+            dateTime = targetDateTime,
+            showSeconds = options.showSeconds,
+            padHour = true
+        )
     }
 
     if (targetDateTime.date == currentDateTime.date) {
@@ -208,7 +212,11 @@ private fun formatTimePart(
         }
     }
 
-    return formatClock(targetDateTime, showSeconds = false)
+    return formatClock(
+        dateTime = targetDateTime,
+        showSeconds = false,
+        padHour = false
+    )
 }
 
 private fun formatRelativeDelta(diffSeconds: Long): String? {
@@ -230,9 +238,14 @@ private fun formatRelativeDelta(diffSeconds: Long): String? {
 
 private fun formatClock(
     dateTime: LocalDateTime,
-    showSeconds: Boolean
+    showSeconds: Boolean,
+    padHour: Boolean
 ): String {
-    val hour = dateTime.hour.toString().padStart(2, '0')
+    val hour = if (padHour) {
+        dateTime.hour.toString().padStart(2, '0')
+    } else {
+        dateTime.hour.toString()
+    }
     val minute = dateTime.minute.toString().padStart(2, '0')
     if (!showSeconds) {
         return "$hour:$minute"

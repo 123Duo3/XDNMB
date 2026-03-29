@@ -16,16 +16,16 @@ data class ThreadDto(
     @SerialName("img") val image: String? = null,
     @SerialName("ext") val imageExtension: String? = null,
     @SerialName("now") val postedAtRaw: String? = null,
-    @Serializable(with = FlexibleNullableIntSerializer::class)
-    @SerialName("sage") val sage: Int? = null,
-    @Serializable(with = FlexibleNullableIntSerializer::class)
-    @SerialName("admin") val admin: Int? = null,
+    @Serializable(with = FlexibleNullableBooleanSerializer::class)
+    @SerialName("sage") val sage: Boolean? = null,
+    @Serializable(with = FlexibleNullableBooleanSerializer::class)
+    @SerialName("admin") val admin: Boolean? = null,
     @Serializable(with = FlexibleNullableIntSerializer::class)
     @SerialName("ReplyCount") val replyCount: Int? = null,
     @Serializable(with = FlexibleNullableIntSerializer::class)
     @SerialName("RemainReplies") val remainReplies: Int? = null,
-    @Serializable(with = FlexibleNullableIntSerializer::class)
-    @SerialName("Hide") val hide: Int? = null,
+    @Serializable(with = FlexibleNullableBooleanSerializer::class)
+    @SerialName("Hide") val hide: Boolean? = null,
     @SerialName("Replies") val replies: List<PostDto> = emptyList()
 )
 
@@ -44,10 +44,10 @@ data class PostDto(
     @SerialName("img") val image: String? = null,
     @SerialName("ext") val imageExtension: String? = null,
     @SerialName("now") val postedAtRaw: String? = null,
-    @Serializable(with = FlexibleNullableIntSerializer::class)
-    @SerialName("sage") val sage: Int? = null,
-    @Serializable(with = FlexibleNullableIntSerializer::class)
-    @SerialName("admin") val admin: Int? = null,
-    @Serializable(with = FlexibleNullableIntSerializer::class)
-    @SerialName("Hide") val hide: Int? = null
+    @Serializable(with = FlexibleNullableBooleanSerializer::class)
+    @SerialName("sage") val sage: Boolean? = null,
+    @Serializable(with = FlexibleNullableBooleanSerializer::class)
+    @SerialName("admin") val admin: Boolean? = null,
+    @Serializable(with = FlexibleNullableBooleanSerializer::class)
+    @SerialName("Hide") val hide: Boolean? = null
 )

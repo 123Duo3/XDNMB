@@ -1,7 +1,6 @@
 package ink.duo3.fogisland.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,26 +33,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.data.LocalTimeSettings
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.ForumGroup
 import ink.duo3.fogisland.shared.model.SearchHit
-import ink.duo3.fogisland.shared.model.SearchHitType
 import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
-import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
-import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
-import ink.duo3.fogisland.shared.util.resolveNmbDisplayAuthor
-import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
+import ink.duo3.fogisland.ui.components.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.NmbPostCard
+import ink.duo3.fogisland.ui.components.NmbPreviewSamples
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,13 +183,14 @@ fun SearchScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(recentSearches, key = { it }) { recentQuery ->
-                            AssistChip(
+                            TextButton(
                                 onClick = {
                                     onQueryChange(recentQuery)
                                     onQuerySubmit(recentQuery)
-                                },
-                                label = { Text(recentQuery) }
-                            )
+                                }
+                            ) {
+                                Text(recentQuery)
+                            }
                         }
                     }
                 }
@@ -263,72 +262,66 @@ private fun DirectThreadShortcutCard(
     forumName: String?,
     onClick: () -> Unit
 ) {
-    val timeSettings = LocalTimeSettings.current
-    val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
-    val displayTitle = resolveNmbDisplayTitle(shortcut.title) ?: "串 No.${shortcut.threadId}"
-    val displayAuthor = resolveNmbDisplayAuthor(shortcut.userHash, shortcut.name)
-    val postedAtText = formatNmbPostedAtText(
-        epochMillis = shortcut.postedAtEpochMillis,
-        options = timeFormatOptions
-    )
-    val previewText = when {
-        shortcut.preview.isNotBlank() -> shortcut.preview
-        shortcut.isCached -> "(空内容)"
-        else -> "本地暂无缓存，打开后会直接尝试加载这个串。"
-    }
-
-    androidx.compose.material3.Card(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceBright
+        ),
+        onClick = onClick
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = displayTitle,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            listOfNotNull(displayAuthor, postedAtText)
-                .takeIf { it.isNotEmpty() }
-                ?.joinToString(" · ")
-                ?.let { metaText ->
-                    Text(
-                        text = metaText,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-            Text(
-                text = previewText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = if (shortcut.isCached) 6 else 3,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AssistChip(
-                    onClick = onClick,
-                    label = { Text("前往串") }
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "No.${shortcut.threadId}",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.SemiBold
                 )
-                forumName?.let { name ->
-                    AssistChip(
-                        onClick = onClick,
-                        label = { Text(name) }
-                    )
-                }
-                AssistChip(
-                    onClick = onClick,
-                    label = { Text("No.${shortcut.threadId}") }
+                Text(
+                    modifier = Modifier.weight(1f),
+                    text = if (shortcut.isCached) "本地已缓存" else "直接打开",
+                    textAlign = TextAlign.End,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            shortcut.title?.let { title ->
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            shortcut.name?.let { name ->
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (shortcut.preview.isNotBlank()) {
+                Text(
+                    text = shortcut.preview,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = if (shortcut.isCached) 6 else 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            forumName?.takeIf { it.isNotBlank() }?.let { name ->
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.outline
                 )
             }
         }
@@ -342,129 +335,68 @@ private fun SearchResultCard(
     forumName: String?,
     onClick: () -> Unit
 ) {
-    val timeSettings = LocalTimeSettings.current
-    val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
-    val displayTitle = resolveNmbDisplayTitle(hit.title)
-        ?: when (hit.type) {
-            SearchHitType.THREAD -> "串 No.${hit.threadId}"
-            SearchHitType.POST -> "回复 No.${hit.postId}"
-        }
-    val displayAuthor = resolveNmbDisplayAuthor(hit.userHash, hit.name)
-    val postedAtText = formatNmbPostedAtText(
-        epochMillis = hit.postedAtEpochMillis,
-        options = timeFormatOptions
-    )
-
-    androidx.compose.material3.Card(
+    NmbPostCard(
+        hit = hit,
+        query = query,
+        forumName = forumName,
+        onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clickable(onClick = onClick)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = highlightQuery(
-                    text = displayTitle,
-                    query = query,
-                    highlightColor = MaterialTheme.colorScheme.primary
-                ),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            .padding(horizontal = 16.dp),
+        bodyMaxLines = 6,
+        bodyOverflow = TextOverflow.Ellipsis
+    )
+}
 
-            listOfNotNull(displayAuthor, postedAtText)
-                .takeIf { it.isNotEmpty() }
-                ?.joinToString(" · ")
-                ?.let { metaText ->
-                    Text(
-                        text = metaText,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-            Text(
-                text = highlightQuery(
-                    text = hit.preview.ifBlank { "(空内容)" },
-                    query = query,
-                    highlightColor = MaterialTheme.colorScheme.primary
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AssistChip(
-                    onClick = onClick,
-                    label = {
-                        Text(if (hit.type == SearchHitType.THREAD) "主串" else "回复")
-                    }
-                )
-                forumName?.let { name ->
-                    AssistChip(
-                        onClick = onClick,
-                        label = { Text(name) }
-                    )
-                }
-                hit.page?.takeIf { hit.type == SearchHitType.POST }?.let { page ->
-                    AssistChip(
-                        onClick = onClick,
-                        label = { Text("第${page}页") }
-                    )
-                }
-                AssistChip(
-                    onClick = onClick,
-                    label = { Text("No.${hit.threadId}") }
-                )
-            }
-        }
+@Preview(name = "Search Cards", widthDp = 412, heightDp = 980)
+@Composable
+private fun SearchCardsPreview() {
+    FogIslandPreviewColumn {
+        DirectThreadShortcutCard(
+            shortcut = NmbPreviewSamples.directThreadShortcutCached,
+            forumName = "综一",
+            onClick = {}
+        )
+        DirectThreadShortcutCard(
+            shortcut = NmbPreviewSamples.directThreadShortcutUncached,
+            forumName = "综一",
+            onClick = {}
+        )
+        SearchResultCard(
+            hit = NmbPreviewSamples.searchThreadHit,
+            query = "岛风",
+            forumName = "手游综合",
+            onClick = {}
+        )
+        SearchResultCard(
+            hit = NmbPreviewSamples.searchReplyHit,
+            query = "岛风",
+            forumName = "手游综合",
+            onClick = {}
+        )
     }
 }
 
-private fun highlightQuery(
-    text: String,
-    query: String,
-    highlightColor: androidx.compose.ui.graphics.Color
-): AnnotatedString {
-    val normalizedQuery = query.trim()
-    if (normalizedQuery.isBlank()) {
-        return AnnotatedString(text)
-    }
-
-    val ranges = buildList {
-        var searchStart = 0
-        while (searchStart < text.length) {
-            val matchIndex = text.indexOf(normalizedQuery, startIndex = searchStart, ignoreCase = true)
-            if (matchIndex < 0) {
-                break
-            }
-            add(matchIndex until (matchIndex + normalizedQuery.length))
-            searchStart = matchIndex + normalizedQuery.length
-        }
-    }
-    if (ranges.isEmpty()) {
-        return AnnotatedString(text)
-    }
-
-    return buildAnnotatedString {
-        append(text)
-        ranges.forEach { range ->
-            addStyle(
-                style = SpanStyle(
-                    color = highlightColor,
-                    fontWeight = FontWeight.SemiBold
-                ),
-                start = range.first,
-                end = range.last + 1
-            )
-        }
+@Preview(name = "Search Screen", widthDp = 412, heightDp = 960)
+@Composable
+private fun SearchScreenPreview() {
+    FogIslandPreviewColumn {
+        SearchScreen(
+            forumGroups = NmbPreviewSamples.forumGroups,
+            query = "岛风",
+            results = listOf(
+                NmbPreviewSamples.searchThreadHit,
+                NmbPreviewSamples.searchReplyHit
+            ),
+            directThreadShortcut = NmbPreviewSamples.directThreadShortcutCached,
+            recentSearches = listOf("岛风", "测试", "No.123456"),
+            isSearching = false,
+            error = null,
+            onMenuClick = {},
+            onQueryChange = {},
+            onQuerySubmit = {},
+            onClearRecentSearches = {},
+            onDirectThreadClick = {},
+            onResultClick = {}
+        )
     }
 }

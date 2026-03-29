@@ -724,14 +724,14 @@ internal fun extractThreadIdFromUrl(url: String): Long? {
 }
 
 private fun LastPostDto.matchesThreadPostRequest(request: ThreadPostRequest): Boolean {
-    val normalizedRequestTitle = normalizeNmbStoredTitle(request.title).trim()
-    val normalizedLastTitle = normalizeNmbStoredTitle(title.orEmpty()).trim()
+    val normalizedRequestTitle = normalizeNmbStoredTitle(request.title).orEmpty().trim()
+    val normalizedLastTitle = normalizeNmbStoredTitle(title).orEmpty().trim()
     if (normalizedRequestTitle != normalizedLastTitle) {
         return false
     }
 
-    val normalizedRequestName = normalizeNmbStoredName(request.name).trim()
-    val normalizedLastName = normalizeNmbStoredName(name.orEmpty()).trim()
+    val normalizedRequestName = normalizeNmbStoredName(request.name).orEmpty().trim()
+    val normalizedLastName = normalizeNmbStoredName(name).orEmpty().trim()
     if (normalizedRequestName != normalizedLastName) {
         return false
     }
@@ -748,14 +748,14 @@ private fun LastPostDto.matchesThreadPostRequest(request: ThreadPostRequest): Bo
 }
 
 private fun LastPostDto.matchesReplyPostRequest(request: ReplyPostRequest): Boolean {
-    val normalizedRequestTitle = normalizeNmbStoredTitle(request.title).trim()
-    val normalizedLastTitle = normalizeNmbStoredTitle(title.orEmpty()).trim()
+    val normalizedRequestTitle = normalizeNmbStoredTitle(request.title).orEmpty().trim()
+    val normalizedLastTitle = normalizeNmbStoredTitle(title).orEmpty().trim()
     if (normalizedRequestTitle != normalizedLastTitle) {
         return false
     }
 
-    val normalizedRequestName = normalizeNmbStoredName(request.name).trim()
-    val normalizedLastName = normalizeNmbStoredName(name.orEmpty()).trim()
+    val normalizedRequestName = normalizeNmbStoredName(request.name).orEmpty().trim()
+    val normalizedLastName = normalizeNmbStoredName(name).orEmpty().trim()
     if (normalizedRequestName != normalizedLastName) {
         return false
     }

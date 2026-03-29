@@ -74,6 +74,32 @@ class NmbDateTimeTest {
     }
 
     @Test
+    fun relativeFormatterDoesNotPadHourAmount() {
+        val formatted = formatNmbPostedAt(
+            epochMillis = postedAtEpochMillis("2026-03-24(二)09:38:00"),
+            now = Instant.parse("2026-03-24T04:38:00Z")
+        )
+
+        assertNotNull(formatted)
+        assertEquals("今天", formatted.dateText)
+        assertEquals("3小时前", formatted.timeText)
+        assertEquals("3小时前", formatted.displayText)
+    }
+
+    @Test
+    fun relativeFormatterDoesNotPadClockHour() {
+        val formatted = formatNmbPostedAt(
+            epochMillis = postedAtEpochMillis("2026-03-24(二)08:03:00"),
+            now = Instant.parse("2026-03-24T15:00:00Z")
+        )
+
+        assertNotNull(formatted)
+        assertEquals("今天", formatted.dateText)
+        assertEquals("8:03", formatted.timeText)
+        assertEquals("8:03", formatted.displayText)
+    }
+
+    @Test
     fun preciseFormatterCanShowSeconds() {
         val formatted = formatNmbPostedAt(
             epochMillis = postedAtEpochMillis("2025-02-01(六)12:38:09"),
@@ -88,6 +114,22 @@ class NmbDateTimeTest {
         assertEquals("2025年2月1日", formatted.dateText)
         assertEquals("12:38:09", formatted.timeText)
         assertEquals("2025年2月1日 12:38:09", formatted.displayText)
+    }
+
+    @Test
+    fun preciseFormatterPadsSingleDigitHour() {
+        val formatted = formatNmbPostedAt(
+            epochMillis = postedAtEpochMillis("2026-03-24(二)08:03:00"),
+            now = Instant.parse("2026-03-24T15:00:00Z"),
+            options = NmbTimeFormatOptions(
+                mode = NmbTimeDisplayMode.PRECISE
+            )
+        )
+
+        assertNotNull(formatted)
+        assertEquals("3月24日", formatted.dateText)
+        assertEquals("08:03", formatted.timeText)
+        assertEquals("3月24日 08:03", formatted.displayText)
     }
 
     @Test

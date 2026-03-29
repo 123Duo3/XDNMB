@@ -1,25 +1,22 @@
 package ink.duo3.fogisland.shared.repository
 
 import ink.duo3.fogisland.shared.model.CatalogSource
-import ink.duo3.fogisland.shared.model.CatalogThread
 import ink.duo3.fogisland.shared.model.CatalogType
 import ink.duo3.fogisland.shared.model.CacheCleanupTtlPolicy
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumBoard
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.NmbPost
 import ink.duo3.fogisland.shared.model.PostingDraftEntry
 import ink.duo3.fogisland.shared.model.PostingDraftType
 import ink.duo3.fogisland.shared.model.PostingHistoryEntry
 import ink.duo3.fogisland.shared.model.PostingHistoryType
-import ink.duo3.fogisland.shared.model.ReadHistoryEntry
 import ink.duo3.fogisland.shared.model.ReplyPostRequest
 import ink.duo3.fogisland.shared.model.ReplyPostResult
 import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SearchHitType
 import ink.duo3.fogisland.shared.model.SiteNotice
-import ink.duo3.fogisland.shared.model.SubscriptionThread
 import ink.duo3.fogisland.shared.model.ThreadDetail
-import ink.duo3.fogisland.shared.model.ThreadPost
 import ink.duo3.fogisland.shared.model.ThreadReadProgress
 import ink.duo3.fogisland.shared.model.ThreadPostRequest
 import ink.duo3.fogisland.shared.model.ThreadPostResult
@@ -56,7 +53,6 @@ import ink.duo3.fogisland.shared.util.normalizeNmbStoredTitle
 import ink.duo3.fogisland.shared.util.parseNmbNoticeDateEpochMillis
 import ink.duo3.fogisland.shared.util.parseNmbPostedAtEpochMillis
 import ink.duo3.fogisland.shared.util.parseNmbThreadIdInput
-import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.shared.util.NMB_IMAGE_CDN_BASE_URL
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -164,6 +160,14 @@ class ForumRepository(
         return resolvedNotice
     }
 
+    suspend fun getDismissedSiteNoticeContent(): String? {
+        return forumPreferences.getDismissedSiteNoticeContent()
+    }
+
+    suspend fun updateDismissedSiteNoticeContent(content: String?) {
+        forumPreferences.updateDismissedSiteNoticeContent(content)
+    }
+
     suspend fun refreshCatalog(source: CatalogSource, page: Int) {
         val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
         val threads = when (source.type) {
@@ -195,7 +199,7 @@ class ForumRepository(
         )
     }
 
-    fun observeSubscriptions(): Flow<List<SubscriptionThread>> {
+    fun observeSubscriptions(): Flow<List<NmbPost>> {
         return subscriptionThreadDao.observeAll().map { entries ->
             entries.map { it.toModel() }
         }
@@ -276,8 +280,8 @@ class ForumRepository(
                 threadId = threadId,
                 forumId = null,
                 userHash = "",
-                name = "",
-                title = "",
+                name = null,
+                title = null,
                 preview = "",
                 postedAtEpochMillis = null,
                 isCached = false
@@ -354,7 +358,7 @@ class ForumRepository(
         )
     }
 
-    fun observeCatalog(source: CatalogSource): Flow<List<CatalogThread>> {
+    fun observeCatalog(source: CatalogSource): Flow<List<NmbPost>> {
         return threadDao.observeCatalog(source.type.name, source.id).map { entries ->
             entries.map { it.toModel() }
         }
@@ -366,9 +370,10 @@ class ForumRepository(
             postDao.observePostsByThread(threadId),
             threadReadProgressDao.observeByThreadId(threadId)
         ) { thread, posts, progress ->
+            val threadModel = thread?.toModel()
             ThreadDetail(
-                thread = thread?.toModel(),
-                posts = posts.map { it.toModel() },
+                thread = threadModel,
+                posts = posts.map { it.toModel(opUserHash = threadModel?.userHash) },
                 progress = progress?.toModel()
             )
         }
@@ -381,9 +386,7 @@ class ForumRepository(
         return postDao.getMaxLoadedPageForThread(threadId) ?: 0
     }
 
-    fun observeReadHistory(): Flow<List<ReadHistoryEntry>> {
-        return threadReadProgressDao.observeReadHistory()
-    }
+    fun observeReadHistory(): Flow<List<NmbPost>> = threadReadProgressDao.observeReadHistory()
 
     fun observePostingHistory(): Flow<List<PostingHistoryEntry>> {
         return postingHistoryDao.observeAll().map { entries ->
@@ -532,6 +535,9 @@ class ForumRepository(
                     query = normalizedQuery
                 ),
                 postedAtEpochMillis = thread.postedAtEpochMillis,
+                sage = thread.sage,
+                admin = thread.admin,
+                hide = thread.hide,
                 page = null,
                 refreshedAt = thread.refreshedAt
             )
@@ -552,6 +558,9 @@ class ForumRepository(
                     query = normalizedQuery
                 ),
                 postedAtEpochMillis = post.postedAtEpochMillis,
+                sage = post.sage,
+                admin = post.admin,
+                hide = post.hide,
                 page = post.page,
                 refreshedAt = post.refreshedAt
             )
@@ -563,7 +572,7 @@ class ForumRepository(
     }
 
     private fun buildSearchPreview(
-        title: String,
+        title: String?,
         contentText: String,
         query: String
     ): String {
@@ -587,12 +596,12 @@ class ForumRepository(
     }
 
     private fun buildPreviewSnippet(
-        title: String,
+        title: String?,
         contentText: String
     ): String {
         val source = when {
             contentText.isNotBlank() -> contentText
-            title.isNotBlank() -> resolveNmbDisplayTitle(title).orEmpty()
+            !title.isNullOrBlank() -> title
             else -> ""
         }.trim()
         if (source.isEmpty()) {
@@ -666,6 +675,13 @@ class ForumRepository(
 
     private fun ThreadDto.toThreadEntity(refreshedAt: Long): ThreadEntity {
         val contentHtml = content.orEmpty()
+        val isTips = isNmbTipsPost(
+            userHash = userHash,
+            remotePostId = id,
+            postedAtRaw = postedAtRaw
+        )
+        val normalizedImage = image?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedExt = imageExtension?.trim()?.takeIf { it.isNotEmpty() }
         return ThreadEntity(
             id = id,
             forumId = forumId,
@@ -674,12 +690,13 @@ class ForumRepository(
             title = normalizeNmbStoredTitle(title),
             contentHtml = contentHtml,
             contentText = htmlToPlainText(contentHtml),
-            image = image.orEmpty(),
-            ext = imageExtension.orEmpty(),
+            image = normalizedImage,
+            ext = normalizedExt?.takeIf { normalizedImage != null },
             postedAtEpochMillis = postedAtRaw?.let(::parseNmbPostedAtEpochMillis),
-            sage = sage ?: 0,
-            admin = admin ?: 0,
-            hide = hide ?: 0,
+            sage = sage ?: false,
+            admin = admin ?: false,
+            hide = hide ?: false,
+            isTips = isTips,
             replyCount = replyCount ?: 0,
             remainReplies = remainReplies,
             refreshedAt = refreshedAt
@@ -692,16 +709,28 @@ class ForumRepository(
         refreshedAt: Long
     ): SubscriptionThreadEntity {
         val contentHtml = content.orEmpty()
+        val isTips = isNmbTipsPost(
+            userHash = userHash,
+            remotePostId = id,
+            postedAtRaw = postedAtRaw
+        )
+        val normalizedImage = image?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedExt = imageExtension?.trim()?.takeIf { it.isNotEmpty() }
         return SubscriptionThreadEntity(
             threadId = id,
             forumId = forumId,
             userHash = userHash.orEmpty(),
             name = normalizeNmbStoredName(name),
             title = normalizeNmbStoredTitle(title),
+            contentHtml = contentHtml,
             contentText = htmlToPlainText(contentHtml),
-            image = image.orEmpty(),
-            ext = imageExtension.orEmpty(),
+            image = normalizedImage,
+            ext = normalizedExt?.takeIf { normalizedImage != null },
             postedAtEpochMillis = postedAtRaw?.let(::parseNmbPostedAtEpochMillis),
+            sage = sage ?: false,
+            admin = admin ?: false,
+            hide = hide ?: false,
+            isTips = isTips,
             replyCount = replyCount ?: 0,
             remainReplies = remainReplies,
             page = page,
@@ -719,6 +748,8 @@ class ForumRepository(
     ): PostEntity {
         val contentHtml = content.orEmpty()
         val isTips = isTipsPost()
+        val normalizedImage = image?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedExt = imageExtension?.trim()?.takeIf { it.isNotEmpty() }
         return PostEntity(
             threadId = threadId,
             id = storageId(page = page, position = position, isTips = isTips),
@@ -730,12 +761,12 @@ class ForumRepository(
             title = normalizeNmbStoredTitle(title),
             contentHtml = contentHtml,
             contentText = htmlToPlainText(contentHtml),
-            image = image.orEmpty(),
-            ext = imageExtension.orEmpty(),
+            image = normalizedImage,
+            ext = normalizedExt?.takeIf { normalizedImage != null },
             postedAtEpochMillis = postedAtRaw?.let(::parseNmbPostedAtEpochMillis),
-            sage = sage ?: 0,
-            admin = admin ?: 0,
-            hide = hide ?: 0,
+            sage = sage ?: false,
+            admin = admin ?: false,
+            hide = hide ?: false,
             isTips = isTips,
             page = page,
             positionInPage = position,
@@ -759,10 +790,13 @@ class ForumRepository(
         return page?.let { -it.toLong() } ?: (Long.MIN_VALUE + position)
     }
 
-    private fun ThreadEntity.toModel(): CatalogThread {
-        return CatalogThread(
+    private fun ThreadEntity.toModel(): NmbPost {
+        return NmbPost(
             id = id,
+            threadId = id,
+            remoteId = id,
             forumId = forumId,
+            replyCount = replyCount,
             userHash = userHash,
             name = name,
             title = title,
@@ -774,16 +808,20 @@ class ForumRepository(
             sage = sage,
             admin = admin,
             hide = hide,
-            replyCount = replyCount,
+            isTips = isTips,
+            isPoster = true,
+            isThread = true,
+            page = null,
+            positionInPage = 0,
             remainReplies = remainReplies,
             refreshedAt = refreshedAt
         )
     }
 
-    private fun PostEntity.toModel(): ThreadPost {
-        return ThreadPost(
-            threadId = threadId,
+    private fun PostEntity.toModel(opUserHash: String?): NmbPost {
+        return NmbPost(
             id = id,
+            threadId = threadId,
             remoteId = remoteId,
             forumId = forumId,
             replyCount = replyCount,
@@ -799,27 +837,39 @@ class ForumRepository(
             admin = admin,
             hide = hide,
             isTips = isTips,
+            isPoster = !opUserHash.isNullOrBlank() && userHash == opUserHash,
+            isThread = false,
             page = page,
             positionInPage = positionInPage,
+            remainReplies = null,
             refreshedAt = refreshedAt
         )
     }
 
-    private fun SubscriptionThreadEntity.toModel(): SubscriptionThread {
-        return SubscriptionThread(
+    private fun SubscriptionThreadEntity.toModel(): NmbPost {
+        return NmbPost(
+            id = threadId,
             threadId = threadId,
+            remoteId = threadId,
             forumId = forumId,
+            replyCount = replyCount,
             userHash = userHash,
             name = name,
             title = title,
+            contentHtml = contentHtml,
             contentText = contentText,
             image = image,
             ext = ext,
             postedAtEpochMillis = postedAtEpochMillis,
-            replyCount = replyCount,
-            remainReplies = remainReplies,
+            sage = sage,
+            admin = admin,
+            hide = hide,
+            isTips = isTips,
+            isPoster = true,
+            isThread = true,
             page = page,
             positionInPage = positionInPage,
+            remainReplies = remainReplies,
             refreshedAt = refreshedAt
         )
     }
@@ -866,7 +916,7 @@ class ForumRepository(
                 threadId = request.threadId,
                 postId = result.postId,
                 forumId = cachedThread?.forumId,
-                threadTitle = cachedThread?.title.orEmpty(),
+                threadTitle = cachedThread?.title,
                 name = normalizeNmbStoredName(request.name),
                 title = normalizeNmbStoredTitle(request.title),
                 contentText = result.contentText,

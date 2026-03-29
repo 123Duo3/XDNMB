@@ -29,7 +29,7 @@ import ink.duo3.fogisland.shared.storage.db.entity.ThreadReadProgressEntity
         PostingDraftEntity::class,
         PostingHistoryEntity::class
     ],
-    version = 7
+    version = 12
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {

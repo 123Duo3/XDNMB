@@ -8,18 +8,16 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.CatalogSource
-import ink.duo3.fogisland.shared.model.CatalogThread
 import ink.duo3.fogisland.shared.model.DirectThreadShortcut
 import ink.duo3.fogisland.shared.model.ForumGroup
+import ink.duo3.fogisland.shared.model.NmbPost
 import ink.duo3.fogisland.shared.model.PostingDraftEntry
 import ink.duo3.fogisland.shared.model.PostingHistoryEntry
 import ink.duo3.fogisland.shared.model.PostingHistoryType
-import ink.duo3.fogisland.shared.model.ReadHistoryEntry
 import ink.duo3.fogisland.shared.model.ReplyPostRequest
 import ink.duo3.fogisland.shared.model.ReplyPostResult
 import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SiteNotice
-import ink.duo3.fogisland.shared.model.SubscriptionThread
 import ink.duo3.fogisland.shared.model.ThreadDetail
 import ink.duo3.fogisland.shared.model.ThreadPostRequest
 import ink.duo3.fogisland.shared.model.ThreadPostResult
@@ -52,9 +50,9 @@ data class ForumBrowseUiState(
     val forumGroups: List<ForumGroup> = emptyList(),
     val timelines: List<Timeline> = emptyList(),
     val currentSource: CatalogSource? = null,
-    val threads: List<CatalogThread> = emptyList(),
-    val subscriptionThreads: List<SubscriptionThread> = emptyList(),
-    val readHistory: List<ReadHistoryEntry> = emptyList(),
+    val threads: List<NmbPost> = emptyList(),
+    val subscriptionThreads: List<NmbPost> = emptyList(),
+    val readHistory: List<NmbPost> = emptyList(),
     val postingHistory: List<PostingHistoryEntry> = emptyList(),
     val postingDrafts: List<PostingDraftEntry> = emptyList(),
     val searchQuery: String = "",
@@ -88,7 +86,7 @@ data class ForumBrowseUiState(
                 return false
             }
 
-            val maxReplyPage = calculateNmbThreadMaxPage(thread.replyCount)
+            val maxReplyPage = calculateNmbThreadMaxPage(thread.replyCount ?: 0)
             return loadedThreadPage < maxReplyPage
         }
 }
@@ -113,6 +111,8 @@ class ForumBrowseViewModel(
     private var threadObservationJob: Job? = null
     private var searchJob: Job? = null
     private var recentSearchObservationJob: Job? = null
+    private var closedSiteNoticeContent: String? = null
+    private var dismissedSiteNoticeContent: String? = null
 
     init {
         observeSubscriptionUuid()
@@ -123,8 +123,25 @@ class ForumBrowseViewModel(
             runCatching { repository.cleanupExpiredReadHistory() }
         }
         viewModelScope.launch {
+            dismissedSiteNoticeContent = repository.getDismissedSiteNoticeContent()
             hydrateCachedIndex()
             refreshIndexInternal()
+        }
+    }
+
+    fun dismissSiteNotice() {
+        val hiddenContent = currentSiteNoticeContentKey() ?: return
+        closedSiteNoticeContent = hiddenContent
+        _uiState.update { it.copy(siteNotice = null) }
+    }
+
+    fun dismissSiteNoticeUntilChanged() {
+        val hiddenContent = currentSiteNoticeContentKey() ?: return
+        closedSiteNoticeContent = hiddenContent
+        dismissedSiteNoticeContent = hiddenContent
+        _uiState.update { it.copy(siteNotice = null) }
+        viewModelScope.launch {
+            repository.updateDismissedSiteNoticeContent(hiddenContent)
         }
     }
 
@@ -144,7 +161,7 @@ class ForumBrowseViewModel(
                 isLoadingIndex = false,
                 forumGroups = cachedIndex.forumGroups,
                 timelines = cachedIndex.timelines,
-                siteNotice = cachedIndex.siteNotice,
+                siteNotice = resolveVisibleSiteNotice(cachedIndex.siteNotice),
                 currentSource = resolveCatalogSource(
                     preferredSource = state.currentSource,
                     forumGroups = cachedIndex.forumGroups,
@@ -180,7 +197,9 @@ class ForumBrowseViewModel(
 
             val failure = forumGroupsResult.exceptionOrNull() ?: timelinesResult.exceptionOrNull()
             if (failure != null) {
-                val siteNotice = noticeDeferred.await().getOrElse { existingNotice }
+                val siteNotice = resolveVisibleSiteNotice(
+                    noticeDeferred.await().getOrElse { existingNotice }
+                )
                 _uiState.update {
                     it.copy(
                         isLoadingIndex = false,
@@ -212,7 +231,9 @@ class ForumBrowseViewModel(
             }
 
             if (source == null) {
-                val refreshedNotice = noticeDeferred.await().getOrElse { existingNotice }
+                val refreshedNotice = resolveVisibleSiteNotice(
+                    noticeDeferred.await().getOrElse { existingNotice }
+                )
                 if (refreshedNotice != existingNotice) {
                     _uiState.update { it.copy(siteNotice = refreshedNotice) }
                 }
@@ -231,10 +252,31 @@ class ForumBrowseViewModel(
                 loadCatalogPage(source, 1)
             }
 
-            val refreshedNotice = noticeDeferred.await().getOrElse { existingNotice }
+            val refreshedNotice = resolveVisibleSiteNotice(
+                noticeDeferred.await().getOrElse { existingNotice }
+            )
             if (refreshedNotice != existingNotice) {
                 _uiState.update { it.copy(siteNotice = refreshedNotice) }
             }
+        }
+    }
+
+    private fun currentSiteNoticeContentKey(): String? {
+        return _uiState.value.siteNotice
+            ?.contentText
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun resolveVisibleSiteNotice(siteNotice: SiteNotice?): SiteNotice? {
+        val contentKey = siteNotice
+            ?.contentText
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return null
+        return siteNotice.takeIf {
+            contentKey != closedSiteNoticeContent &&
+                contentKey != dismissedSiteNoticeContent
         }
     }
 

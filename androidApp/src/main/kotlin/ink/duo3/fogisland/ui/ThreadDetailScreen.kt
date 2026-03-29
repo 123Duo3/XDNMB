@@ -14,7 +14,6 @@ import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,17 +31,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.data.LocalTimeSettings
 import ink.duo3.fogisland.shared.model.ErrorPresentation
+import ink.duo3.fogisland.shared.model.NmbPost
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.model.ThreadDetail
 import ink.duo3.fogisland.shared.util.NmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
-import ink.duo3.fogisland.shared.util.resolveNmbDisplayAuthor
-import ink.duo3.fogisland.shared.util.resolveNmbDisplayTitle
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
-import ink.duo3.fogisland.ui.components.ThreadImagePreview
+import ink.duo3.fogisland.ui.components.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.NmbPostFlatItem
+import ink.duo3.fogisland.ui.components.NmbPreviewSamples
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -200,7 +201,7 @@ fun ThreadDetailScreen(
             modifier = Modifier.fillMaxSize(),
             state = listState,
             contentPadding = innerPadding,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             error?.let { errorState ->
                 item {
@@ -213,14 +214,8 @@ fun ThreadDetailScreen(
 
             thread?.let { root ->
                 item(key = "thread-${root.id}") {
-                    PostCard(
-                        title = resolveNmbDisplayTitle(root.title),
-                        author = resolveNmbDisplayAuthor(root.userHash, root.name),
-                        postedAtEpochMillis = root.postedAtEpochMillis,
-                        image = root.image,
-                        ext = root.ext,
-                        content = root.contentText,
-                        timeFormatOptions = timeFormatOptions,
+                    ThreadDetailPostItem(
+                        post = root,
                         onImageClick = onImageClick
                     )
                 }
@@ -230,14 +225,8 @@ fun ThreadDetailScreen(
                 items = posts,
                 key = { post -> "${post.threadId}-${post.id}" }
             ) { post ->
-                PostCard(
-                    title = resolveNmbDisplayTitle(post.title),
-                    author = resolveNmbDisplayAuthor(post.userHash, post.name),
-                    postedAtEpochMillis = post.postedAtEpochMillis,
-                    image = post.image,
-                    ext = post.ext,
-                    content = post.contentText,
-                    timeFormatOptions = timeFormatOptions,
+                ThreadDetailPostItem(
+                    post = post,
                     onImageClick = onImageClick
                 )
             }
@@ -267,59 +256,53 @@ fun ThreadDetailScreen(
 }
 
 @Composable
-private fun PostCard(
-    title: String?,
-    author: String?,
-    postedAtEpochMillis: Long?,
-    image: String,
-    ext: String,
-    content: String,
-    timeFormatOptions: NmbTimeFormatOptions,
+private fun ThreadDetailPostItem(
+    post: NmbPost,
     onImageClick: (String, String?) -> Unit
 ) {
-    val postedAtText = formatNmbPostedAtText(
-        epochMillis = postedAtEpochMillis,
-        options = timeFormatOptions
+    NmbPostFlatItem(
+        post = post,
+        onImageClick = onImageClick
     )
-    val metaText = listOfNotNull(author, postedAtText)
-        .joinToString(separator = " · ")
+}
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            title?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            if (metaText.isNotBlank()) {
-                Text(
-                    text = metaText,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+@Preview(name = "Thread Detail Items", widthDp = 412, heightDp = 900)
+@Composable
+private fun ThreadDetailPostItemPreview() {
+    FogIslandPreviewColumn(verticalSpacingDp = 0) {
+        ThreadDetailPostItem(
+            post = NmbPreviewSamples.forumThread,
+            onImageClick = { _, _ -> }
+        )
+        ThreadDetailPostItem(
+            post = NmbPreviewSamples.replyPost,
+            onImageClick = { _, _ -> }
+        )
+    }
+}
 
-            Text(
-                text = content.ifBlank { "(空内容)" },
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            image.takeIf { it.isNotBlank() }?.let {
-                ThreadImagePreview(
-                    image = image,
-                    ext = ext,
-                    onImageClick = onImageClick
-                )
-            }
-        }
+@Preview(name = "Thread Detail Screen", widthDp = 412, heightDp = 960)
+@Composable
+private fun ThreadDetailScreenPreview() {
+    FogIslandPreviewColumn {
+        ThreadDetailScreen(
+            detail = ink.duo3.fogisland.shared.model.ThreadDetail(
+                thread = NmbPreviewSamples.forumThread,
+                posts = listOf(NmbPreviewSamples.replyPost),
+                progress = null
+            ),
+            forumName = "欢乐恶搞",
+            loadedPage = 2,
+            isLoading = false,
+            canLoadMore = true,
+            error = null,
+            onBack = {},
+            onReply = {},
+            onSubscribe = {},
+            onRefresh = {},
+            onLoadMore = {},
+            onProgressChanged = { _, _ -> },
+            onImageClick = { _, _ -> }
+        )
     }
 }
