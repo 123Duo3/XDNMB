@@ -13,6 +13,7 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+androidApp/release/
 *.apk
 output.json
 
@@ -54,3 +55,4 @@ xcuserdata/
 Pods/
 DerivedData/
 .LSOverride
+
