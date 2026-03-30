@@ -26,6 +26,7 @@ import ink.duo3.fogisland.shared.model.NmbPost
 import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SearchHitType
 import ink.duo3.fogisland.shared.model.SiteNotice
+import ink.duo3.fogisland.shared.util.htmlToPlainText
 import ink.duo3.fogisland.ui.theme.FogIslandTheme
 
 internal object NmbPreviewImages {
@@ -46,6 +47,12 @@ private const val PreviewBodyText =
     "这是一段用于 Preview 的正文，方便直接在 IDE 里调整卡片层级、间距和行数。第二行可以顺手看换行效果。"
 private const val PreviewReplyText =
     "这是一条回复预览，用来看平铺样式、分割线和正文密度。"
+private const val PreviewRichBodyHtml =
+    "<font color=\"#789922\">&gt;&gt;No.45670000</font><br />这是一段用于 Preview 的正文，方便直接在 IDE 里调整卡片层级、间距和行数。<br />https://app.nmbxd.com"
+private const val PreviewReplyHtml =
+    "<font color=\"#789922\">&gt;&gt;No.45678901</font><br />[h]这是一段隐藏文本[/h] 这是一条回复预览，用来看平铺样式、分割线和正文密度。"
+private const val PreviewSiteNoticeHtml =
+    "<span style=\" color: green \">=========== 公告预览 ==========<br /></span>客户端地址：<a href=\"https://app.nmbxd.com\">https://app.nmbxd.com</a>"
 
 @Composable
 internal fun FogIslandPreviewColumn(
@@ -82,8 +89,8 @@ internal object NmbPreviewSamples {
         userHash = "A1B2C3",
         name = "匿名",
         title = "今天岛上风很大",
-        contentHtml = "",
-        contentText = PreviewBodyText,
+        contentHtml = PreviewRichBodyHtml,
+        contentText = htmlToPlainText(PreviewRichBodyHtml),
         image = NmbPreviewImages.Wide,
         ext = "jpg",
         postedAtEpochMillis = PreviewNow,
@@ -100,6 +107,7 @@ internal object NmbPreviewSamples {
     val forumThreadWithoutTitle = forumThread.copy(
         id = 45678902L,
         title = null,
+        contentHtml = "没有标题时也要能直接看正文和图片的位置。",
         contentText = "没有标题时也要能直接看正文和图片的位置。",
         image = NmbPreviewImages.Tall
     )
@@ -107,6 +115,7 @@ internal object NmbPreviewSamples {
     val forumThreadWithoutImage = forumThread.copy(
         id = 45678903L,
         title = "只有正文的串",
+        contentHtml = "这个场景用来看没有图片时，正文和 footer 之间的距离。",
         contentText = "这个场景用来看没有图片时，正文和 footer 之间的距离。",
         image = null,
         ext = null
@@ -118,8 +127,8 @@ internal object NmbPreviewSamples {
         userHash = "SUB123",
         name = "匿名",
         title = "订阅串标题",
-        contentHtml = "",
-        contentText = PreviewBodyText,
+        contentHtml = PreviewRichBodyHtml,
+        contentText = htmlToPlainText(PreviewRichBodyHtml),
         image = NmbPreviewImages.Normal,
         ext = "jpg",
         postedAtEpochMillis = PreviewNow,
@@ -215,8 +224,8 @@ internal object NmbPreviewSamples {
         userHash = "REP123",
         name = "匿名",
         title = null,
-        contentHtml = "",
-        contentText = PreviewReplyText,
+        contentHtml = PreviewReplyHtml,
+        contentText = htmlToPlainText(PreviewReplyHtml),
         image = NmbPreviewImages.Long,
         ext = "jpg",
         postedAtEpochMillis = PreviewNow - 900_000L,
@@ -274,8 +283,8 @@ internal object NmbPreviewSamples {
     )
 
     val siteNotice = SiteNotice(
-        contentHtml = "",
-        contentText = "这是公告预览，用来看站点公告和串列表一起出现时的层次关系。",
+        contentHtml = PreviewSiteNoticeHtml,
+        contentText = htmlToPlainText(PreviewSiteNoticeHtml),
         publishedAt = PreviewNow - 3_600_000L
     )
 }

@@ -750,11 +750,10 @@ fun ImageViewerScreen(
                 }
         ) {
             if (layout != null && currentSuccessState != null) {
-                val currentLayout = layout
-                val displayedScale = resolveDisplayedScale(currentLayout)
-                val displayedTranslation = resolveDisplayedTranslation(currentLayout)
+                val displayedScale = resolveDisplayedScale(layout)
+                val displayedTranslation = resolveDisplayedTranslation(layout)
                 ImageViewerCanvas(
-                    layout = currentLayout,
+                    layout = layout,
                     displayedScale = displayedScale,
                     displayedTranslation = displayedTranslation,
                     imageBitmap = imageBitmap,

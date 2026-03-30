@@ -18,7 +18,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -42,6 +41,7 @@ import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SearchHitType
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
+import ink.duo3.fogisland.shared.util.shouldRenderNmbRichText
 import ink.duo3.fogisland.utils.ProvideContentColorTextStyle
 
 private val NmbPostCardShape = RoundedCornerShape(24.dp)
@@ -74,13 +74,15 @@ fun NmbPostCard(
         NmbPostContent(
             title = post.title,
             subtitle = post.name,
-            bodyText = post.contentText.takeIf { it.isNotBlank() }?.let(::AnnotatedString),
+            bodyHtml = post.contentHtml,
+            fallbackBodyText = post.contentText,
+            bodyColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            bodyInteractionsEnabled = false,
+            bodyMaxLines = bodyMaxLines,
+            bodyOverflow = bodyOverflow,
             image = post.image,
             ext = post.ext,
-            onImageClick = onImageClick,
-            maxLines = bodyMaxLines,
-            overflow = bodyOverflow,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            onImageClick = onImageClick
         )
         NmbPostFooter(
             contextText = buildNmbContextText(forumName, post.remoteId),
@@ -118,21 +120,26 @@ fun NmbPostCard(
                     SearchHitType.POST -> "回复 No.${hit.postId}"
                 },
             subtitle = hit.name,
-            bodyText = hit.preview
+            customBody = hit.preview
                 .takeIf { it.isNotBlank() }
-                ?.let {
-                    highlightNmbPostQuery(
-                        text = it,
-                        query = query,
-                        highlightColor = MaterialTheme.colorScheme.primary
-                    )
+                ?.let { previewText ->
+                    {
+                        Text(
+                            text = highlightNmbPostQuery(
+                                text = previewText,
+                                query = query,
+                                highlightColor = MaterialTheme.colorScheme.primary
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = bodyMaxLines,
+                            overflow = bodyOverflow
+                        )
+                    }
                 },
             image = null,
             ext = null,
-            onImageClick = { _, _ -> },
-            maxLines = bodyMaxLines,
-            overflow = bodyOverflow,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            onImageClick = { _, _ -> }
         )
         NmbPostFooter(
             contextText = buildNmbContextText(forumName, hit.threadId),
@@ -164,13 +171,15 @@ fun NmbPostFlatItem(
         NmbPostContent(
             title = post.title,
             subtitle = post.name,
-            bodyText = post.contentText.takeIf { it.isNotBlank() }?.let(::AnnotatedString),
+            bodyHtml = post.contentHtml,
+            fallbackBodyText = post.contentText,
+            bodyColor = MaterialTheme.colorScheme.onSurface,
+            bodyInteractionsEnabled = true,
+            bodyMaxLines = bodyMaxLines,
+            bodyOverflow = bodyOverflow,
             image = post.image,
             ext = post.ext,
             onImageClick = onImageClick,
-            maxLines = bodyMaxLines,
-            overflow = bodyOverflow,
-            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(vertical = 8.dp)
         )
     }
@@ -434,13 +443,16 @@ private fun NmbPostFooter(
 private fun NmbPostContent(
     title: String?,
     subtitle: String?,
-    bodyText: AnnotatedString?,
+    bodyHtml: String? = null,
+    fallbackBodyText: String? = null,
+    bodyColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    bodyInteractionsEnabled: Boolean = true,
+    bodyMaxLines: Int = Int.MAX_VALUE,
+    bodyOverflow: TextOverflow = TextOverflow.Clip,
+    customBody: (@Composable () -> Unit)? = null,
     image: String?,
     ext: String?,
     onImageClick: (String, String?) -> Unit,
-    maxLines: Int,
-    overflow: TextOverflow,
-    color: Color,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -466,14 +478,29 @@ private fun NmbPostContent(
             }
         }
 
-        bodyText?.let { displayBody ->
-            Text(
-                text = displayBody,
-                style = MaterialTheme.typography.bodyMedium,
-                color = color,
-                maxLines = maxLines,
-                overflow = overflow
-            )
+        when {
+            customBody != null -> customBody()
+            !bodyHtml.isNullOrBlank() || !fallbackBodyText.isNullOrBlank() -> {
+                if (shouldRenderNmbRichText(bodyHtml)) {
+                    NmbRichTextText(
+                        html = bodyHtml,
+                        fallbackText = fallbackBodyText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = bodyColor,
+                        interactionsEnabled = bodyInteractionsEnabled,
+                        maxLines = bodyMaxLines,
+                        overflow = bodyOverflow
+                    )
+                } else {
+                    Text(
+                        text = fallbackBodyText.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = bodyColor,
+                        maxLines = bodyMaxLines,
+                        overflow = bodyOverflow
+                    )
+                }
+            }
         }
 
         if (!image.isNullOrBlank()) {
@@ -597,35 +624,35 @@ private fun NmbPostContentPreview() {
             NmbPostContent(
                 title = NmbPreviewSamples.forumThread.title,
                 subtitle = NmbPreviewSamples.forumThread.name,
-                bodyText = NmbPreviewSamples.forumThread.contentText.takeIf { it.isNotBlank() }?.let(::AnnotatedString),
+                bodyHtml = NmbPreviewSamples.forumThread.contentHtml,
+                fallbackBodyText = NmbPreviewSamples.forumThread.contentText,
+                bodyColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                bodyInteractionsEnabled = true,
+                bodyMaxLines = 6,
+                bodyOverflow = TextOverflow.Ellipsis,
                 image = NmbPreviewSamples.forumThread.image,
                 ext = NmbPreviewSamples.forumThread.ext,
-                onImageClick = { _, _ -> },
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                onImageClick = { _, _ -> }
             )
             NmbPostContent(
                 title = NmbPreviewSamples.directThreadShortcutUncached.title,
                 subtitle = NmbPreviewSamples.directThreadShortcutUncached.name,
-                bodyText = null,
                 image = null,
                 ext = null,
-                onImageClick = { _, _ -> },
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                onImageClick = { _, _ -> }
             )
             NmbPostContent(
                 title = NmbPreviewSamples.replyPost.title,
                 subtitle = NmbPreviewSamples.replyPost.userHash,
-                bodyText = NmbPreviewSamples.replyPost.contentText.takeIf { it.isNotBlank() }?.let(::AnnotatedString),
+                bodyHtml = NmbPreviewSamples.replyPost.contentHtml,
+                fallbackBodyText = NmbPreviewSamples.replyPost.contentText,
+                bodyColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                bodyInteractionsEnabled = true,
+                bodyMaxLines = 4,
+                bodyOverflow = TextOverflow.Ellipsis,
                 image = NmbPreviewSamples.replyPost.image,
                 ext = NmbPreviewSamples.replyPost.ext,
-                onImageClick = { _, _ -> },
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                onImageClick = { _, _ -> }
             )
         }
     }

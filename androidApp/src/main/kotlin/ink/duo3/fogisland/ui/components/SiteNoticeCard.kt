@@ -65,9 +65,11 @@ fun SiteNoticeCard(
             Spacer(Modifier.height(8.dp))
             CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
                 SelectionContainer {
-                    Text(
-                        text = notice.contentText,
-                        style = MaterialTheme.typography.bodyMedium
+                    NmbRichTextText(
+                        html = notice.contentHtml,
+                        fallbackText = notice.contentText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }

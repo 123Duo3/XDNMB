@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 
 private const val LOADING_INDICATOR_GLOBAL_ROTATION_TARGET = 1080f
 private const val LOADING_INDICATOR_MIN_PROGRESS = 0.1f
-private const val LOADING_INDICATOR_MAX_PROGRESS = 0.87f
+private const val LOADING_INDICATOR_MAX_PROGRESS = 0.6f
 private const val LOADING_INDICATOR_ANIMATION_DURATION_MILLIS = 6000
 private const val LOADING_PROGRESS_UPDATE_MILLIS = 80
 private const val LOADING_INDICATOR_SIZE_DP = 40

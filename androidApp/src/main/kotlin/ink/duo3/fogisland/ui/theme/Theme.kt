@@ -9,6 +9,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -259,6 +261,9 @@ val unspecified_scheme = ColorFamily(
     Color.Unspecified, Color.Unspecified, Color.Unspecified, Color.Unspecified
 )
 
+val LocalFogIslandDarkTheme = staticCompositionLocalOf { false }
+val LocalFogIslandUseMonet = staticCompositionLocalOf { false }
+
 @Composable
 fun FogIslandTheme(
     themeSettings: ThemeSettings = ThemeSettings(),
@@ -300,10 +305,14 @@ fun FogIslandTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = FogIslandTypography,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalFogIslandDarkTheme provides darkTheme,
+        LocalFogIslandUseMonet provides enableMonet
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = FogIslandTypography,
+            content = content
+        )
+    }
 }
-
