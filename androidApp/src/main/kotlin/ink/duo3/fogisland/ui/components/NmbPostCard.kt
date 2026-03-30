@@ -180,7 +180,7 @@ fun NmbPostFlatItem(
             image = post.image,
             ext = post.ext,
             onImageClick = onImageClick,
-            modifier = Modifier.padding(vertical = 8.dp)
+            modifier = Modifier.padding(bottom = 4.dp,)
         )
     }
 }

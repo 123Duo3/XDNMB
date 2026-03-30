@@ -60,6 +60,18 @@ class NmbRichTextTest {
     }
 
     @Test
+    fun `adjacent hidden texts stay separate segments`() {
+        val richText = parseNmbRichText("[h]您好[/h][h]我好[/h][h]您吃了吗？[/h]")
+
+        assertEquals("您好我好您吃了吗？", richText.plainText)
+        val hiddenSegments = richText.segments.filter { it.isHidden }
+        assertEquals(3, hiddenSegments.size)
+        assertEquals("您好", hiddenSegments[0].text)
+        assertEquals("我好", hiddenSegments[1].text)
+        assertEquals("您吃了吗？", hiddenSegments[2].text)
+    }
+
+    @Test
     fun `parse italic underline and strikethrough`() {
         val richText = parseNmbRichText("<i>斜体</i><u>下划线</u><del>删除线</del>")
 

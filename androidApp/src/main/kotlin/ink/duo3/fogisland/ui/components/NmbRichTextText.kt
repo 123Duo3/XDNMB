@@ -32,7 +32,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -92,28 +91,21 @@ fun NmbRichTextText(
     overflow: TextOverflow = TextOverflow.Clip
 ) {
     val context = LocalContext.current
-    val revealedHiddenSegmentIndices = remember(richText, interactionsEnabled) {
+    val revealedHiddenGroupIds = remember(richText, interactionsEnabled) {
         mutableStateListOf<Int>()
     }
     val hiddenRevealProgress = remember(richText, interactionsEnabled) {
         mutableStateMapOf<Int, Float>()
     }
-    val revealedHiddenSegmentSnapshot = remember(
-        interactionsEnabled,
-        revealedHiddenSegmentIndices.size
-    ) {
-        if (interactionsEnabled) {
-            revealedHiddenSegmentIndices.toSet()
-        } else {
-            emptySet()
-        }
+    val revealedHiddenGroupSnapshot = if (interactionsEnabled) {
+        revealedHiddenGroupIds.toSet()
+    } else {
+        emptySet()
     }
-    val hiddenRevealProgressSnapshot = remember(interactionsEnabled, hiddenRevealProgress.size) {
-        if (interactionsEnabled) {
-            hiddenRevealProgress.toMap()
-        } else {
-            emptyMap()
-        }
+    val hiddenRevealProgressSnapshot = if (interactionsEnabled) {
+        hiddenRevealProgress.toMap()
+    } else {
+        emptyMap()
     }
     var textLayoutResult by remember(richText) { mutableStateOf<TextLayoutResult?>(null) }
     val currentLayoutResult by rememberUpdatedState(textLayoutResult)
@@ -166,7 +158,7 @@ fun NmbRichTextText(
         linkColor,
         hiddenTextColor,
         resolvedBaseFontSize,
-        revealedHiddenSegmentSnapshot,
+        revealedHiddenGroupSnapshot,
         hiddenRevealProgressSnapshot,
         replyColor,
         harmonizedPureGreen,
@@ -180,7 +172,7 @@ fun NmbRichTextText(
             linkColor = linkColor,
             hiddenTextColor = hiddenTextColor,
             baseFontSize = resolvedBaseFontSize,
-            revealedHiddenSegmentIndices = revealedHiddenSegmentSnapshot,
+            revealedHiddenGroupIds = revealedHiddenGroupSnapshot,
             hiddenRevealProgress = hiddenRevealProgressSnapshot,
             replyColor = replyColor,
             harmonizedPureGreen = harmonizedPureGreen,
@@ -214,21 +206,21 @@ fun NmbRichTextText(
                     val layout = currentLayoutResult ?: return@awaitEachGesture
                     val characterOffset = layout.getOffsetForPosition(up.position)
 
-                    val hiddenIndex = annotatedText.getStringAnnotations(
+                    val hiddenGroupId = annotatedText.getStringAnnotations(
                         tag = NmbRichTextHiddenAnnotationTag,
                         start = characterOffset,
                         end = characterOffset
                     ).firstOrNull()
                         ?.item
                         ?.toIntOrNull()
-                        ?.takeIf { index ->
-                            index !in revealedHiddenSegmentIndices && index !in hiddenRevealProgress
+                        ?.takeIf { groupId ->
+                            groupId !in revealedHiddenGroupIds && groupId !in hiddenRevealProgress
                         }
 
-                    if (hiddenIndex != null) {
+                    if (hiddenGroupId != null) {
                         down.consume()
                         up.consume()
-                        hiddenRevealProgress[hiddenIndex] = 0f
+                        hiddenRevealProgress[hiddenGroupId] = 0f
                         coroutineScope.launch {
                             val animatable = Animatable(0f)
                             animatable.animateTo(
@@ -238,10 +230,10 @@ fun NmbRichTextText(
                                     easing = FastOutSlowInEasing
                                 )
                             ) {
-                                hiddenRevealProgress[hiddenIndex] = value
+                                hiddenRevealProgress[hiddenGroupId] = value
                             }
-                            hiddenRevealProgress.remove(hiddenIndex)
-                            revealedHiddenSegmentIndices.add(hiddenIndex)
+                            hiddenRevealProgress.remove(hiddenGroupId)
+                            revealedHiddenGroupIds.add(hiddenGroupId)
                         }
                         return@awaitEachGesture
                     }
@@ -274,7 +266,7 @@ private fun NmbRichText.toAnnotatedString(
     linkColor: Color,
     hiddenTextColor: Color,
     baseFontSize: TextUnit,
-    revealedHiddenSegmentIndices: Set<Int>,
+    revealedHiddenGroupIds: Set<Int>,
     hiddenRevealProgress: Map<Int, Float>,
     replyColor: Color,
     harmonizedPureGreen: Color,
@@ -297,8 +289,8 @@ private fun NmbRichText.toAnnotatedString(
             normalColor = normalColor,
             linkColor = linkColor,
             hiddenTextColor = hiddenTextColor,
-            revealedHidden = index in revealedHiddenSegmentIndices,
-            revealProgress = hiddenRevealProgress[index] ?: 0f,
+            revealedHidden = segment.hiddenGroupId?.let { it in revealedHiddenGroupIds } ?: false,
+            revealProgress = segment.hiddenGroupId?.let { hiddenRevealProgress[it] } ?: 0f,
             replyColor = replyColor,
             harmonizedPureGreen = harmonizedPureGreen,
             harmonizedPureBlue = harmonizedPureBlue,
@@ -350,10 +342,11 @@ private fun NmbRichText.toAnnotatedString(
             )
         }
 
-        if (segment.isHidden && index !in revealedHiddenSegmentIndices) {
+        val hiddenGroupId = segment.hiddenGroupId
+        if (segment.isHidden && hiddenGroupId != null && hiddenGroupId !in revealedHiddenGroupIds) {
             builder.addStringAnnotation(
                 tag = NmbRichTextHiddenAnnotationTag,
-                annotation = index.toString(),
+                annotation = hiddenGroupId.toString(),
                 start = start,
                 end = end
             )
@@ -420,9 +413,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHiddenTextBackg
         start = 0,
         end = text.length
     ).sortedBy { it.start }
+        .mergeAdjacentHiddenAnnotations()
 
     hiddenAnnotations.forEachIndexed { index, annotation ->
-        val revealProgress = annotation.item.toIntOrNull()?.let { hiddenRevealProgress[it] } ?: 0f
+        val revealProgress = annotation.id.toIntOrNull()?.let { hiddenRevealProgress[it] } ?: 0f
         val firstLine = layout.getLineForOffset(annotation.start)
         val lastCharacterOffset = (annotation.end - 1).coerceAtLeast(annotation.start)
         val lastLine = layout.getLineForOffset(lastCharacterOffset)
@@ -485,6 +479,36 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHiddenTextBackg
             )
         }
     }
+}
+
+private data class HiddenAnnotationRange(
+    val id: String,
+    val start: Int,
+    val end: Int
+)
+
+private fun List<AnnotatedString.Range<String>>.mergeAdjacentHiddenAnnotations(): List<HiddenAnnotationRange> {
+    if (isEmpty()) {
+        return emptyList()
+    }
+
+    val merged = mutableListOf<HiddenAnnotationRange>()
+    forEach { annotation ->
+        val previous = merged.lastOrNull()
+        if (previous != null &&
+            previous.id == annotation.item &&
+            previous.end == annotation.start
+        ) {
+            merged[merged.lastIndex] = previous.copy(end = annotation.end)
+        } else {
+            merged += HiddenAnnotationRange(
+                id = annotation.item,
+                start = annotation.start,
+                end = annotation.end
+            )
+        }
+    }
+    return merged
 }
 
 private fun remapNmbHtmlColor(

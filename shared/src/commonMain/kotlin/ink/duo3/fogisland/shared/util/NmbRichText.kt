@@ -16,6 +16,7 @@ data class NmbRichTextSegment(
     val color: String? = null,
     val href: String? = null,
     val threadId: Long? = null,
+    val hiddenGroupId: Int? = null,
     val isBold: Boolean = false,
     val isItalic: Boolean = false,
     val isSmall: Boolean = false,
@@ -29,6 +30,7 @@ private data class NmbRichTextScope(
     val tagName: String,
     val color: String? = null,
     val href: String? = null,
+    val hiddenGroupId: Int? = null,
     val isBold: Boolean = false,
     val isItalic: Boolean = false,
     val isSmall: Boolean = false,
@@ -41,6 +43,7 @@ private data class NmbRichTextScope(
 private data class NmbRichTextStyle(
     val color: String? = null,
     val href: String? = null,
+    val hiddenGroupId: Int? = null,
     val isBold: Boolean = false,
     val isItalic: Boolean = false,
     val isSmall: Boolean = false,
@@ -78,7 +81,16 @@ fun parseNmbRichText(html: String?): NmbRichText {
         return NmbRichText(emptyList())
     }
 
-    val normalizedHtml = html.replace(hiddenTextRegex, "<span class=\"h-hidden-text\">$1</span>")
+    var hiddenGroupId = 0
+    val normalizedHtml = html.replace(hiddenTextRegex) { matchResult ->
+        buildString {
+            append("<span class=\"h-hidden-text\" data-hidden-group-id=\"")
+            append(hiddenGroupId++)
+            append("\">")
+            append(matchResult.groupValues[1])
+            append("</span>")
+        }
+    }
     val scopes = mutableListOf<NmbRichTextScope>()
     val segments = mutableListOf<NmbRichTextSegment>()
     var cursor = 0
@@ -145,6 +157,7 @@ private fun appendNmbRichText(
             text = normalizedText,
             color = style.color,
             href = style.href,
+            hiddenGroupId = style.hiddenGroupId,
             isBold = style.isBold,
             isItalic = style.isItalic,
             isSmall = style.isSmall,
@@ -222,6 +235,7 @@ private fun appendResolvedNmbSegment(
         color = style.color,
         href = href,
         threadId = threadId,
+        hiddenGroupId = style.hiddenGroupId,
         isBold = style.isBold,
         isItalic = style.isItalic,
         isSmall = style.isSmall,
@@ -252,19 +266,32 @@ private fun handleNmbRichTag(
         .removeSuffix("/")
         .trim()
     val tagName = tagBody.substringBefore(' ').lowercase()
+    val currentStyle = resolveNmbRichStyle(scopes)
 
     if (isClosingTag) {
         when (tagName) {
-            "p" -> segments += NmbRichTextSegment(text = "\n\n")
+            "p" -> appendResolvedNmbSegment(
+                segments = segments,
+                text = "\n\n",
+                style = currentStyle
+            )
             "div", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6" ->
-                segments += NmbRichTextSegment(text = "\n")
+                appendResolvedNmbSegment(
+                    segments = segments,
+                    text = "\n",
+                    style = currentStyle
+                )
             else -> popNmbRichScope(scopes, tagName)
         }
         return
     }
 
     when (tagName) {
-        "br" -> segments += NmbRichTextSegment(text = "\n")
+        "br" -> appendResolvedNmbSegment(
+            segments = segments,
+            text = "\n",
+            style = currentStyle
+        )
         "font" -> {
             parseTagAttributes(tagBody)["color"]?.let { color ->
                 scopes += NmbRichTextScope(
@@ -281,6 +308,7 @@ private fun handleNmbRichTag(
                 ?.getOrNull(1)
                 ?.trim()
                 ?.takeIf { value -> value.isNotEmpty() }
+            val hiddenGroupId = attributes["data-hidden-group-id"]?.toIntOrNull()
             val isHidden = attributes["class"]
                 ?.split(' ')
                 ?.any { token -> token.equals("h-hidden-text", ignoreCase = true) }
@@ -290,6 +318,7 @@ private fun handleNmbRichTag(
                 scopes += NmbRichTextScope(
                     tagName = tagName,
                     color = color,
+                    hiddenGroupId = hiddenGroupId,
                     isHidden = isHidden
                 )
             }
@@ -330,6 +359,7 @@ private fun resolveNmbRichStyle(scopes: List<NmbRichTextScope>): NmbRichTextStyl
     return NmbRichTextStyle(
         color = color,
         href = href,
+        hiddenGroupId = scopes.lastOrNull { scope -> scope.hiddenGroupId != null }?.hiddenGroupId,
         isBold = scopes.any { scope -> scope.isBold },
         isItalic = scopes.any { scope -> scope.isItalic },
         isSmall = scopes.any { scope -> scope.isSmall },
@@ -393,6 +423,7 @@ private fun mergeNmbRichSegments(
             previous.color == segment.color &&
             previous.href == segment.href &&
             previous.threadId == segment.threadId &&
+            previous.hiddenGroupId == segment.hiddenGroupId &&
             previous.isBold == segment.isBold &&
             previous.isItalic == segment.isItalic &&
             previous.isSmall == segment.isSmall &&
