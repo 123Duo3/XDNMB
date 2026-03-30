@@ -115,7 +115,11 @@ fun parseNmbRichText(html: String?): NmbRichText {
         segments = segments
     )
 
-    return NmbRichText(segments = mergeNmbRichSegments(segments))
+    return NmbRichText(
+        segments = normalizeNmbRichWhitespace(
+            mergeNmbRichSegments(segments)
+        )
+    )
 }
 
 fun htmlToPlainText(html: String?): String {
@@ -440,4 +444,57 @@ private fun mergeNmbRichSegments(
         }
     }
     return merged
+}
+
+private fun normalizeNmbRichWhitespace(
+    segments: List<NmbRichTextSegment>
+): List<NmbRichTextSegment> {
+    if (segments.isEmpty()) {
+        return emptyList()
+    }
+
+    val normalized = mutableListOf<NmbRichTextSegment>()
+    var pendingWhitespace = false
+    var atLineStart = true
+
+    segments.forEach { segment ->
+        if (segment.isCode) {
+            pendingWhitespace = false
+            atLineStart = segment.text.lastOrNull() == '\n'
+            normalized += segment
+            return@forEach
+        }
+
+        val builder = StringBuilder()
+        segment.text.forEach { char ->
+            when {
+                char == '\n' -> {
+                    pendingWhitespace = false
+                    builder.append('\n')
+                    atLineStart = true
+                }
+
+                char == ' ' -> {
+                    if (!atLineStart) {
+                        pendingWhitespace = true
+                    }
+                }
+
+                else -> {
+                    if (pendingWhitespace) {
+                        builder.append(' ')
+                        pendingWhitespace = false
+                    }
+                    builder.append(char)
+                    atLineStart = false
+                }
+            }
+        }
+
+        if (builder.isNotEmpty()) {
+            normalized += segment.copy(text = builder.toString())
+        }
+    }
+
+    return mergeNmbRichSegments(normalized)
 }

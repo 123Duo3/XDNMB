@@ -22,9 +22,9 @@ class HtmlTextTest {
     }
 
     @Test
-    fun doesNotTrimIntentionalWhitespace() {
+    fun collapsesHtmlWhitespaceAroundLineEdges() {
         assertEquals(
-            expected = "  ASCII \n 艺术  ",
+            expected = "ASCII\n艺术",
             actual = htmlToPlainText("  ASCII <br> 艺术  ")
         )
     }

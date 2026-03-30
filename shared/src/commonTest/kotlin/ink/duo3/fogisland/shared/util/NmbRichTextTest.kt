@@ -30,8 +30,9 @@ class NmbRichTextTest {
         assertEquals("公告 客户端下载", richText.plainText)
         assertEquals("green", richText.segments[0].color)
         assertEquals("公告", richText.segments[0].text)
-        assertEquals("https://app.nmbxd.com", richText.segments[2].href)
-        assertEquals("客户端下载", richText.segments[2].text)
+        val linkSegment = richText.segments.firstOrNull { it.href == "https://app.nmbxd.com" }
+        assertNotNull(linkSegment)
+        assertEquals("客户端下载", linkSegment.text.trim())
     }
 
     @Test
@@ -98,5 +99,19 @@ class NmbRichTextTest {
         assertFalse(shouldRenderNmbRichText("普通正文"))
         assertTrue(shouldRenderNmbRichText("<font color=\"#789922\">引用</font>"))
         assertTrue(shouldRenderNmbRichText("[h]隐藏内容[/h]"))
+    }
+
+    @Test
+    fun `collapses consecutive html spaces`() {
+        val richText = parseNmbRichText("前文   <b> 中间 </b>   后文")
+
+        assertEquals("前文 中间 后文", richText.plainText)
+    }
+
+    @Test
+    fun `does not normalize tab characters`() {
+        val richText = parseNmbRichText("前文\t\t<b>\t中间\t</b>\t后文")
+
+        assertEquals("前文\t\t\t中间\t\t后文", richText.plainText)
     }
 }

@@ -180,7 +180,7 @@ fun NmbPostFlatItem(
             image = post.image,
             ext = post.ext,
             onImageClick = onImageClick,
-            modifier = Modifier.padding(bottom = 4.dp,)
+            modifier = Modifier.padding(bottom = 4.dp)
         )
     }
 }
@@ -441,6 +441,7 @@ private fun NmbPostFooter(
 
 @Composable
 private fun NmbPostContent(
+    modifier: Modifier = Modifier,
     title: String?,
     subtitle: String?,
     bodyHtml: String? = null,
@@ -452,8 +453,7 @@ private fun NmbPostContent(
     customBody: (@Composable () -> Unit)? = null,
     image: String?,
     ext: String?,
-    onImageClick: (String, String?) -> Unit,
-    modifier: Modifier = Modifier
+    onImageClick: (String, String?) -> Unit
 ) {
     Column(
         modifier = modifier,
