@@ -33,18 +33,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.shared.model.CookieProfile
 import ink.duo3.fogisland.shared.model.ThreadPostImage
+import ink.duo3.fogisland.shared.util.MAX_POST_IMAGE_BYTES
+import ink.duo3.fogisland.shared.util.MAX_POST_IMAGE_LABEL
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
-private const val MAX_POST_IMAGE_BYTES = 5 * 1024 * 1024
+private const val TARGET_POST_IMAGE_BYTES = MAX_POST_IMAGE_BYTES
 private const val MAX_JPEG_QUALITY = 95
 private const val MIN_JPEG_QUALITY = 35
-private val compressionScaleSteps = listOf(1f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, 0.2f)
-private val supportedPostImageMimeTypes = setOf("image/jpeg", "image/png")
+private const val MAX_IMAGE_RESAMPLE_ATTEMPTS = 6
+private val supportedPostImageMimeTypes = setOf("image/jpeg", "image/png", "image/gif")
 
 @Composable
 fun ActivePostCookieCard(
@@ -145,10 +149,10 @@ fun PostImageCard(
     selectedImage: ThreadPostImage?,
     useWatermark: Boolean,
     isImageTooLarge: Boolean,
-    isCompressingImage: Boolean,
+    isPreparingImage: Boolean,
     onPickImage: () -> Unit,
+    onPreviewImage: (() -> Unit)?,
     onRemoveImage: () -> Unit,
-    onCompressImage: () -> Unit,
     onUseWatermarkChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -179,11 +183,29 @@ fun PostImageCard(
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (selectedImage != null && isImageTooLarge) {
+                        Text(
+                            text = "超过 $MAX_POST_IMAGE_LABEL，可能无法发送",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = onPickImage) {
+                    OutlinedButton(
+                        onClick = onPickImage,
+                        enabled = !isPreparingImage
+                    ) {
                         Icon(Icons.Default.PhotoLibrary, contentDescription = null)
                         Text("选择")
+                    }
+                    if (selectedImage != null && onPreviewImage != null) {
+                        OutlinedButton(
+                            onClick = onPreviewImage,
+                            enabled = !isPreparingImage
+                        ) {
+                            Text("预览")
+                        }
                     }
                     if (selectedImage != null) {
                         IconButton(onClick = onRemoveImage) {
@@ -194,33 +216,12 @@ fun PostImageCard(
             }
 
             if (selectedImage != null) {
-                if (isImageTooLarge) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "图片过大，可能发送失败",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            Text(
-                                text = "如有需要，可先压缩后再发送。",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = onCompressImage,
-                            enabled = !isCompressingImage
-                        ) {
-                            Text(if (isCompressingImage) "压缩中…" else "压缩")
-                        }
-                    }
+                if (isPreparingImage) {
+                    Text(
+                        text = "正在优化图片体积…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 Row(
@@ -263,52 +264,105 @@ suspend fun Context.readPostImage(uri: Uri): ThreadPostImage {
             input.readBytes()
         } ?: throw IllegalStateException("无法读取所选图片")
 
-        val image = ThreadPostImage(
+        ThreadPostImage(
             fileName = fileName,
             mimeType = mimeType,
             bytes = bytes
         )
+    }
+}
 
-        if (image.isSupportedPostImageFormat()) {
+suspend fun Context.preparePostImageForSending(image: ThreadPostImage): ThreadPostImage {
+    return withContext(Dispatchers.Default) {
+        val normalizedImage = if (image.isSupportedPostImageFormat()) {
             image
         } else {
             image.normalizeToSupportedPostImage()
         }
-    }
-}
 
-suspend fun Context.compressPostImage(image: ThreadPostImage): ThreadPostImage {
-    return withContext(Dispatchers.Default) {
-        if (image.bytes.size <= MAX_POST_IMAGE_BYTES) {
-            return@withContext image
+        if (normalizedImage.isGifImage()) {
+            return@withContext normalizedImage
         }
 
-        val decodedBitmap = BitmapFactory.decodeByteArray(image.bytes, 0, image.bytes.size)
-            ?: throw IllegalStateException("无法解码所选图片")
-        val orientedBitmap = decodedBitmap.rotateByExifOrientation(image.bytes)
-        val jpegReadyBitmap = orientedBitmap.ensureOpaqueForJpeg()
+        if (normalizedImage.bytes.size <= TARGET_POST_IMAGE_BYTES) {
+            return@withContext normalizedImage
+        }
 
-        for (scale in compressionScaleSteps) {
-            val candidateBitmap = jpegReadyBitmap.scaledForCompression(scale)
-            val compressedBytes = candidateBitmap.compressToTargetBytes(MAX_POST_IMAGE_BYTES)
-            if (candidateBitmap !== jpegReadyBitmap) {
-                candidateBitmap.recycle()
+        val decodedBitmap = BitmapFactory.decodeByteArray(
+            normalizedImage.bytes,
+            0,
+            normalizedImage.bytes.size
+        )
+            ?: throw IllegalStateException("无法解码所选图片")
+        val orientedBitmap = decodedBitmap.rotateByExifOrientation(normalizedImage.bytes)
+        val jpegReadyBitmap = orientedBitmap.ensureOpaqueForJpeg()
+        var workingBitmap = jpegReadyBitmap
+
+        try {
+            repeat(MAX_IMAGE_RESAMPLE_ATTEMPTS) {
+                val attempt = workingBitmap.compressToTargetBytes(TARGET_POST_IMAGE_BYTES)
+                attempt.bytes?.let { compressedBytes ->
+                    return@withContext ThreadPostImage(
+                        fileName = normalizedImage.fileName.toJpegFileName(),
+                        mimeType = "image/jpeg",
+                        bytes = compressedBytes
+                    )
+                }
+
+                val nextScale = calculateCompressionScale(
+                    currentBytes = attempt.smallestAttemptBytes,
+                    targetBytes = TARGET_POST_IMAGE_BYTES
+                )
+                val scaledBitmap = workingBitmap.scaledForCompression(nextScale)
+                if (scaledBitmap === workingBitmap) {
+                    return@repeat
+                }
+                if (workingBitmap !== jpegReadyBitmap) {
+                    workingBitmap.recycle()
+                }
+                workingBitmap = scaledBitmap
             }
-            if (compressedBytes != null) {
+
+            val finalAttempt = workingBitmap.compressToTargetBytes(MAX_POST_IMAGE_BYTES)
+            finalAttempt.bytes?.let { compressedBytes ->
                 return@withContext ThreadPostImage(
-                    fileName = image.fileName.toJpegFileName(),
+                    fileName = normalizedImage.fileName.toJpegFileName(),
                     mimeType = "image/jpeg",
                     bytes = compressedBytes
                 )
             }
-        }
 
-        throw IllegalStateException("无法将图片压缩到可发送大小")
+            normalizedImage
+        } finally {
+            if (workingBitmap !== jpegReadyBitmap) {
+                workingBitmap.recycle()
+            }
+            if (jpegReadyBitmap !== orientedBitmap) {
+                jpegReadyBitmap.recycle()
+            }
+            if (orientedBitmap !== decodedBitmap) {
+                orientedBitmap.recycle()
+            }
+            decodedBitmap.recycle()
+        }
     }
 }
 
-fun isPostImageTooLarge(image: ThreadPostImage?): Boolean {
-    return image?.bytes?.size?.let { it > MAX_POST_IMAGE_BYTES } == true
+fun shouldPreparePostImageForSending(image: ThreadPostImage?): Boolean {
+    if (image == null) {
+        return false
+    }
+    if (image.isGifImage()) {
+        return !image.isSupportedPostImageFormat()
+    }
+    return !image.isSupportedPostImageFormat() ||
+        image.bytes.size > TARGET_POST_IMAGE_BYTES
+}
+
+fun ThreadPostImage.hasSamePayloadAs(other: ThreadPostImage): Boolean {
+    return fileName == other.fileName &&
+        mimeType == other.mimeType &&
+        bytes.contentEquals(other.bytes)
 }
 
 private fun Context.queryDisplayName(uri: Uri): String? {
@@ -371,14 +425,21 @@ private fun Bitmap.scaledForCompression(scale: Float): Bitmap {
     return Bitmap.createScaledBitmap(this, targetWidth, targetHeight, true)
 }
 
-private fun Bitmap.compressToTargetBytes(maxBytes: Int): ByteArray? {
+private data class CompressionAttempt(
+    val bytes: ByteArray?,
+    val smallestAttemptBytes: Int
+)
+
+private fun Bitmap.compressToTargetBytes(maxBytes: Int): CompressionAttempt {
     var low = MIN_JPEG_QUALITY
     var high = MAX_JPEG_QUALITY
     var bestBytes: ByteArray? = null
+    var smallestAttemptBytes = Int.MAX_VALUE
 
     while (low <= high) {
         val quality = (low + high) / 2
         val encodedBytes = encodeJpeg(quality)
+        smallestAttemptBytes = min(smallestAttemptBytes, encodedBytes.size)
         if (encodedBytes.size <= maxBytes) {
             bestBytes = encodedBytes
             low = quality + 1
@@ -387,7 +448,10 @@ private fun Bitmap.compressToTargetBytes(maxBytes: Int): ByteArray? {
         }
     }
 
-    return bestBytes
+    return CompressionAttempt(
+        bytes = bestBytes,
+        smallestAttemptBytes = smallestAttemptBytes
+    )
 }
 
 private fun Bitmap.encodeJpeg(quality: Int): ByteArray {
@@ -433,7 +497,8 @@ private fun ThreadPostImage.isSupportedPostImageFormat(): Boolean {
     val lowerCaseFileName = fileName.lowercase()
     return lowerCaseFileName.endsWith(".jpg") ||
         lowerCaseFileName.endsWith(".jpeg") ||
-        lowerCaseFileName.endsWith(".png")
+        lowerCaseFileName.endsWith(".png") ||
+        lowerCaseFileName.endsWith(".gif")
 }
 
 private fun ThreadPostImage.normalizeToSupportedPostImage(): ThreadPostImage {
@@ -454,4 +519,25 @@ private fun ThreadPostImage.normalizeToSupportedPostImage(): ThreadPostImage {
             bytes = orientedBitmap.ensureOpaqueForJpeg().encodeJpeg(MAX_JPEG_QUALITY)
         )
     }
+}
+
+private fun ThreadPostImage.isGifImage(): Boolean {
+    val normalizedMimeType = mimeType?.lowercase()
+    if (normalizedMimeType == "image/gif") {
+        return true
+    }
+    return fileName.lowercase().endsWith(".gif")
+}
+
+private fun calculateCompressionScale(
+    currentBytes: Int,
+    targetBytes: Int
+): Float {
+    if (currentBytes <= targetBytes) {
+        return 1f
+    }
+
+    val ratio = targetBytes.toDouble() / currentBytes.toDouble()
+    val scaledRatio = sqrt(ratio).toFloat() * 0.98f
+    return scaledRatio.coerceIn(0.35f, 0.92f)
 }

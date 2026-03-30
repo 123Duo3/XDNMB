@@ -63,9 +63,9 @@ import ink.duo3.fogisland.shared.util.buildNmbFullImageUrl
 import ink.duo3.fogisland.utils.HttpProgressInterceptor
 import ink.duo3.fogisland.utils.HttpTransferProgress
 import ink.duo3.fogisland.utils.ImageDownloadResult
-import ink.duo3.fogisland.utils.downloadBitmapImage
+import ink.duo3.fogisland.utils.downloadRemoteImage
 import ink.duo3.fogisland.utils.resolveNmbImageFallbackUrl
-import ink.duo3.fogisland.utils.shareBitmapImage
+import ink.duo3.fogisland.utils.shareRemoteImage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -102,8 +102,9 @@ private const val LOADING_INDICATOR_FADE_OUT_MILLIS = 180
 
 @Composable
 fun ImageViewerScreen(
-    image: String,
+    image: String?,
     ext: String?,
+    localImagePath: String? = null,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -112,7 +113,7 @@ fun ImageViewerScreen(
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val baseImageLoader = context.imageLoader
-    val overScroller = remember(context, image, ext) { OverScroller(context) }
+    val overScroller = remember(context, image, ext, localImagePath) { OverScroller(context) }
     val viewConfiguration = remember(context) { ViewConfiguration.get(context) }
     val repository = remember(context) {
         RepositoryProvider.provideForumRepository(context.applicationContext)
@@ -123,25 +124,35 @@ fun ImageViewerScreen(
         }
     }
 
-    var imageUrl by remember(image, ext) {
-        mutableStateOf(buildNmbFullImageUrl(image = image, ext = ext))
+    var imageUrl by remember(image, ext, localImagePath) {
+        mutableStateOf(
+            if (localImagePath == null && image != null) {
+                buildNmbFullImageUrl(image = image, ext = ext)
+            } else {
+                null
+            }
+        )
     }
-    var hasRequestedFallback by remember(image, ext) { mutableStateOf(false) }
-    var isFetchingFallback by remember(image, ext) { mutableStateOf(false) }
-    var hasTerminalError by remember(image, ext) { mutableStateOf(imageUrl == null) }
-    var viewportSize by remember(image, ext) { mutableStateOf(IntSize.Zero) }
-    var scale by remember(image, ext) { mutableFloatStateOf(IMAGE_VIEWER_MIN_SCALE) }
-    var translation by remember(image, ext) { mutableStateOf(Offset.Zero) }
-    var animationJob by remember(image, ext) { mutableStateOf<Job?>(null) }
-    var hasUserInteracted by remember(image, ext) { mutableStateOf(false) }
-    var lastGestureAnchor by remember(image, ext) { mutableStateOf<Offset?>(null) }
-    var controlsVisible by remember(image, ext) { mutableStateOf(true) }
-    var isSharingImage by remember(image, ext) { mutableStateOf(false) }
-    var isDownloadingImage by remember(image, ext) { mutableStateOf(false) }
-    var showSharingProgress by remember(image, ext) { mutableStateOf(false) }
-    var showDownloadingProgress by remember(image, ext) { mutableStateOf(false) }
-    var shouldShowLoadingIndicator by remember(image, ext) { mutableStateOf(false) }
-    val imageLoadProgress = remember(image, ext) { MutableStateFlow<HttpTransferProgress?>(null) }
+    var hasRequestedFallback by remember(image, ext, localImagePath) { mutableStateOf(false) }
+    var isFetchingFallback by remember(image, ext, localImagePath) { mutableStateOf(false) }
+    var hasTerminalError by remember(image, ext, localImagePath) {
+        mutableStateOf(localImagePath == null && imageUrl == null)
+    }
+    var viewportSize by remember(image, ext, localImagePath) { mutableStateOf(IntSize.Zero) }
+    var scale by remember(image, ext, localImagePath) { mutableFloatStateOf(IMAGE_VIEWER_MIN_SCALE) }
+    var translation by remember(image, ext, localImagePath) { mutableStateOf(Offset.Zero) }
+    var animationJob by remember(image, ext, localImagePath) { mutableStateOf<Job?>(null) }
+    var hasUserInteracted by remember(image, ext, localImagePath) { mutableStateOf(false) }
+    var lastGestureAnchor by remember(image, ext, localImagePath) { mutableStateOf<Offset?>(null) }
+    var controlsVisible by remember(image, ext, localImagePath) { mutableStateOf(true) }
+    var isSharingImage by remember(image, ext, localImagePath) { mutableStateOf(false) }
+    var isDownloadingImage by remember(image, ext, localImagePath) { mutableStateOf(false) }
+    var showSharingProgress by remember(image, ext, localImagePath) { mutableStateOf(false) }
+    var showDownloadingProgress by remember(image, ext, localImagePath) { mutableStateOf(false) }
+    var shouldShowLoadingIndicator by remember(image, ext, localImagePath) { mutableStateOf(false) }
+    val imageLoadProgress = remember(image, ext, localImagePath) {
+        MutableStateFlow<HttpTransferProgress?>(null)
+    }
     val currentImageLoadProgress by imageLoadProgress.collectAsState()
     val loadingIndicatorAlpha by animateFloatAsState(
         targetValue = if (shouldShowLoadingIndicator) 1f else 0f,
@@ -151,8 +162,8 @@ fun ImageViewerScreen(
         ),
         label = "image_viewer_loading_indicator_alpha"
     )
-    val progressImageLoader = remember(baseImageLoader, imageUrl) {
-        if (imageUrl == null) {
+    val progressImageLoader = remember(baseImageLoader, imageUrl, localImagePath) {
+        if (imageUrl == null || localImagePath != null) {
             baseImageLoader
         } else {
             baseImageLoader
@@ -378,8 +389,9 @@ fun ImageViewerScreen(
                 repository = repository,
                 currentUrl = imageUrl
             ) { baseUrl ->
+                val remoteImageId = image ?: return@resolveNmbImageFallbackUrl null
                 buildNmbFullImageUrl(
-                    image = image,
+                    image = remoteImageId,
                     ext = ext,
                     cdnBaseUrl = baseUrl
                 )
@@ -427,14 +439,22 @@ fun ImageViewerScreen(
         }
     }
 
-    val imageRequest = remember(imageUrl) {
-        imageUrl?.let { resolvedUrl ->
-            ImageRequest.Builder(context)
-                .data(resolvedUrl)
-                .size(CoilSize.ORIGINAL)
-                .precision(Precision.EXACT)
-                .crossfade(false)
-                .build()
+    val imageModel = remember(imageUrl, localImagePath) {
+        localImagePath ?: imageUrl
+    }
+    val imageRequest = remember(imageModel) {
+        imageModel?.let { model ->
+            ImageRequest.Builder(context).apply {
+                data(model)
+                if (localImagePath != null) {
+                    size(CoilSize(4096, 4096))
+                    precision(Precision.INEXACT)
+                } else {
+                    size(CoilSize.ORIGINAL)
+                    precision(Precision.EXACT)
+                }
+                crossfade(false)
+            }.build()
         }
     }
     val painter = rememberAsyncImagePainter(
@@ -442,11 +462,18 @@ fun ImageViewerScreen(
         imageLoader = progressImageLoader
     )
     val painterState = painter.state
-    val currentSuccessState = remember(imageUrl, painterState) {
+    val currentSuccessState = remember(imageUrl, localImagePath, painterState) {
         (painterState as? AsyncImagePainter.State.Success)
             ?.takeIf { state ->
-                state.result.request.data == imageUrl
+                if (localImagePath != null) {
+                    state.result.request.data == localImagePath
+                } else {
+                    state.result.request.data == imageUrl
+                }
             }
+    }
+    val currentDiskCacheKey = remember(currentSuccessState) {
+        currentSuccessState?.result?.diskCacheKey
     }
     val sourceBitmap = remember(currentSuccessState) {
         val drawable = currentSuccessState
@@ -490,9 +517,9 @@ fun ImageViewerScreen(
             )
         } ?: IMAGE_VIEWER_MIN_SCALE
     }
-    val canHandleImageFile = sourceBitmap != null && imageUrl != null
+    val canHandleImageFile = imageUrl != null
 
-    LaunchedEffect(imageUrl, currentSuccessState, hasTerminalError) {
+    LaunchedEffect(imageUrl, localImagePath, currentSuccessState, hasTerminalError) {
         if (hasTerminalError) {
             shouldShowLoadingIndicator = false
             return@LaunchedEffect
@@ -505,7 +532,7 @@ fun ImageViewerScreen(
         shouldShowLoadingIndicator = true
     }
 
-    LaunchedEffect(imageUrl, painterState, currentSuccessState) {
+    LaunchedEffect(imageUrl, localImagePath, painterState, currentSuccessState) {
         when {
             currentSuccessState != null -> {
                 hasTerminalError = false
@@ -515,7 +542,10 @@ fun ImageViewerScreen(
             painterState is AsyncImagePainter.State.Error -> {
                 imageLoadProgress.value = null
                 shouldShowLoadingIndicator = false
-                if (!hasRequestedFallback) {
+                if (localImagePath != null) {
+                    hasTerminalError = true
+                    isFetchingFallback = false
+                } else if (!hasRequestedFallback) {
                     fetchFallbackCdnIfNeeded()
                 } else {
                     hasTerminalError = true
@@ -774,16 +804,17 @@ fun ImageViewerScreen(
             showSharingProgress = showSharingProgress,
             onBack = onBack,
             onDownload = {
-                val bitmap = sourceBitmap ?: return@ImageViewerTopBar
+                val remoteImageId = image ?: return@ImageViewerTopBar
                 val resolvedUrl = imageUrl ?: return@ImageViewerTopBar
                 isDownloadingImage = true
                 scope.launch {
-                    val result = downloadBitmapImage(
+                    val result = downloadRemoteImage(
                         context = context,
-                        bitmap = bitmap,
-                        imageId = image,
+                        imageId = remoteImageId,
                         ext = ext,
-                        imageUrl = resolvedUrl
+                        imageUrl = resolvedUrl,
+                        diskCacheKey = currentDiskCacheKey,
+                        bitmapFallback = sourceBitmap
                     )
                     isDownloadingImage = false
                     result.onSuccess { downloadResult ->
@@ -798,16 +829,17 @@ fun ImageViewerScreen(
                 }
             },
             onShare = {
-                val bitmap = sourceBitmap ?: return@ImageViewerTopBar
+                val remoteImageId = image ?: return@ImageViewerTopBar
                 val resolvedUrl = imageUrl ?: return@ImageViewerTopBar
                 isSharingImage = true
                 scope.launch {
-                    val result = shareBitmapImage(
+                    val result = shareRemoteImage(
                         context = context,
-                        bitmap = bitmap,
-                        imageId = image,
+                        imageId = remoteImageId,
                         ext = ext,
-                        imageUrl = resolvedUrl
+                        imageUrl = resolvedUrl,
+                        diskCacheKey = currentDiskCacheKey,
+                        bitmapFallback = sourceBitmap
                     )
                     isSharingImage = false
                     result.onSuccess { shareIntent ->

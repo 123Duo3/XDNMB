@@ -149,6 +149,10 @@ fun FogIslandApp() {
         backStack.add(AppRoute.ImageViewer(image = image, ext = ext))
     }
 
+    fun showImageViewer(localImagePath: String) {
+        backStack.add(AppRoute.ImageViewer(localImagePath = localImagePath))
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         ModalNavigationDrawer(
             modifier = Modifier.fillMaxSize(),
@@ -527,15 +531,18 @@ fun FogIslandApp() {
                         viewModel.consumePostedThreadResult()
                     }
 
-                    PostThreadScreen(
-                        forumGroups = state.forumGroups,
-                        initialForumId = key.initialForumId,
-                        initialDraft = state.postingDrafts.firstOrNull { it.id == key.draftId },
-                        isPosting = state.isPostingThread,
-                        error = state.postThreadError,
-                        onMenuClick = { scope.launch { drawerState.open() } },
-                        onClearError = viewModel::clearPostThreadError,
-                        onSubmit = viewModel::submitThreadPost
+                    PostComposerScreen(
+                        mode = PostComposerMode.Thread(
+                            forumGroups = state.forumGroups,
+                            initialForumId = key.initialForumId,
+                            initialDraft = state.postingDrafts.firstOrNull { it.id == key.draftId },
+                            isPosting = state.isPostingThread,
+                            error = state.postThreadError,
+                            onMenuClick = { scope.launch { drawerState.open() } },
+                            onClearError = viewModel::clearPostThreadError,
+                            onPreviewImage = ::showImageViewer,
+                            onSubmit = viewModel::submitThreadPost
+                        )
                     )
                 }
 
@@ -570,20 +577,23 @@ fun FogIslandApp() {
                     }
 
                     val currentThread = state.currentThread?.takeIf { it.id == key.threadId }
-                    PostReplyScreen(
-                        threadId = key.threadId,
-                        threadTitle = currentThread?.title,
-                        forumName = resolveForumName(currentThread?.forumId, forumNameById),
-                        initialDraft = state.postingDrafts.firstOrNull { it.id == key.draftId },
-                        isPosting = state.isPostingReply,
-                        error = state.postReplyError,
-                        onBack = {
-                            if (backStack.isNotEmpty()) {
-                                backStack.removeAt(backStack.lastIndex)
-                            }
-                        },
-                        onClearError = viewModel::clearPostReplyError,
-                        onSubmit = viewModel::submitReplyPost
+                    PostComposerScreen(
+                        mode = PostComposerMode.Reply(
+                            threadId = key.threadId,
+                            threadTitle = currentThread?.title,
+                            forumName = resolveForumName(currentThread?.forumId, forumNameById),
+                            initialDraft = state.postingDrafts.firstOrNull { it.id == key.draftId },
+                            isPosting = state.isPostingReply,
+                            error = state.postReplyError,
+                            onBack = {
+                                if (backStack.isNotEmpty()) {
+                                    backStack.removeAt(backStack.lastIndex)
+                                }
+                            },
+                            onClearError = viewModel::clearPostReplyError,
+                            onPreviewImage = ::showImageViewer,
+                            onSubmit = viewModel::submitReplyPost
+                        )
                     )
                 }
 
@@ -646,6 +656,7 @@ fun FogIslandApp() {
                     ImageViewerScreen(
                         image = key.image,
                         ext = key.ext,
+                        localImagePath = key.localImagePath,
                         onBack = {
                             if (backStack.isNotEmpty()) {
                                 backStack.removeAt(backStack.lastIndex)
@@ -710,8 +721,9 @@ private sealed interface AppRoute {
         val targetPage: Int? = null
     ) : AppRoute
     data class ImageViewer(
-        val image: String,
-        val ext: String?
+        val image: String? = null,
+        val ext: String? = null,
+        val localImagePath: String? = null
     ) : AppRoute
     data object Settings : AppRoute
     data object HiddenContent : AppRoute

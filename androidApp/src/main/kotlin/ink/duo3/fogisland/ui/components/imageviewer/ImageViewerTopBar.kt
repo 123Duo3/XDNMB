@@ -125,28 +125,30 @@ internal fun BoxScope.ImageViewerTopBar(
                     color = Color.White
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                ViewerActionButton(
-                    enabled = canHandleImageFile && !isSharingImage && !isDownloadingImage,
-                    inProgress = showDownloadingProgress,
-                    onClick = onDownload
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.FileDownload,
-                        contentDescription = "下载图片",
-                        tint = Color.White
-                    )
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                ViewerActionButton(
-                    enabled = canHandleImageFile && !isSharingImage && !isDownloadingImage,
-                    inProgress = showSharingProgress,
-                    onClick = onShare
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Share,
-                        contentDescription = "分享图片",
-                        tint = Color.White
-                    )
+                if (canHandleImageFile) {
+                    ViewerActionButton(
+                        enabled = !isSharingImage && !isDownloadingImage,
+                        inProgress = showDownloadingProgress,
+                        onClick = onDownload
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.FileDownload,
+                            contentDescription = "下载图片",
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    ViewerActionButton(
+                        enabled = !isSharingImage && !isDownloadingImage,
+                        inProgress = showSharingProgress,
+                        onClick = onShare
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Share,
+                            contentDescription = "分享图片",
+                            tint = Color.White
+                        )
+                    }
                 }
             }
         }
