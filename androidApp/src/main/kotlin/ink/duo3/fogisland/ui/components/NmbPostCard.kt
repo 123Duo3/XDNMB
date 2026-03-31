@@ -41,6 +41,7 @@ import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SearchHitType
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
+import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.shouldRenderNmbRichText
 import ink.duo3.fogisland.utils.ProvideContentColorTextStyle
 
@@ -152,6 +153,7 @@ fun NmbPostCard(
 fun NmbPostFlatItem(
     post: NmbPost,
     onImageClick: (String, String?) -> Unit,
+    onLinkClick: ((NmbLinkTarget) -> Unit)? = null,
     modifier: Modifier = Modifier,
     bodyMaxLines: Int = Int.MAX_VALUE,
     bodyOverflow: TextOverflow = TextOverflow.Clip
@@ -175,6 +177,7 @@ fun NmbPostFlatItem(
             fallbackBodyText = post.contentText,
             bodyColor = MaterialTheme.colorScheme.onSurface,
             bodyInteractionsEnabled = true,
+            onLinkClick = onLinkClick,
             bodyMaxLines = bodyMaxLines,
             bodyOverflow = bodyOverflow,
             image = post.image,
@@ -270,17 +273,31 @@ private fun NmbPostHeader(
             Text(
                 text = userHash,
                 fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = if (isPoster) {
+                    FontWeight.Bold
+                } else {
+                    FontWeight.SemiBold
+                },
                 color = if (isAdmin) {
                     MaterialTheme.colorScheme.error
+                } else if (isPoster) {
+                    MaterialTheme.colorScheme.primary
                 } else {
-                    MaterialTheme.colorScheme.outline
+                    Color.Unspecified
                 }
             )
+
+            if (isPoster) {
+                Text(
+                    text = " · PO",
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
             if (isSage) {
                 Text(
                     text = " · ",
-                    color = MaterialTheme.colorScheme.outline
+                    color = Color.Unspecified
                 )
                 Text(
                     text = "SAGE",
@@ -291,19 +308,6 @@ private fun NmbPostHeader(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(start = 4.dp).size(12.dp)
-                )
-            }
-
-            if (isPoster) {
-                Text(
-                    text = " · ",
-                    color = MaterialTheme.colorScheme.outline
-                )
-
-                Text(
-                    text = "PO",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
                 )
             }
 
@@ -405,35 +409,36 @@ private fun NmbPostFooter(
         return
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    ProvideContentColorTextStyle(
+        textStyle = MaterialTheme.typography.labelMedium,
+        contentColor = MaterialTheme.colorScheme.outline
     ) {
-        if (!contextText.isNullOrBlank()) {
-            Text(
-                modifier = Modifier.weight(1f),
-                text = contextText,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.outline
-            )
-        } else {
-            Spacer(modifier = Modifier.weight(1f))
-        }
 
-        replyCount?.let { count ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_chat_bubble_12dp),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(12.dp)
-                )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (!contextText.isNullOrBlank()) {
                 Text(
-                    modifier = Modifier.padding(start = 4.dp),
-                    text = count.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    modifier = Modifier.weight(1f),
+                    text = contextText
                 )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+
+            replyCount?.let { count ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_chat_bubble_12dp),
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        modifier = Modifier.padding(start = 4.dp),
+                        text = count.toString()
+                    )
+                }
             }
         }
     }
@@ -448,6 +453,7 @@ private fun NmbPostContent(
     fallbackBodyText: String? = null,
     bodyColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     bodyInteractionsEnabled: Boolean = true,
+    onLinkClick: ((NmbLinkTarget) -> Unit)? = null,
     bodyMaxLines: Int = Int.MAX_VALUE,
     bodyOverflow: TextOverflow = TextOverflow.Clip,
     customBody: (@Composable () -> Unit)? = null,
@@ -488,6 +494,7 @@ private fun NmbPostContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = bodyColor,
                         interactionsEnabled = bodyInteractionsEnabled,
+                        onLinkClick = onLinkClick,
                         maxLines = bodyMaxLines,
                         overflow = bodyOverflow
                     )

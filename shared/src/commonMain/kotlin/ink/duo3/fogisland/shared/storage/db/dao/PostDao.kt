@@ -26,6 +26,15 @@ interface PostDao {
 
     @Query(
         """
+        SELECT threadId FROM posts
+        WHERE remoteId = :remoteId
+        LIMIT 1
+        """
+    )
+    suspend fun getThreadIdByRemoteId(remoteId: Long): Long?
+
+    @Query(
+        """
         SELECT * FROM posts
         WHERE isTips = 0
           AND (

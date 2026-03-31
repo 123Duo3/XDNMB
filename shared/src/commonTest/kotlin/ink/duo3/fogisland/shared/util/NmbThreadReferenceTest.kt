@@ -38,4 +38,34 @@ class NmbThreadReferenceTest {
         assertNull(parseNmbThreadIdInput("综合线"))
         assertNull(parseNmbThreadIdInput("https://www.nmbxd1.com/f/4"))
     }
+
+    @Test
+    fun `resolve thread url as internal link target`() {
+        assertEquals(
+            NmbLinkTarget.Thread(
+                threadId = 1234567L,
+                targetPage = 2
+            ),
+            resolveNmbUrlLinkTarget("https://www.nmbxd1.com/t/1234567?page=2")
+        )
+    }
+
+    @Test
+    fun `resolve thread reply url as internal link target`() {
+        assertEquals(
+            NmbLinkTarget.Thread(
+                threadId = 1234567L,
+                targetPostId = 7654321L
+            ),
+            resolveNmbUrlLinkTarget("https://www.nmbxd.com/t/1234567?r=7654321")
+        )
+    }
+
+    @Test
+    fun `resolve external url as external link target`() {
+        assertEquals(
+            NmbLinkTarget.ExternalUrl("https://app.nmbxd.com"),
+            resolveNmbUrlLinkTarget("https://app.nmbxd.com")
+        )
+    }
 }

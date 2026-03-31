@@ -1,5 +1,6 @@
 package ink.duo3.fogisland.ui
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -51,12 +53,22 @@ import ink.duo3.fogisland.shared.model.findCatalogSource
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toCatalogSource
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
+import ink.duo3.fogisland.shared.util.NmbLinkTarget
+import ink.duo3.fogisland.shared.util.htmlToPlainText
+import ink.duo3.fogisland.shared.util.shouldRenderNmbRichText
 import ink.duo3.fogisland.ui.components.NavigationItemGroup
+import ink.duo3.fogisland.ui.components.NmbRichTextText
+import ink.duo3.fogisland.utils.openNmbExternalLink
+import ink.duo3.fogisland.utils.resolveNmbIntentLinkTarget
 import ink.duo3.fogisland.viewmodel.ForumBrowseViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 
 @Composable
-fun FogIslandApp() {
+fun FogIslandApp(
+    incomingIntents: Flow<Intent> = emptyFlow()
+) {
     val context = LocalContext.current
     val repository = remember(context) { RepositoryProvider.provideForumRepository(context.applicationContext) }
     val viewModel = viewModel<ForumBrowseViewModel>(factory = ForumBrowseViewModel.factory())
@@ -142,6 +154,30 @@ fun FogIslandApp() {
         backStack.add(AppRoute.PostReply(threadId, draftId))
     }
 
+    fun showThread(
+        threadId: Long,
+        targetPostId: Long? = null,
+        targetPage: Int? = null,
+        forceRefresh: Boolean = false
+    ) {
+        viewModel.openThread(
+            threadId = threadId,
+            forceRefresh = forceRefresh,
+            targetPage = targetPage
+        )
+        val route = AppRoute.Thread(
+            threadId = threadId,
+            targetPostId = targetPostId,
+            targetPage = targetPage
+        )
+        val currentThreadRoute = backStack.lastOrNull() as? AppRoute.Thread
+        if (currentThreadRoute?.threadId == threadId) {
+            backStack[backStack.lastIndex] = route
+        } else {
+            backStack.add(route)
+        }
+    }
+
     fun showImageViewer(
         image: String,
         ext: String?
@@ -151,6 +187,33 @@ fun FogIslandApp() {
 
     fun showImageViewer(localImagePath: String) {
         backStack.add(AppRoute.ImageViewer(localImagePath = localImagePath))
+    }
+
+    fun handleLinkTarget(target: NmbLinkTarget) {
+        scope.launch {
+            when (target) {
+                is NmbLinkTarget.ExternalUrl -> openNmbExternalLink(context, target.url)
+                is NmbLinkTarget.PostReference -> {
+                    repository.resolveThreadIdByPostReference(target.postId)?.let { threadId ->
+                        showThread(
+                            threadId = threadId,
+                            targetPostId = target.postId.takeIf { it != threadId }
+                        )
+                    }
+                }
+                is NmbLinkTarget.Thread -> showThread(
+                    threadId = target.threadId,
+                    targetPostId = target.targetPostId,
+                    targetPage = target.targetPage
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(incomingIntents) {
+        incomingIntents.collect { intent ->
+            resolveNmbIntentLinkTarget(intent)?.let(::handleLinkTarget)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -230,7 +293,7 @@ fun FogIslandApp() {
                             if (state.timelines.isNotEmpty()) {
                                 val timelineExpanded = expandedGroups[-1L] ?: false
                                 NavigationItemGroup(
-                                    label = { Text("时间线", style = MaterialTheme.typography.labelLarge) },
+                                    label = { DrawerItemLabel("时间线") },
                                     selected = isCatalogRoute && state.currentSource?.type == CatalogType.TIMELINE,
                                     expanded = timelineExpanded,
                                     modifier = Modifier,
@@ -240,10 +303,7 @@ fun FogIslandApp() {
                                         val source = timeline.toCatalogSource()
                                         NavigationDrawerItem(
                                             label = {
-                                                Text(
-                                                    timeline.displayName,
-                                                    style = MaterialTheme.typography.labelLarge
-                                                )
+                                                DrawerItemLabel(timeline.displayName)
                                             },
                                             selected = isCatalogRoute && state.currentSource == source,
                                             onClick = {
@@ -262,7 +322,7 @@ fun FogIslandApp() {
                                     state.currentSource?.type == CatalogType.FORUM &&
                                     group.forums.any { it.id == state.currentSource?.id }
                                 NavigationItemGroup(
-                                    label = { Text(group.name, style = MaterialTheme.typography.labelLarge) },
+                                    label = { DrawerItemLabel(group.name) },
                                     selected = groupSelected,
                                     expanded = expanded,
                                     modifier = Modifier,
@@ -272,10 +332,7 @@ fun FogIslandApp() {
                                         val source = forum.toCatalogSource(group)
                                         NavigationDrawerItem(
                                             label = {
-                                                Text(
-                                                    forum.displayName,
-                                                    style = MaterialTheme.typography.labelLarge
-                                                )
+                                                DrawerItemLabel(forum.displayName)
                                             },
                                             selected = isCatalogRoute && state.currentSource == source,
                                             onClick = {
@@ -332,8 +389,7 @@ fun FogIslandApp() {
                         },
                         onLoadMore = { viewModel.loadMoreCatalog() },
                         onThreadClick = { threadId ->
-                            viewModel.openThread(threadId)
-                            backStack.add(AppRoute.Thread(threadId))
+                            showThread(threadId)
                         },
                         onHideThreadClick = { threadId ->
                             viewModel.hideThread(threadId)
@@ -349,6 +405,7 @@ fun FogIslandApp() {
                         onDismissSiteNoticeUntilChanged = {
                             viewModel.dismissSiteNoticeUntilChanged()
                         },
+                        onNoticeLinkClick = ::handleLinkTarget,
                         onImageClick = { image, ext ->
                             showImageViewer(image = image, ext = ext)
                         }
@@ -369,8 +426,7 @@ fun FogIslandApp() {
                         onRefreshClick = { viewModel.refreshSubscriptions() },
                         onLoadMore = { viewModel.loadMoreSubscriptions() },
                         onThreadClick = { threadId ->
-                            viewModel.openThread(threadId)
-                            backStack.add(AppRoute.Thread(threadId))
+                            showThread(threadId)
                         },
                         onDeleteClick = { threadId ->
                             viewModel.deleteSubscription(threadId)
@@ -391,8 +447,7 @@ fun FogIslandApp() {
                         error = state.historyError,
                         onMenuClick = { scope.launch { drawerState.open() } },
                         onThreadClick = { threadId ->
-                            viewModel.openThread(threadId)
-                            backStack.add(AppRoute.Thread(threadId))
+                            showThread(threadId)
                         },
                         onDeleteClick = { threadId ->
                             viewModel.deleteReadHistoryEntry(threadId)
@@ -418,12 +473,9 @@ fun FogIslandApp() {
                         onMenuClick = { scope.launch { drawerState.open() } },
                         onEntryClick = { entry ->
                             entry.threadId?.let { threadId ->
-                                viewModel.openThread(threadId)
-                                backStack.add(
-                                    AppRoute.Thread(
-                                        threadId = threadId,
-                                        targetPostId = entry.postId
-                                    )
+                                showThread(
+                                    threadId = threadId,
+                                    targetPostId = entry.postId
                                 )
                             }
                         },
@@ -480,20 +532,18 @@ fun FogIslandApp() {
                         onClearRecentSearches = viewModel::clearRecentSearches,
                         onDirectThreadClick = { threadId ->
                             viewModel.submitSearchQuery(state.searchQuery)
-                            backStack.add(AppRoute.Thread(threadId = threadId))
+                            showThread(threadId)
                         },
                         onResultClick = { hit ->
                             viewModel.submitSearchQuery(state.searchQuery)
-                            backStack.add(
-                                AppRoute.Thread(
-                                    threadId = hit.threadId,
-                                    targetPostId = hit.postId,
-                                    targetPage = if (hit.type == ink.duo3.fogisland.shared.model.SearchHitType.POST) {
-                                        hit.page
-                                    } else {
-                                        null
-                                    }
-                                )
+                            showThread(
+                                threadId = hit.threadId,
+                                targetPostId = hit.postId,
+                                targetPage = if (hit.type == ink.duo3.fogisland.shared.model.SearchHitType.POST) {
+                                    hit.page
+                                } else {
+                                    null
+                                }
                             )
                         }
                     )
@@ -525,8 +575,7 @@ fun FogIslandApp() {
                             backStack.removeAt(backStack.lastIndex)
                         }
                         result.threadId?.let { threadId ->
-                            viewModel.openThread(threadId, forceRefresh = true)
-                            backStack.add(AppRoute.Thread(threadId = threadId))
+                            showThread(threadId = threadId, forceRefresh = true)
                         }
                         viewModel.consumePostedThreadResult()
                     }
@@ -561,14 +610,14 @@ fun FogIslandApp() {
                         if (backStack.lastOrNull() !is AppRoute.Thread ||
                             (backStack.lastOrNull() as? AppRoute.Thread)?.threadId != result.threadId
                         ) {
-                            backStack.add(AppRoute.Thread(result.threadId))
+                            showThread(result.threadId)
                         }
                         val refreshThroughPage = if (state.activeThreadId == result.threadId) {
                             state.loadedThreadPage.coerceAtLeast(1)
                         } else {
                             1
                         }
-                        viewModel.openThread(
+                        showThread(
                             threadId = result.threadId,
                             forceRefresh = true,
                             targetPage = refreshThroughPage
@@ -648,7 +697,8 @@ fun FogIslandApp() {
                         },
                         onImageClick = { image, ext ->
                             showImageViewer(image = image, ext = ext)
-                        }
+                        },
+                        onLinkClick = ::handleLinkTarget
                     )
                 }
 
@@ -705,6 +755,27 @@ fun FogIslandApp() {
                 .padding(16.dp)
         )
     }
+}
+
+@Composable
+private fun DrawerItemLabel(text: String) {
+    val contentColor = LocalContentColor.current
+    if (shouldRenderNmbRichText(text)) {
+        NmbRichTextText(
+            html = text,
+            fallbackText = htmlToPlainText(text),
+            style = MaterialTheme.typography.labelLarge,
+            color = contentColor,
+            interactionsEnabled = false,
+            maxLines = 1
+        )
+        return
+    }
+
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge
+    )
 }
 
 private sealed interface AppRoute {

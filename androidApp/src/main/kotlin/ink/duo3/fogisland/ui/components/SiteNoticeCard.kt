@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.shared.model.SiteNotice
+import ink.duo3.fogisland.shared.util.NmbLinkTarget
 
 @Composable
 fun SiteNoticeCard(
@@ -34,6 +35,7 @@ fun SiteNoticeCard(
     publishedAtText: String?,
     onDismissClick: () -> Unit,
     onDismissPermanentlyClick: () -> Unit,
+    onLinkClick: ((NmbLinkTarget) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val selectionColors = TextSelectionColors(
@@ -69,7 +71,9 @@ fun SiteNoticeCard(
                         html = notice.contentHtml,
                         fallbackText = notice.contentText,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        linkColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        onLinkClick = onLinkClick
                     )
                 }
             }
@@ -109,7 +113,8 @@ private fun SiteNoticeCardPreview() {
             notice = NmbPreviewSamples.siteNotice,
             publishedAtText = "3 月 29 日",
             onDismissClick = {},
-            onDismissPermanentlyClick = {}
+            onDismissPermanentlyClick = {},
+            onLinkClick = null
         )
     }
 }

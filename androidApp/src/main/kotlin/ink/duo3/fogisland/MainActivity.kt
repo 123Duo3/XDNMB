@@ -21,11 +21,15 @@ import ink.duo3.fogisland.data.themeSettingsFlow
 import ink.duo3.fogisland.data.timeSettingsFlow
 import ink.duo3.fogisland.shared.model.ForumTimeSettings
 import ink.duo3.fogisland.ui.theme.FogIslandTheme
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 class MainActivity : ComponentActivity() {
+    private val incomingIntents = MutableSharedFlow<android.content.Intent>(replay = 1, extraBufferCapacity = 1)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        incomingIntents.tryEmit(intent)
         
         setContent {
             val themeSettings by applicationContext.themeSettingsFlow.collectAsState(ThemeSettings())
@@ -40,11 +44,17 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.surfaceContainer
                     ) {
-                        FogIslandApp()
+                        FogIslandApp(incomingIntents = incomingIntents)
                     }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        incomingIntents.tryEmit(intent)
     }
 }
 

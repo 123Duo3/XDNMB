@@ -1,6 +1,5 @@
 package ink.duo3.fogisland.ui.components
 
-import android.content.Intent
 import android.graphics.Color as AndroidColor
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -27,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
@@ -41,8 +39,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
-import androidx.core.net.toUri
 import com.materialkolor.ktx.harmonize
+import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.NmbRichText
 import ink.duo3.fogisland.shared.util.NmbRichTextSegment
 import ink.duo3.fogisland.shared.util.parseNmbRichText
@@ -50,7 +48,7 @@ import ink.duo3.fogisland.ui.theme.LocalFogIslandDarkTheme
 import ink.duo3.fogisland.ui.theme.LocalFogIslandUseMonet
 import kotlinx.coroutines.launch
 
-private const val NmbRichTextUrlAnnotationTag = "nmb_url"
+private const val NmbRichTextLinkAnnotationTag = "nmb_link"
 private const val NmbRichTextHiddenAnnotationTag = "nmb_hidden"
 private const val NmbHiddenRevealAnimationDurationMillis = 220
 
@@ -62,6 +60,8 @@ fun NmbRichTextText(
     color: Color,
     modifier: Modifier = Modifier,
     interactionsEnabled: Boolean = true,
+    onLinkClick: ((NmbLinkTarget) -> Unit)? = null,
+    linkColor: Color? = null,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip
 ) {
@@ -75,6 +75,8 @@ fun NmbRichTextText(
         color = color,
         modifier = modifier,
         interactionsEnabled = interactionsEnabled,
+        onLinkClick = onLinkClick,
+        linkColor = linkColor,
         maxLines = maxLines,
         overflow = overflow
     )
@@ -87,10 +89,11 @@ fun NmbRichTextText(
     color: Color,
     modifier: Modifier = Modifier,
     interactionsEnabled: Boolean = true,
+    onLinkClick: ((NmbLinkTarget) -> Unit)? = null,
+    linkColor: Color? = null,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip
 ) {
-    val context = LocalContext.current
     val revealedHiddenGroupIds = remember(richText, interactionsEnabled) {
         mutableStateListOf<Int>()
     }
@@ -109,8 +112,9 @@ fun NmbRichTextText(
     }
     var textLayoutResult by remember(richText) { mutableStateOf<TextLayoutResult?>(null) }
     val currentLayoutResult by rememberUpdatedState(textLayoutResult)
+    val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val coroutineScope = rememberCoroutineScope()
-    val linkColor = MaterialTheme.colorScheme.primary
+    val resolvedLinkColor = linkColor ?: MaterialTheme.colorScheme.primary
     val hiddenBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f)
     val hiddenTextColor = hiddenBackgroundColor.copy(alpha = 0.12f)
     val harmonizeTargetColor = MaterialTheme.colorScheme.primary
@@ -140,6 +144,14 @@ fun NmbRichTextText(
         }
         if (useMonet) baseColor.harmonize(harmonizeTargetColor) else baseColor
     }
+    val deepSkyBlueColor = remember(harmonizeTargetColor, isDarkTheme, useMonet) {
+        val baseColor = if (isDarkTheme) {
+            Color(0xFF4FC3F7)
+        } else {
+            Color(0xFF03A9F4)
+        }
+        if (useMonet) baseColor.harmonize(harmonizeTargetColor) else baseColor
+    }
     val harmonizedPureRed = remember(harmonizeTargetColor, isDarkTheme, useMonet) {
         val baseColor = if (isDarkTheme) {
             Color(0xFFE57373)
@@ -155,7 +167,7 @@ fun NmbRichTextText(
     val annotatedText = remember(
         richText,
         color,
-        linkColor,
+        resolvedLinkColor,
         hiddenTextColor,
         resolvedBaseFontSize,
         revealedHiddenGroupSnapshot,
@@ -163,13 +175,14 @@ fun NmbRichTextText(
         replyColor,
         harmonizedPureGreen,
         harmonizedPureBlue,
+        deepSkyBlueColor,
         harmonizedPureRed,
         harmonizeTargetColor,
         useMonet
     ) {
         richText.toAnnotatedString(
             normalColor = color,
-            linkColor = linkColor,
+            linkColor = resolvedLinkColor,
             hiddenTextColor = hiddenTextColor,
             baseFontSize = resolvedBaseFontSize,
             revealedHiddenGroupIds = revealedHiddenGroupSnapshot,
@@ -177,6 +190,7 @@ fun NmbRichTextText(
             replyColor = replyColor,
             harmonizedPureGreen = harmonizedPureGreen,
             harmonizedPureBlue = harmonizedPureBlue,
+            deepSkyBlueColor = deepSkyBlueColor,
             harmonizedPureRed = harmonizedPureRed,
             harmonizeTargetColor = harmonizeTargetColor,
             useMonet = useMonet
@@ -239,15 +253,15 @@ fun NmbRichTextText(
                     }
 
                     val url = annotatedText.getStringAnnotations(
-                        tag = NmbRichTextUrlAnnotationTag,
+                        tag = NmbRichTextLinkAnnotationTag,
                         start = characterOffset,
                         end = characterOffset
-                    ).firstOrNull()?.item
+                    ).firstOrNull()?.item?.let(::decodeNmbLinkTarget)
 
-                    if (url != null) {
+                    if (url != null && currentOnLinkClick != null) {
                         down.consume()
                         up.consume()
-                        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                        currentOnLinkClick?.invoke(url)
                     }
                 }
             },
@@ -271,6 +285,7 @@ private fun NmbRichText.toAnnotatedString(
     replyColor: Color,
     harmonizedPureGreen: Color,
     harmonizedPureBlue: Color,
+    deepSkyBlueColor: Color,
     harmonizedPureRed: Color,
     harmonizeTargetColor: Color,
     useMonet: Boolean
@@ -294,18 +309,19 @@ private fun NmbRichText.toAnnotatedString(
             replyColor = replyColor,
             harmonizedPureGreen = harmonizedPureGreen,
             harmonizedPureBlue = harmonizedPureBlue,
+            deepSkyBlueColor = deepSkyBlueColor,
             harmonizedPureRed = harmonizedPureRed,
             harmonizeTargetColor = harmonizeTargetColor,
             useMonet = useMonet
         )
 
         val textDecoration = when {
-            segment.href != null && segment.isStrikethrough ->
+            segment.linkTarget != null && segment.isStrikethrough ->
                 TextDecoration.combine(
                     listOf(TextDecoration.Underline, TextDecoration.LineThrough)
                 )
 
-            segment.href != null || segment.isUnderline -> TextDecoration.Underline
+            segment.linkTarget != null || segment.isUnderline -> TextDecoration.Underline
             segment.isStrikethrough -> TextDecoration.LineThrough
             else -> null
         }
@@ -332,11 +348,11 @@ private fun NmbRichText.toAnnotatedString(
             )
         }
 
-        val href = segment.href
-        if (href != null) {
+        val linkTarget = segment.linkTarget
+        if (linkTarget != null) {
             builder.addStringAnnotation(
-                tag = NmbRichTextUrlAnnotationTag,
-                annotation = href,
+                tag = NmbRichTextLinkAnnotationTag,
+                annotation = encodeNmbLinkTarget(linkTarget),
                 start = start,
                 end = end
             )
@@ -365,20 +381,21 @@ private fun NmbRichTextSegment.resolveDisplayColor(
     replyColor: Color,
     harmonizedPureGreen: Color,
     harmonizedPureBlue: Color,
+    deepSkyBlueColor: Color,
     harmonizedPureRed: Color,
     harmonizeTargetColor: Color,
     useMonet: Boolean
 ): Color {
-    val href = href
     val segmentColor = color
     val visibleColor = when {
-        href != null -> linkColor
+        linkTarget != null -> linkColor
         segmentColor != null -> parseNmbHtmlColor(segmentColor)?.let { parsedColor ->
             remapNmbHtmlColor(
                 rawColor = parsedColor,
                 replyColor = replyColor,
                 harmonizedPureGreen = harmonizedPureGreen,
                 harmonizedPureBlue = harmonizedPureBlue,
+                deepSkyBlueColor = deepSkyBlueColor,
                 harmonizedPureRed = harmonizedPureRed,
                 harmonizeTargetColor = harmonizeTargetColor,
                 useMonet = useMonet
@@ -394,6 +411,42 @@ private fun NmbRichTextSegment.resolveDisplayColor(
     val targetColor = if (visibleColor != Color.Unspecified) visibleColor else normalColor
     return lerp(hiddenTextColor, targetColor, revealProgress)
 }
+
+private fun encodeNmbLinkTarget(target: NmbLinkTarget): String {
+    return when (target) {
+        is NmbLinkTarget.PostReference -> "post:${target.postId}"
+        is NmbLinkTarget.Thread ->
+            "thread:${target.threadId}:${target.targetPostId.orEmptyAnnotationPart()}:${target.targetPage.orEmptyAnnotationPart()}"
+        is NmbLinkTarget.ExternalUrl -> "url:${target.url}"
+    }
+}
+
+private fun decodeNmbLinkTarget(annotation: String): NmbLinkTarget? {
+    val type = annotation.substringBefore(':')
+    val payload = annotation.substringAfter(':', missingDelimiterValue = "")
+    if (payload.isBlank()) {
+        return null
+    }
+
+    return when (type) {
+        "post" -> payload.toLongOrNull()?.let(NmbLinkTarget::PostReference)
+        "thread" -> {
+            val parts = payload.split(':', limit = 3)
+            val threadId = parts.getOrNull(0)?.toLongOrNull() ?: return null
+            NmbLinkTarget.Thread(
+                threadId = threadId,
+                targetPostId = parts.getOrNull(1)?.nullIfBlank()?.toLongOrNull(),
+                targetPage = parts.getOrNull(2)?.nullIfBlank()?.toIntOrNull()
+            )
+        }
+        "url" -> NmbLinkTarget.ExternalUrl(payload)
+        else -> null
+    }
+}
+
+private fun Any?.orEmptyAnnotationPart(): String = this?.toString().orEmpty()
+
+private fun String.nullIfBlank(): String? = takeIf { it.isNotBlank() }
 
 private fun parseNmbHtmlColor(rawColor: String): Color? {
     return runCatching { Color(AndroidColor.parseColor(rawColor)) }.getOrNull()
@@ -516,6 +569,7 @@ private fun remapNmbHtmlColor(
     replyColor: Color,
     harmonizedPureGreen: Color,
     harmonizedPureBlue: Color,
+    deepSkyBlueColor: Color,
     harmonizedPureRed: Color,
     harmonizeTargetColor: Color,
     useMonet: Boolean
@@ -523,6 +577,7 @@ private fun remapNmbHtmlColor(
     return when (rawColor.toArgb()) {
         "#789922".toColorInt() -> replyColor
         "#00FF00".toColorInt() -> harmonizedPureGreen
+        "#00BFFF".toColorInt() -> deepSkyBlueColor
         "#FF0000".toColorInt() -> harmonizedPureRed
         "#0000FF".toColorInt() -> harmonizedPureBlue
         else -> if (useMonet) rawColor.harmonize(harmonizeTargetColor) else rawColor

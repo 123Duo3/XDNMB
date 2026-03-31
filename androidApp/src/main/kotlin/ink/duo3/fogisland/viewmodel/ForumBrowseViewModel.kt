@@ -305,7 +305,7 @@ class ForumBrowseViewModel(
                     forumGroups = forumGroups,
                     timelines = timelines,
                     currentSource = source,
-                    siteNotice = existingNotice
+                    siteNotice = resolveVisibleSiteNotice(it.siteNotice)
                 )
             }
 
@@ -313,7 +313,7 @@ class ForumBrowseViewModel(
                 val refreshedNotice = resolveVisibleSiteNotice(
                     noticeDeferred.await().getOrElse { existingNotice }
                 )
-                if (refreshedNotice != existingNotice) {
+                if (refreshedNotice != _uiState.value.siteNotice) {
                     _uiState.update { it.copy(siteNotice = refreshedNotice) }
                 }
                 return@supervisorScope
@@ -334,7 +334,7 @@ class ForumBrowseViewModel(
             val refreshedNotice = resolveVisibleSiteNotice(
                 noticeDeferred.await().getOrElse { existingNotice }
             )
-            if (refreshedNotice != existingNotice) {
+            if (refreshedNotice != _uiState.value.siteNotice) {
                 _uiState.update { it.copy(siteNotice = refreshedNotice) }
             }
         }

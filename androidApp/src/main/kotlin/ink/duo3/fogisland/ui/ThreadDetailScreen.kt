@@ -38,6 +38,7 @@ import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.NmbPost
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.model.ThreadDetail
+import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.NmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
@@ -66,7 +67,8 @@ fun ThreadDetailScreen(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onProgressChanged: (Int, Int) -> Unit,
-    onImageClick: (String, String?) -> Unit
+    onImageClick: (String, String?) -> Unit,
+    onLinkClick: (NmbLinkTarget) -> Unit
 ) {
     val thread = detail.thread
     val posts = detail.posts
@@ -77,9 +79,38 @@ fun ThreadDetailScreen(
     val timeSettings = LocalTimeSettings.current
     val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
     val locatedFocusPostIndex = remember(posts, focusPostId) {
-        focusPostId?.let { postId -> posts.indexOfFirst { it.id == postId }.takeIf { it >= 0 } }
+        focusPostId?.let { postId ->
+            posts.indexOfFirst { it.id == postId || it.remoteId == postId }.takeIf { it >= 0 }
+        }
     }
     val shouldSuppressProgressRestore = focusPage != null || locatedFocusPostIndex != null
+    val handleRichTextLinkClick = remember(thread, posts, onLinkClick) {
+        { target: NmbLinkTarget ->
+            when (target) {
+                is NmbLinkTarget.ExternalUrl -> onLinkClick(target)
+                is NmbLinkTarget.Thread -> onLinkClick(target)
+                is NmbLinkTarget.PostReference -> {
+                    val currentThread = thread
+                    val targetPostId = target.postId
+                    val shouldOpenInCurrentThread = currentThread?.let { root ->
+                        root.remoteId == targetPostId || posts.any { post -> post.remoteId == targetPostId }
+                    } == true
+
+                    currentThread
+                        ?.takeIf { shouldOpenInCurrentThread }
+                        ?.let {
+                            onLinkClick(
+                                NmbLinkTarget.Thread(
+                                    threadId = it.id,
+                                    targetPostId = targetPostId
+                                )
+                            )
+                        }
+                        ?: onLinkClick(target)
+                }
+            }
+        }
+    }
 
     LaunchedEffect(thread?.id, posts.size, focusPostId, focusPage) {
         val threadId = thread?.id ?: return@LaunchedEffect
@@ -216,7 +247,8 @@ fun ThreadDetailScreen(
                 item(key = "thread-${root.id}") {
                     ThreadDetailPostItem(
                         post = root,
-                        onImageClick = onImageClick
+                        onImageClick = onImageClick,
+                        onLinkClick = handleRichTextLinkClick
                     )
                 }
             }
@@ -227,7 +259,8 @@ fun ThreadDetailScreen(
             ) { post ->
                 ThreadDetailPostItem(
                     post = post,
-                    onImageClick = onImageClick
+                    onImageClick = onImageClick,
+                    onLinkClick = handleRichTextLinkClick
                 )
             }
 
@@ -258,11 +291,13 @@ fun ThreadDetailScreen(
 @Composable
 private fun ThreadDetailPostItem(
     post: NmbPost,
-    onImageClick: (String, String?) -> Unit
+    onImageClick: (String, String?) -> Unit,
+    onLinkClick: ((NmbLinkTarget) -> Unit)? = null
 ) {
     NmbPostFlatItem(
         post = post,
-        onImageClick = onImageClick
+        onImageClick = onImageClick,
+        onLinkClick = onLinkClick
     )
 }
 
@@ -272,11 +307,13 @@ private fun ThreadDetailPostItemPreview() {
     FogIslandPreviewColumn(verticalSpacingDp = 0) {
         ThreadDetailPostItem(
             post = NmbPreviewSamples.forumThread,
-            onImageClick = { _, _ -> }
+            onImageClick = { _, _ -> },
+            onLinkClick = null
         )
         ThreadDetailPostItem(
             post = NmbPreviewSamples.replyPost,
-            onImageClick = { _, _ -> }
+            onImageClick = { _, _ -> },
+            onLinkClick = null
         )
     }
 }
@@ -302,7 +339,8 @@ private fun ThreadDetailScreenPreview() {
             onRefresh = {},
             onLoadMore = {},
             onProgressChanged = { _, _ -> },
-            onImageClick = { _, _ -> }
+            onImageClick = { _, _ -> },
+            onLinkClick = {}
         )
     }
 }

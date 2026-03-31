@@ -535,6 +535,11 @@ class ForumRepository(
         return threadReadProgressDao.getByThreadId(threadId)?.toModel()
     }
 
+    suspend fun resolveThreadIdByPostReference(postId: Long): Long? {
+        threadDao.getThreadById(postId)?.let { return it.id }
+        return postDao.getThreadIdByRemoteId(postId)
+    }
+
     suspend fun updateReadProgress(
         threadId: Long,
         page: Int,

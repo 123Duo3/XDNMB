@@ -49,9 +49,11 @@ import ink.duo3.fogisland.data.LocalTimeSettings
 import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.CatalogType
 import ink.duo3.fogisland.shared.model.NmbPost
+import ink.duo3.fogisland.shared.model.SiteNotice
 import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
+import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.formatNmbPostedAt
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import ink.duo3.fogisland.ui.components.FogIslandPreviewColumn
@@ -73,6 +75,7 @@ fun ForumScreen(
     onHideTimelineForumClick: (Long, Long, (Boolean) -> Unit) -> Unit,
     onDismissSiteNotice: () -> Unit,
     onDismissSiteNoticeUntilChanged: () -> Unit,
+    onNoticeLinkClick: (NmbLinkTarget) -> Unit,
     onImageClick: (String, String?) -> Unit
 ) {
     val source = state.currentSource
@@ -84,6 +87,7 @@ fun ForumScreen(
     val timeSettings = LocalTimeSettings.current
     val timeFormatOptions = remember(timeSettings) { timeSettings.toNmbTimeFormatOptions() }
     var renderedSiteNotice by remember { mutableStateOf(state.siteNotice) }
+    var pendingSiteNotice by remember { mutableStateOf<SiteNotice?>(null) }
     var actionTarget by remember { mutableStateOf<NmbPost?>(null) }
     var displayedThreads by remember { mutableStateOf(state.threads) }
     var removingThreadIds by remember { mutableStateOf(emptySet<Long>()) }
@@ -95,6 +99,7 @@ fun ForumScreen(
         displayedThreads = state.threads
         removingThreadIds = emptySet()
         removingTimelineForumThreadIds = emptySet()
+        pendingSiteNotice = null
         actionTarget = null
     }
 
@@ -109,24 +114,58 @@ fun ForumScreen(
     }
 
     LaunchedEffect(state.siteNotice) {
-        if (state.siteNotice != null) {
-            renderedSiteNotice = state.siteNotice
+        val incomingNotice = state.siteNotice
+        val incomingNoticeKey = siteNoticeContentKey(incomingNotice)
+        val renderedNoticeKey = siteNoticeContentKey(renderedSiteNotice)
+        val isHidingNotice =
+            siteNoticeVisibility.currentState && !siteNoticeVisibility.targetState
+
+        when {
+            incomingNotice == null -> {
+                pendingSiteNotice = null
+                siteNoticeVisibility.targetState = false
+            }
+
+            renderedSiteNotice == null &&
+                !siteNoticeVisibility.currentState &&
+                !siteNoticeVisibility.targetState -> {
+                renderedSiteNotice = incomingNotice
+                pendingSiteNotice = null
+                siteNoticeVisibility.targetState = true
+            }
+
+            incomingNoticeKey == renderedNoticeKey -> {
+                pendingSiteNotice = null
+            }
+
+            isHidingNotice -> {
+                pendingSiteNotice = incomingNotice
+            }
+
+            else -> {
+                renderedSiteNotice = incomingNotice
+                pendingSiteNotice = null
+                siteNoticeVisibility.targetState = true
+            }
         }
-        siteNoticeVisibility.targetState = state.siteNotice != null
     }
 
     LaunchedEffect(
         siteNoticeVisibility.currentState,
         siteNoticeVisibility.targetState,
         renderedSiteNotice,
+        pendingSiteNotice,
         state.siteNotice
     ) {
-        if (
-            !siteNoticeVisibility.currentState &&
-            !siteNoticeVisibility.targetState &&
-            state.siteNotice == null
-        ) {
-            renderedSiteNotice = null
+        if (!siteNoticeVisibility.currentState && !siteNoticeVisibility.targetState) {
+            val queuedNotice = pendingSiteNotice
+            if (queuedNotice != null) {
+                renderedSiteNotice = queuedNotice
+                pendingSiteNotice = null
+                siteNoticeVisibility.targetState = true
+            } else if (state.siteNotice == null) {
+                renderedSiteNotice = null
+            }
         }
     }
 
@@ -191,6 +230,7 @@ fun ForumScreen(
                                 },
                                 onDismissClick = onDismissSiteNotice,
                                 onDismissPermanentlyClick = onDismissSiteNoticeUntilChanged,
+                                onLinkClick = onNoticeLinkClick,
                                 modifier = Modifier.fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 8.dp)
                             )
@@ -362,6 +402,13 @@ fun ForumScreen(
             }
         )
     }
+}
+
+private fun siteNoticeContentKey(notice: SiteNotice?): String? {
+    return notice
+        ?.contentText
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
 }
 
 private fun mergeAnimatedPosts(

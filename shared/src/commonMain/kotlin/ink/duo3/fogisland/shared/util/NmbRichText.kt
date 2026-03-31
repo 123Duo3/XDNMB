@@ -14,8 +14,7 @@ data class NmbRichText(
 data class NmbRichTextSegment(
     val text: String,
     val color: String? = null,
-    val href: String? = null,
-    val threadId: Long? = null,
+    val linkTarget: NmbLinkTarget? = null,
     val hiddenGroupId: Int? = null,
     val isBold: Boolean = false,
     val isItalic: Boolean = false,
@@ -74,6 +73,10 @@ private val htmlEntities = mapOf(
     "&ldquo;" to "\"",
     "&rdquo;" to "\"",
     "&hellip;" to "..."
+)
+
+private val namedHtmlColors = mapOf(
+    "deepskyblue" to "#00BFFF"
 )
 
 fun parseNmbRichText(html: String?): NmbRichText {
@@ -160,7 +163,7 @@ private fun appendNmbRichText(
         segments += NmbRichTextSegment(
             text = normalizedText,
             color = style.color,
-            href = style.href,
+            linkTarget = resolveNmbUrlLinkTarget(style.href),
             hiddenGroupId = style.hiddenGroupId,
             isBold = style.isBold,
             isItalic = style.isItalic,
@@ -211,13 +214,16 @@ private fun appendDetectedNmbRichSegments(
         }
 
         val matchedText = nextMatch.value
-        val threadId = parseNmbThreadIdInput(matchedText)
+        val linkTarget = when (nextMatch) {
+            nextThreadReference -> parseNmbThreadIdInput(matchedText)?.let(NmbLinkTarget::PostReference)
+            nextRawUrl -> resolveNmbUrlLinkTarget(matchedText)
+            else -> null
+        }
         appendResolvedNmbSegment(
             segments = segments,
             text = matchedText,
             style = style,
-            href = if (threadId == null && nextMatch == nextRawUrl) matchedText else null,
-            threadId = threadId
+            linkTarget = linkTarget
         )
         cursor = nextMatch.range.last + 1
     }
@@ -227,8 +233,7 @@ private fun appendResolvedNmbSegment(
     segments: MutableList<NmbRichTextSegment>,
     text: String,
     style: NmbRichTextStyle,
-    href: String? = style.href,
-    threadId: Long? = null
+    linkTarget: NmbLinkTarget? = style.href?.let(::resolveNmbUrlLinkTarget)
 ) {
     if (text.isEmpty()) {
         return
@@ -237,8 +242,7 @@ private fun appendResolvedNmbSegment(
     segments += NmbRichTextSegment(
         text = text,
         color = style.color,
-        href = href,
-        threadId = threadId,
+        linkTarget = linkTarget,
         hiddenGroupId = style.hiddenGroupId,
         isBold = style.isBold,
         isItalic = style.isItalic,
@@ -297,7 +301,7 @@ private fun handleNmbRichTag(
             style = currentStyle
         )
         "font" -> {
-            parseTagAttributes(tagBody)["color"]?.let { color ->
+            parseTagAttributes(tagBody)["color"]?.let(::normalizeNamedHtmlColor)?.let { color ->
                 scopes += NmbRichTextScope(
                     tagName = tagName,
                     color = color
@@ -312,6 +316,7 @@ private fun handleNmbRichTag(
                 ?.getOrNull(1)
                 ?.trim()
                 ?.takeIf { value -> value.isNotEmpty() }
+                ?.let(::normalizeNamedHtmlColor)
             val hiddenGroupId = attributes["data-hidden-group-id"]?.toIntOrNull()
             val isHidden = attributes["class"]
                 ?.split(' ')
@@ -397,6 +402,11 @@ private fun parseTagAttributes(tagBody: String): Map<String, String> {
     }
 }
 
+private fun normalizeNamedHtmlColor(rawColor: String): String {
+    val trimmed = rawColor.trim()
+    return namedHtmlColors[trimmed.lowercase()] ?: trimmed
+}
+
 private fun decodeNmbHtmlEntities(text: String): String {
     val decodedNamedEntities = htmlEntities.entries.fold(text) { acc, (entity, replacement) ->
         acc.replace(entity, replacement)
@@ -425,8 +435,7 @@ private fun mergeNmbRichSegments(
             '\n' !in previous.text &&
             '\n' !in segment.text &&
             previous.color == segment.color &&
-            previous.href == segment.href &&
-            previous.threadId == segment.threadId &&
+            previous.linkTarget == segment.linkTarget &&
             previous.hiddenGroupId == segment.hiddenGroupId &&
             previous.isBold == segment.isBold &&
             previous.isItalic == segment.isItalic &&

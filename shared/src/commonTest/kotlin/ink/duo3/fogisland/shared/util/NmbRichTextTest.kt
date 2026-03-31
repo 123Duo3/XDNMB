@@ -16,7 +16,7 @@ class NmbRichTextTest {
         assertEquals(3, richText.segments.size)
         assertEquals(">>No.123456", richText.segments[0].text)
         assertEquals("#789922", richText.segments[0].color)
-        assertEquals(123456L, richText.segments[0].threadId)
+        assertEquals(NmbLinkTarget.PostReference(123456L), richText.segments[0].linkTarget)
         assertEquals("\n", richText.segments[1].text)
         assertEquals("正文", richText.segments[2].text)
     }
@@ -30,9 +30,33 @@ class NmbRichTextTest {
         assertEquals("公告 客户端下载", richText.plainText)
         assertEquals("green", richText.segments[0].color)
         assertEquals("公告", richText.segments[0].text)
-        val linkSegment = richText.segments.firstOrNull { it.href == "https://app.nmbxd.com" }
+        val linkSegment = richText.segments.firstOrNull {
+            it.linkTarget == NmbLinkTarget.ExternalUrl("https://app.nmbxd.com")
+        }
         assertNotNull(linkSegment)
         assertEquals("客户端下载", linkSegment.text.trim())
+    }
+
+    @Test
+    fun `normalize named html colors`() {
+        val richText = parseNmbRichText("<font color=\"DeepSkyBlue\">蓝色文字</font>")
+
+        assertEquals("蓝色文字", richText.plainText)
+        assertEquals("#00BFFF", richText.segments.single().color)
+    }
+
+    @Test
+    fun `parse thread url link as internal thread target`() {
+        val richText = parseNmbRichText("<a href=\"https://www.nmbxd1.com/t/1234567?page=2\">串链接</a>")
+
+        assertEquals("串链接", richText.plainText)
+        assertEquals(
+            NmbLinkTarget.Thread(
+                threadId = 1234567L,
+                targetPage = 2
+            ),
+            richText.segments.single().linkTarget
+        )
     }
 
     @Test
@@ -55,8 +79,8 @@ class NmbRichTextTest {
         assertNotNull(hiddenSegment)
         assertEquals("隐藏内容", hiddenSegment.text)
         assertEquals(
-            "https://liuyan.people.com.cn/",
-            richText.segments.last().href
+            NmbLinkTarget.ExternalUrl("https://liuyan.people.com.cn/"),
+            richText.segments.last().linkTarget
         )
     }
 
@@ -90,8 +114,7 @@ class NmbRichTextTest {
         assertEquals(1, richText.segments.size)
         assertFalse(richText.segments[0].isBold)
         assertFalse(richText.segments[0].isSmall)
-        assertNull(richText.segments[0].href)
-        assertNull(richText.segments[0].threadId)
+        assertNull(richText.segments[0].linkTarget)
     }
 
     @Test

@@ -29,6 +29,45 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="nmbxd.com"
+                    android:pathPrefix="/t/" />
+                <data
+                    android:scheme="https"
+                    android:host="www.nmbxd.com"
+                    android:pathPrefix="/t/" />
+                <data
+                    android:scheme="https"
+                    android:host="nmbxd1.com"
+                    android:pathPrefix="/t/" />
+                <data
+                    android:scheme="https"
+                    android:host="www.nmbxd1.com"
+                    android:pathPrefix="/t/" />
+                <data
+                    android:scheme="http"
+                    android:host="nmbxd.com"
+                    android:pathPrefix="/t/" />
+                <data
+                    android:scheme="http"
+                    android:host="www.nmbxd.com"
+                    android:pathPrefix="/t/" />
+                <data
+                    android:scheme="http"
+                    android:host="nmbxd1.com"
+                    android:pathPrefix="/t/" />
+                <data
+                    android:scheme="http"
+                    android:host="www.nmbxd1.com"
+                    android:pathPrefix="/t/" />
+            </intent-filter>
         </activity>
     </application>
 
