@@ -194,12 +194,13 @@ fun FogIslandApp(
             when (target) {
                 is NmbLinkTarget.ExternalUrl -> openNmbExternalLink(context, target.url)
                 is NmbLinkTarget.PostReference -> {
-                    repository.resolveThreadIdByPostReference(target.postId)?.let { threadId ->
-                        showThread(
-                            threadId = threadId,
-                            targetPostId = target.postId.takeIf { it != threadId }
-                        )
-                    }
+                    val resolvedThreadId = repository.resolveThreadIdByPostReference(target.postId)
+                    showThread(
+                        threadId = resolvedThreadId ?: target.postId,
+                        targetPostId = resolvedThreadId
+                            ?.takeIf { it != target.postId }
+                            ?.let { target.postId }
+                    )
                 }
                 is NmbLinkTarget.Thread -> showThread(
                     threadId = target.threadId,
