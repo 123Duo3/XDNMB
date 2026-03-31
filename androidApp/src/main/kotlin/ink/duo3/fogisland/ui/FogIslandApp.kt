@@ -554,7 +554,7 @@ fun FogIslandApp(
                     val postedThreadResult = state.postedThreadResult
                     LaunchedEffect(postedThreadResult) {
                         val result = postedThreadResult ?: return@LaunchedEffect
-                        key.draftId?.let { draftId ->
+                        (result.submittedDraftId ?: key.draftId)?.let { draftId ->
                             context.deleteDraftImage(repository.getPostingDraft(draftId)?.imagePath)
                             viewModel.deletePostingDraft(draftId)
                         }
@@ -600,7 +600,7 @@ fun FogIslandApp(
                     val postedReplyResult = state.postedReplyResult
                     LaunchedEffect(postedReplyResult) {
                         val result = postedReplyResult ?: return@LaunchedEffect
-                        key.draftId?.let { draftId ->
+                        (result.submittedDraftId ?: key.draftId)?.let { draftId ->
                             context.deleteDraftImage(repository.getPostingDraft(draftId)?.imagePath)
                             viewModel.deletePostingDraft(draftId)
                         }

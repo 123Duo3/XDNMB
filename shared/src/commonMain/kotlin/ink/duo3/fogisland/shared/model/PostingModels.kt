@@ -20,7 +20,8 @@ data class ThreadPostResult(
     val forumId: Long,
     val threadId: Long?,
     val message: String,
-    val contentText: String
+    val contentText: String,
+    val submittedDraftId: Long? = null
 )
 
 enum class PostingDraftType {
@@ -81,5 +82,6 @@ data class ReplyPostResult(
     val threadId: Long,
     val postId: Long?,
     val message: String,
-    val contentText: String
+    val contentText: String,
+    val submittedDraftId: Long? = null
 )

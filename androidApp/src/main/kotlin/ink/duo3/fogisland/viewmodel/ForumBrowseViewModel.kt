@@ -452,7 +452,7 @@ class ForumBrowseViewModel(
                     it.copy(
                         isPostingThread = false,
                         postThreadError = null,
-                        postedThreadResult = result
+                        postedThreadResult = result.copy(submittedDraftId = draftId)
                     )
                 }
             }.onFailure { throwable ->
@@ -491,7 +491,7 @@ class ForumBrowseViewModel(
                     it.copy(
                         isPostingReply = false,
                         postReplyError = null,
-                        postedReplyResult = result
+                        postedReplyResult = result.copy(submittedDraftId = draftId)
                     )
                 }
             }.onFailure { throwable ->
