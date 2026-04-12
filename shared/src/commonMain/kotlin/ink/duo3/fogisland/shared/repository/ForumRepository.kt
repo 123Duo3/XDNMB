@@ -14,6 +14,7 @@ import ink.duo3.fogisland.shared.model.PostingHistoryEntry
 import ink.duo3.fogisland.shared.model.PostingHistoryType
 import ink.duo3.fogisland.shared.model.ReplyPostRequest
 import ink.duo3.fogisland.shared.model.ReplyPostResult
+import ink.duo3.fogisland.shared.model.ResolvedPostReference
 import ink.duo3.fogisland.shared.model.SearchHit
 import ink.duo3.fogisland.shared.model.SearchHitType
 import ink.duo3.fogisland.shared.model.SiteNotice
@@ -538,6 +539,82 @@ class ForumRepository(
     suspend fun resolveThreadIdByPostReference(postId: Long): Long? {
         threadDao.getThreadById(postId)?.let { return it.id }
         return postDao.getThreadIdByRemoteId(postId)
+    }
+
+    suspend fun getCachedPostReference(postId: Long): ResolvedPostReference? {
+        threadDao.getThreadById(postId)?.let { thread ->
+            return ResolvedPostReference(
+                threadId = thread.id,
+                post = thread.toModel()
+            )
+        }
+
+        val post = postDao.getPostByRemoteId(postId) ?: return null
+        val opUserHash = threadDao.getThreadById(post.threadId)?.userHash
+        return ResolvedPostReference(
+            threadId = post.threadId,
+            post = post.toModel(opUserHash)
+        )
+    }
+
+    suspend fun queryPostReference(
+        postId: Long,
+        preferredThreadId: Long? = null
+    ): ResolvedPostReference? {
+        getCachedPostReference(postId)?.let { return it }
+
+        preferredThreadId?.let { threadId ->
+            runCatching {
+                queryPostReferenceInThread(
+                    threadId = threadId,
+                    postId = postId
+                )
+            }.getOrNull()?.let { return it }
+        }
+
+        if (preferredThreadId != postId) {
+            runCatching {
+                queryPostReferenceInThread(
+                    threadId = postId,
+                    postId = postId
+                )
+            }.getOrNull()?.let { return it }
+        }
+
+        return getCachedPostReference(postId)
+    }
+
+    suspend fun queryPostReferenceInThread(
+        threadId: Long,
+        postId: Long
+    ): ResolvedPostReference? {
+        getCachedPostReference(postId)
+            ?.takeIf { it.threadId == threadId }
+            ?.let { return it }
+
+        var nextPage = if (threadDao.getThreadById(threadId) != null) {
+            (postDao.getMaxLoadedPageForThread(threadId) ?: 0) + 1
+        } else {
+            1
+        }.coerceAtLeast(1)
+        var knownMaxPage: Int? = null
+
+        while (knownMaxPage == null || nextPage <= knownMaxPage) {
+            val result = refreshThread(threadId, nextPage)
+            knownMaxPage = result.maxPage
+
+            getCachedPostReference(postId)
+                ?.takeIf { it.threadId == threadId }
+                ?.let { return it }
+
+            if (result.reachedEnd) {
+                break
+            }
+            nextPage += 1
+        }
+
+        return getCachedPostReference(postId)
+            ?.takeIf { it.threadId == threadId }
     }
 
     suspend fun updateReadProgress(

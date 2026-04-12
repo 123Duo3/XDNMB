@@ -36,6 +36,16 @@ interface PostDao {
     @Query(
         """
         SELECT * FROM posts
+        WHERE remoteId = :remoteId
+        ORDER BY refreshedAt DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getPostByRemoteId(remoteId: Long): PostEntity?
+
+    @Query(
+        """
+        SELECT * FROM posts
         WHERE isTips = 0
           AND (
               title LIKE '%' || :query || '%' ESCAPE '\'

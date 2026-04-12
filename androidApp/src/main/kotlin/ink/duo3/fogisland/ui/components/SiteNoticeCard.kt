@@ -28,6 +28,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ink.duo3.fogisland.shared.model.SiteNotice
 import ink.duo3.fogisland.shared.util.NmbLinkTarget
+import ink.duo3.fogisland.ui.components.preview.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.preview.NmbPreviewSamples
+import ink.duo3.fogisland.ui.components.richtext.NmbRichTextText
 
 @Composable
 fun SiteNoticeCard(

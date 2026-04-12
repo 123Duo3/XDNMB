@@ -1,4 +1,4 @@
-package ink.duo3.fogisland.ui.components
+package ink.duo3.fogisland.ui.components.post
 
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.background
@@ -33,12 +33,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import ink.duo3.fogisland.shared.util.buildNmbThumbImageUrl
+import ink.duo3.fogisland.ui.components.preview.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.preview.NmbPreviewImages
 import ink.duo3.fogisland.utils.resolveNmbImageFallbackUrl
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -63,14 +66,17 @@ fun ThreadImagePreview(
     image: String,
     ext: String?,
     onImageClick: (String, String?) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    previewHeight: Dp = THREAD_IMAGE_PREVIEW_HEIGHT_DP.dp,
+    minimumPreviewWidth: Dp = THREAD_IMAGE_PREVIEW_MIN_WIDTH_DP.dp,
+    cornerRadius: Dp = THREAD_IMAGE_PREVIEW_CORNER_RADIUS_DP.dp
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val inspectionMode = LocalInspectionMode.current
     val previewSpec = remember(image) { resolveThreadImagePreviewSpec(image) }
-    val previewHeightPx = with(density) { THREAD_IMAGE_PREVIEW_HEIGHT_DP.dp.toPx() }
-    val minimumPreviewWidthPx = with(density) { THREAD_IMAGE_PREVIEW_MIN_WIDTH_DP.dp.toPx() }
+    val previewHeightPx = with(density) { previewHeight.toPx() }
+    val minimumPreviewWidthPx = with(density) { minimumPreviewWidth.toPx() }
 
     if (inspectionMode && previewSpec != null) {
         BoxWithConstraints(modifier = modifier) {
@@ -100,10 +106,10 @@ fun ThreadImagePreview(
             Surface(
                 modifier = Modifier
                     .width(with(density) { previewLayout.widthPx.toDp() })
-                    .height(THREAD_IMAGE_PREVIEW_HEIGHT_DP.dp)
+                    .height(previewHeight)
                     .clickable { onImageClick(image, ext) },
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(THREAD_IMAGE_PREVIEW_CORNER_RADIUS_DP.dp)
+                shape = RoundedCornerShape(cornerRadius)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(
@@ -218,10 +224,10 @@ fun ThreadImagePreview(
         Surface(
             modifier = Modifier
                 .width(with(density) { previewLayout.widthPx.toDp() })
-                .height(THREAD_IMAGE_PREVIEW_HEIGHT_DP.dp)
+                .height(previewHeight)
                 .clickable { onImageClick(image, ext) },
             color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = RoundedCornerShape(THREAD_IMAGE_PREVIEW_CORNER_RADIUS_DP.dp)
+            shape = RoundedCornerShape(cornerRadius)
         ) {
             Image(
                 painter = painter,

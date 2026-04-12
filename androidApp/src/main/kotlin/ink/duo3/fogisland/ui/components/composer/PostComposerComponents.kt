@@ -1,4 +1,4 @@
-package ink.duo3.fogisland.ui.components
+package ink.duo3.fogisland.ui.components.composer
 
 import android.content.Context
 import android.graphics.Bitmap

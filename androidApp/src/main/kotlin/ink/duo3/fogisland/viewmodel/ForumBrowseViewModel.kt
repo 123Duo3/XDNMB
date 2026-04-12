@@ -783,6 +783,66 @@ class ForumBrowseViewModel(
         }
     }
 
+    suspend fun loadCurrentThreadUntilPost(postId: Long): Boolean {
+        val thread = _uiState.value.currentThread ?: return false
+        if (thread.remoteId == postId || _uiState.value.currentPosts.any { it.remoteId == postId }) {
+            return true
+        }
+
+        val threadId = thread.id
+        var nextPage = (threadPageCache[threadId] ?: 0) + 1
+        var knownMaxPage = calculateNmbThreadMaxPage(thread.replyCount ?: 0)
+        if (threadEndReachedCache[threadId] == true || nextPage > knownMaxPage) {
+            // Probe the last known page once so stale reply counts can expand the page window.
+            nextPage = knownMaxPage.coerceAtLeast(1)
+        }
+
+        _uiState.update { it.copy(isLoadingThread = true, error = null) }
+
+        return runCatching {
+            while (nextPage <= knownMaxPage) {
+                val result = repository.refreshThread(threadId, nextPage)
+                threadPageCache[threadId] = result.page
+                knownMaxPage = result.maxPage
+
+                if (repository.getCachedPostReference(postId)?.threadId == threadId) {
+                    threadEndReachedCache[threadId] = result.reachedEnd
+                    _uiState.update {
+                        it.copy(
+                            isLoadingThread = false,
+                            loadedThreadPage = result.page,
+                            hasReachedReplyEnd = threadEndReachedCache[threadId] == true
+                        )
+                    }
+                    return true
+                }
+
+                if (result.reachedEnd) {
+                    threadEndReachedCache[threadId] = true
+                    break
+                }
+                nextPage += 1
+            }
+
+            _uiState.update {
+                it.copy(
+                    isLoadingThread = false,
+                    loadedThreadPage = threadPageCache[threadId] ?: it.loadedThreadPage,
+                    hasReachedReplyEnd = threadEndReachedCache[threadId] == true
+                )
+            }
+            false
+        }.getOrElse { throwable ->
+            _uiState.update {
+                it.copy(
+                    isLoadingThread = false,
+                    error = throwable.toErrorPresentation("加载引用目标失败")
+                )
+            }
+            false
+        }
+    }
+
     fun saveThreadProgress(threadId: Long, itemIndex: Int, itemOffset: Int) {
         val state = _uiState.value
         val thread = state.currentThread

@@ -41,10 +41,10 @@ import ink.duo3.fogisland.shared.model.NmbPost
 import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
-import ink.duo3.fogisland.ui.components.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.preview.FogIslandPreviewColumn
 import ink.duo3.fogisland.ui.components.ListItemAnimatedVisibility
-import ink.duo3.fogisland.ui.components.NmbPostCard
-import ink.duo3.fogisland.ui.components.NmbPreviewSamples
+import ink.duo3.fogisland.ui.components.post.NmbPostCard
+import ink.duo3.fogisland.ui.components.preview.NmbPreviewSamples
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

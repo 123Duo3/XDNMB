@@ -56,10 +56,10 @@ import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.formatNmbPostedAt
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
-import ink.duo3.fogisland.ui.components.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.preview.FogIslandPreviewColumn
 import ink.duo3.fogisland.ui.components.ListItemAnimatedVisibility
-import ink.duo3.fogisland.ui.components.NmbPostCard
-import ink.duo3.fogisland.ui.components.NmbPreviewSamples
+import ink.duo3.fogisland.ui.components.post.NmbPostCard
+import ink.duo3.fogisland.ui.components.preview.NmbPreviewSamples
 import ink.duo3.fogisland.ui.components.SiteNoticeCard
 import ink.duo3.fogisland.viewmodel.ForumBrowseUiState
 

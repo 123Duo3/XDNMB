@@ -72,11 +72,11 @@ import ink.duo3.fogisland.data.updateUseDarkMode
 import ink.duo3.fogisland.data.updateUseMonet
 import ink.duo3.fogisland.data.updateUsePreciseTime
 import ink.duo3.fogisland.data.updateUseUtcPlus8Time
-import ink.duo3.fogisland.ui.components.CookieSettingsSection
-import ink.duo3.fogisland.ui.components.SettingItem
-import ink.duo3.fogisland.ui.components.SettingItemGroup
-import ink.duo3.fogisland.ui.components.SettingItemWithSwitch
-import ink.duo3.fogisland.ui.components.SubscriptionUuidEditorDialog
+import ink.duo3.fogisland.ui.components.settings.CookieSettingsSection
+import ink.duo3.fogisland.ui.components.settings.SettingItem
+import ink.duo3.fogisland.ui.components.settings.SettingItemGroup
+import ink.duo3.fogisland.ui.components.settings.SettingItemWithSwitch
+import ink.duo3.fogisland.ui.components.settings.SubscriptionUuidEditorDialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -1,4 +1,4 @@
-package ink.duo3.fogisland.ui.components
+package ink.duo3.fogisland.ui.components.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

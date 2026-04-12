@@ -81,11 +81,7 @@ class NmbApiClient(
     @Volatile
     private var hasLoadedBackupUrls = false
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        coerceInputValues = true
-    }
+    private val json = nmbJson
 
     private val client = HttpClient {
         install(ContentEncoding) {
@@ -628,7 +624,7 @@ private fun throwIfPostFormFailed(
         throw NmbApiResponseException(path, message)
     }
     detectNmbBusinessErrorMessage(
-        json = nmbApiDetectionJson,
+        json = nmbJson,
         bodyText = bodyText,
         expectsRawString = false
     )?.let { message ->
@@ -680,7 +676,7 @@ internal fun detectNmbBusinessErrorMessage(
     return primitive.contentOrNull?.takeIf { it.isNotBlank() }
 }
 
-private val nmbApiDetectionJson = Json {
+private val nmbJson = Json {
     ignoreUnknownKeys = true
     isLenient = true
     coerceInputValues = true
@@ -688,7 +684,7 @@ private val nmbApiDetectionJson = Json {
 
 internal fun detectNmbApiErrorDtoMessage(bodyText: String): String? {
     return try {
-        nmbApiDetectionJson.decodeFromString<NmbApiErrorDto>(bodyText)
+        nmbJson.decodeFromString<NmbApiErrorDto>(bodyText)
     } catch (_: SerializationException) {
         null
     }?.takeIf { it.success == false }

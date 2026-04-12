@@ -2,6 +2,11 @@ package ink.duo3.fogisland.shared.util
 
 private val PURE_THREAD_ID_REGEX = Regex("^\\d+$")
 private val NO_THREAD_ID_REGEX = Regex("^(?:>>\\s*)?No\\.\\s*(\\d+)$", RegexOption.IGNORE_CASE)
+private val QUOTED_THREAD_ID_REGEX = Regex("^(?:>>|>)(?!>)\\s*(\\d{8})$")
+private val POST_REFERENCE_REGEX = Regex(
+    "^(?:>>\\s*(?:No\\.\\s*)?(\\d+)|No\\.\\s*(\\d{5,}))$",
+    RegexOption.IGNORE_CASE
+)
 private val THREAD_URL_REGEX = Regex(
     pattern = "^https?://(?:www\\.)?nmbxd(?:1)?\\.com/t/(\\d+)(?:[/?#].*)?$",
     option = RegexOption.IGNORE_CASE
@@ -30,6 +35,8 @@ fun parseNmbThreadIdInput(input: String): Long? {
         return null
     }
 
+    parseNmbQuotedThreadIdInput(normalizedInput)?.let { return it }
+
     if (PURE_THREAD_ID_REGEX.matches(normalizedInput)) {
         return normalizedInput.toLongOrNull()
     }
@@ -43,6 +50,31 @@ fun parseNmbThreadIdInput(input: String): Long? {
     parseNmbThreadUrl(normalizedInput)?.let { return it }
 
     return null
+}
+
+fun parseNmbQuotedThreadIdInput(input: String): Long? {
+    val normalizedInput = input.trim()
+    if (normalizedInput.isEmpty()) {
+        return null
+    }
+
+    return QUOTED_THREAD_ID_REGEX.matchEntire(normalizedInput)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.toLongOrNull()
+}
+
+fun parseNmbPostReference(input: String): Long? {
+    val normalizedInput = input.trim()
+    if (normalizedInput.isEmpty()) {
+        return null
+    }
+
+    val match = POST_REFERENCE_REGEX.matchEntire(normalizedInput) ?: return null
+    return match.groupValues
+        .drop(1)
+        .firstOrNull { value -> value.isNotBlank() }
+        ?.toLongOrNull()
 }
 
 fun parseNmbThreadUrl(input: String): Long? {

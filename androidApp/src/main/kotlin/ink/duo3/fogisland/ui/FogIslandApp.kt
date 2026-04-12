@@ -57,7 +57,7 @@ import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.htmlToPlainText
 import ink.duo3.fogisland.shared.util.shouldRenderNmbRichText
 import ink.duo3.fogisland.ui.components.NavigationItemGroup
-import ink.duo3.fogisland.ui.components.NmbRichTextText
+import ink.duo3.fogisland.ui.components.richtext.NmbRichTextText
 import ink.duo3.fogisland.utils.openNmbExternalLink
 import ink.duo3.fogisland.utils.resolveNmbIntentLinkTarget
 import ink.duo3.fogisland.viewmodel.ForumBrowseViewModel
@@ -699,6 +699,14 @@ fun FogIslandApp(
                         onImageClick = { image, ext ->
                             showImageViewer(image = image, ext = ext)
                         },
+                        onResolveCachedPostReference = repository::getCachedPostReference,
+                        onQueryPostReference = { postId, preferredThreadId ->
+                            repository.queryPostReference(
+                                postId = postId,
+                                preferredThreadId = preferredThreadId
+                            )
+                        },
+                        onLoadCurrentThreadUntilPost = viewModel::loadCurrentThreadUntilPost,
                         onLinkClick = ::handleLinkTarget
                     )
                 }

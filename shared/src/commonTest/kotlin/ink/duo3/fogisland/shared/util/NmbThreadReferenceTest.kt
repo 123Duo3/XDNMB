@@ -6,8 +6,29 @@ import kotlin.test.assertNull
 
 class NmbThreadReferenceTest {
     @Test
+    fun `parse post references with arrow and optional no prefix`() {
+        assertEquals(1234567L, parseNmbPostReference(">>No.1234567"))
+        assertEquals(1234567L, parseNmbPostReference(">> 1234567"))
+        assertEquals(1234567L, parseNmbPostReference("No.1234567"))
+    }
+
+    @Test
+    fun `reject short bare no references`() {
+        assertNull(parseNmbPostReference("No.1234"))
+    }
+
+    @Test
     fun `parse pure thread id`() {
         assertEquals(1234567L, parseNmbThreadIdInput("1234567"))
+    }
+
+    @Test
+    fun `parse quoted eight digit thread id`() {
+        assertEquals(12345678L, parseNmbQuotedThreadIdInput(">>12345678"))
+        assertEquals(12345678L, parseNmbQuotedThreadIdInput(">12345678"))
+        assertEquals(12345678L, parseNmbThreadIdInput(">>12345678"))
+        assertEquals(12345678L, parseNmbThreadIdInput(">12345678"))
+        assertNull(parseNmbQuotedThreadIdInput(">>1234567"))
     }
 
     @Test

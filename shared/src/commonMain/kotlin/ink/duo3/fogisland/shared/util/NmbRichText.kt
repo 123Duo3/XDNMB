@@ -16,13 +16,17 @@ data class NmbRichTextSegment(
     val color: String? = null,
     val linkTarget: NmbLinkTarget? = null,
     val hiddenGroupId: Int? = null,
+    val inlinePreviewGroupId: Int? = null,
     val isBold: Boolean = false,
     val isItalic: Boolean = false,
     val isSmall: Boolean = false,
     val isUnderline: Boolean = false,
     val isStrikethrough: Boolean = false,
     val isHidden: Boolean = false,
-    val isCode: Boolean = false
+    val isCode: Boolean = false,
+    val useLabelMediumStyle: Boolean = false,
+    val suppressLinkUnderline: Boolean = false,
+    val useInternalLinkColorOverride: Boolean = false
 )
 
 private data class NmbRichTextScope(
@@ -52,10 +56,19 @@ private data class NmbRichTextStyle(
     val isCode: Boolean = false
 )
 
+private data class NmbRichListScope(
+    val ordered: Boolean,
+    val nextIndex: Int = 1
+)
+
 private val htmlTagRegex = Regex("<[^>]+>")
 private val hiddenTextRegex = Regex("\\[h]([\\s\\S]*?)\\[/h]", RegexOption.IGNORE_CASE)
 private val sourceLineBreakRegex = Regex("\\r\\n?|\\n")
-private val threadReferenceRegex = Regex("(?:>>\\s*)?No\\.\\s*\\d+", RegexOption.IGNORE_CASE)
+private val quotedThreadIdRegex = Regex("(?:>>|>)(?!>)\\s*\\d{8}(?![0-9A-Za-z./])")
+private val threadReferenceRegex = Regex(
+    "(?:>>\\s*(?:No\\.\\s*)?\\d+)|(?:No\\.\\s*\\d{5,})",
+    RegexOption.IGNORE_CASE
+)
 private val rawUrlRegex = Regex("https?://[^\\s<]+", RegexOption.IGNORE_CASE)
 private val htmlEntityRegex = Regex("&#(\\d+);")
 private val tagAttributeRegex =
@@ -95,6 +108,7 @@ fun parseNmbRichText(html: String?): NmbRichText {
         }
     }
     val scopes = mutableListOf<NmbRichTextScope>()
+    val listScopes = mutableListOf<NmbRichListScope>()
     val segments = mutableListOf<NmbRichTextSegment>()
     var cursor = 0
 
@@ -107,6 +121,7 @@ fun parseNmbRichText(html: String?): NmbRichText {
         handleNmbRichTag(
             rawTag = match.value,
             scopes = scopes,
+            listScopes = listScopes,
             segments = segments
         )
         cursor = match.range.last + 1
@@ -191,9 +206,14 @@ private fun appendDetectedNmbRichSegments(
     var cursor = 0
 
     while (cursor < text.length) {
-        val nextThreadReference = threadReferenceRegex.find(text, cursor)
+        val nextQuotedThreadId = if (style.isSmall) {
+            null
+        } else {
+            quotedThreadIdRegex.find(text, cursor)
+        }
+        val nextThreadReference = findNextPostReferenceMatch(text, cursor)
         val nextRawUrl = rawUrlRegex.find(text, cursor)
-        val nextMatch = listOfNotNull(nextThreadReference, nextRawUrl)
+        val nextMatch = listOfNotNull(nextQuotedThreadId, nextThreadReference, nextRawUrl)
             .minByOrNull { it.range.first }
 
         if (nextMatch == null) {
@@ -215,7 +235,11 @@ private fun appendDetectedNmbRichSegments(
 
         val matchedText = nextMatch.value
         val linkTarget = when (nextMatch) {
-            nextThreadReference -> parseNmbThreadIdInput(matchedText)?.let(NmbLinkTarget::PostReference)
+            nextQuotedThreadId ->
+                parseNmbQuotedThreadIdInput(matchedText)?.let { threadId ->
+                    NmbLinkTarget.Thread(threadId = threadId)
+                }
+            nextThreadReference -> parseNmbPostReference(matchedText)?.let(NmbLinkTarget::PostReference)
             nextRawUrl -> resolveNmbUrlLinkTarget(matchedText)
             else -> null
         }
@@ -227,6 +251,19 @@ private fun appendDetectedNmbRichSegments(
         )
         cursor = nextMatch.range.last + 1
     }
+}
+
+private fun findNextPostReferenceMatch(text: String, startIndex: Int): MatchResult? {
+    var match = threadReferenceRegex.find(text, startIndex)
+    while (match != null && parseNmbQuotedThreadIdInput(match.value) != null) {
+        val nextStartIndex = match.range.first + 1
+        match = if (nextStartIndex < text.length) {
+            threadReferenceRegex.find(text, nextStartIndex)
+        } else {
+            null
+        }
+    }
+    return match
 }
 
 private fun appendResolvedNmbSegment(
@@ -257,6 +294,7 @@ private fun appendResolvedNmbSegment(
 private fun handleNmbRichTag(
     rawTag: String,
     scopes: MutableList<NmbRichTextScope>,
+    listScopes: MutableList<NmbRichListScope>,
     segments: MutableList<NmbRichTextSegment>
 ) {
     val normalizedTag = rawTag
@@ -278,6 +316,11 @@ private fun handleNmbRichTag(
 
     if (isClosingTag) {
         when (tagName) {
+            "ul", "ol" -> {
+                if (listScopes.isNotEmpty()) {
+                    listScopes.removeAt(listScopes.lastIndex)
+                }
+            }
             "p" -> appendResolvedNmbSegment(
                 segments = segments,
                 text = "\n\n",
@@ -298,6 +341,13 @@ private fun handleNmbRichTag(
         "br" -> appendResolvedNmbSegment(
             segments = segments,
             text = "\n",
+            style = currentStyle
+        )
+        "ul" -> listScopes += NmbRichListScope(ordered = false)
+        "ol" -> listScopes += NmbRichListScope(ordered = true)
+        "li" -> appendResolvedNmbSegment(
+            segments = segments,
+            text = listScopes.nextListMarker(),
             style = currentStyle
         )
         "font" -> {
@@ -347,6 +397,15 @@ private fun handleNmbRichTag(
         "s", "strike", "del" -> scopes += NmbRichTextScope(tagName = tagName, isStrikethrough = true)
         "pre" -> scopes += NmbRichTextScope(tagName = tagName, isCode = true)
     }
+}
+
+private fun MutableList<NmbRichListScope>.nextListMarker(): String {
+    val scope = lastOrNull() ?: return "• "
+    if (!scope.ordered) {
+        return "• "
+    }
+    this[lastIndex] = scope.copy(nextIndex = scope.nextIndex + 1)
+    return "${scope.nextIndex}. "
 }
 
 private fun resolveNmbRichStyle(scopes: List<NmbRichTextScope>): NmbRichTextStyle {
@@ -437,13 +496,17 @@ private fun mergeNmbRichSegments(
             previous.color == segment.color &&
             previous.linkTarget == segment.linkTarget &&
             previous.hiddenGroupId == segment.hiddenGroupId &&
+            previous.inlinePreviewGroupId == segment.inlinePreviewGroupId &&
             previous.isBold == segment.isBold &&
             previous.isItalic == segment.isItalic &&
             previous.isSmall == segment.isSmall &&
             previous.isUnderline == segment.isUnderline &&
             previous.isStrikethrough == segment.isStrikethrough &&
             previous.isHidden == segment.isHidden &&
-            previous.isCode == segment.isCode
+            previous.isCode == segment.isCode &&
+            previous.useLabelMediumStyle == segment.useLabelMediumStyle &&
+            previous.suppressLinkUnderline == segment.suppressLinkUnderline &&
+            previous.useInternalLinkColorOverride == segment.useInternalLinkColorOverride
         ) {
             merged[merged.lastIndex] = previous.copy(
                 text = previous.text + segment.text
@@ -483,7 +546,7 @@ private fun normalizeNmbRichWhitespace(
                     atLineStart = true
                 }
 
-                char == ' ' -> {
+                char.isWhitespace() -> {
                     if (!atLineStart) {
                         pendingWhitespace = true
                     }

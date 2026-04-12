@@ -1,9 +1,13 @@
-package ink.duo3.fogisland.ui.components
+package ink.duo3.fogisland.ui.components.richtext
 
 import android.graphics.Color as AndroidColor
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -18,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -26,10 +31,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -62,6 +71,9 @@ fun NmbRichTextText(
     interactionsEnabled: Boolean = true,
     onLinkClick: ((NmbLinkTarget) -> Unit)? = null,
     linkColor: Color? = null,
+    referenceColor: Color? = null,
+    internalLinkColorOverride: Color? = null,
+    suppressInternalLinkUnderline: Boolean = false,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip
 ) {
@@ -77,6 +89,9 @@ fun NmbRichTextText(
         interactionsEnabled = interactionsEnabled,
         onLinkClick = onLinkClick,
         linkColor = linkColor,
+        referenceColor = referenceColor,
+        internalLinkColorOverride = internalLinkColorOverride,
+        suppressInternalLinkUnderline = suppressInternalLinkUnderline,
         maxLines = maxLines,
         overflow = overflow
     )
@@ -91,6 +106,9 @@ fun NmbRichTextText(
     interactionsEnabled: Boolean = true,
     onLinkClick: ((NmbLinkTarget) -> Unit)? = null,
     linkColor: Color? = null,
+    referenceColor: Color? = null,
+    internalLinkColorOverride: Color? = null,
+    suppressInternalLinkUnderline: Boolean = false,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip
 ) {
@@ -114,20 +132,15 @@ fun NmbRichTextText(
     val currentLayoutResult by rememberUpdatedState(textLayoutResult)
     val currentOnLinkClick by rememberUpdatedState(onLinkClick)
     val coroutineScope = rememberCoroutineScope()
-    val resolvedLinkColor = linkColor ?: MaterialTheme.colorScheme.primary
+    val resolvedLinkColor = linkColor ?: MaterialTheme.colorScheme.tertiary
+    val resolvedReferenceColor = referenceColor ?: MaterialTheme.colorScheme.tertiary
     val hiddenBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f)
     val hiddenTextColor = hiddenBackgroundColor.copy(alpha = 0.12f)
     val harmonizeTargetColor = MaterialTheme.colorScheme.primary
     val isDarkTheme = LocalFogIslandDarkTheme.current
     val useMonet = LocalFogIslandUseMonet.current
-    val replyColor = remember(harmonizeTargetColor, isDarkTheme, useMonet) {
-        val baseColor = if (isDarkTheme) {
-            Color(0xFFDCE775)
-        } else {
-            Color(0xFFAFB42B)
-        }
-        if (useMonet) baseColor.harmonize(harmonizeTargetColor) else baseColor
-    }
+    val labelMediumStyle = MaterialTheme.typography.labelMedium
+    val replyColor = resolvedReferenceColor
     val harmonizedPureGreen = remember(harmonizeTargetColor, isDarkTheme, useMonet) {
         val baseColor = if (isDarkTheme) {
             Color(0xFF81C784)
@@ -164,11 +177,20 @@ fun NmbRichTextText(
         style.fontSize != TextUnit.Unspecified -> style.fontSize
         else -> MaterialTheme.typography.bodyMedium.fontSize
     }
+    val inlinePreviewParts = remember(richText) {
+        buildInlinePreviewParts(richText)
+    }
+    val density = LocalDensity.current
+    val textMeasurer = rememberTextMeasurer()
     val annotatedText = remember(
         richText,
+        inlinePreviewParts,
         color,
         resolvedLinkColor,
+        resolvedReferenceColor,
+        internalLinkColorOverride,
         hiddenTextColor,
+        labelMediumStyle,
         resolvedBaseFontSize,
         revealedHiddenGroupSnapshot,
         hiddenRevealProgressSnapshot,
@@ -178,27 +200,92 @@ fun NmbRichTextText(
         deepSkyBlueColor,
         harmonizedPureRed,
         harmonizeTargetColor,
-        useMonet
+        useMonet,
+        suppressInternalLinkUnderline
     ) {
-        richText.toAnnotatedString(
-            normalColor = color,
-            linkColor = resolvedLinkColor,
-            hiddenTextColor = hiddenTextColor,
-            baseFontSize = resolvedBaseFontSize,
-            revealedHiddenGroupIds = revealedHiddenGroupSnapshot,
-            hiddenRevealProgress = hiddenRevealProgressSnapshot,
-            replyColor = replyColor,
-            harmonizedPureGreen = harmonizedPureGreen,
-            harmonizedPureBlue = harmonizedPureBlue,
-            deepSkyBlueColor = deepSkyBlueColor,
-            harmonizedPureRed = harmonizedPureRed,
-            harmonizeTargetColor = harmonizeTargetColor,
-            useMonet = useMonet
-        )
+        val builder = AnnotatedString.Builder()
+        inlinePreviewParts.forEach { part ->
+            when (part) {
+                is InlinePreviewPart.TextPart -> {
+                    builder.append(
+                        part.richText.toAnnotatedString(
+                            normalColor = color,
+                            linkColor = resolvedLinkColor,
+                            referenceColor = resolvedReferenceColor,
+                            internalLinkColorOverride = internalLinkColorOverride,
+                            hiddenTextColor = hiddenTextColor,
+                            labelMediumStyle = labelMediumStyle,
+                            baseFontSize = resolvedBaseFontSize,
+                            revealedHiddenGroupIds = revealedHiddenGroupSnapshot,
+                            hiddenRevealProgress = hiddenRevealProgressSnapshot,
+                            replyColor = replyColor,
+                            harmonizedPureGreen = harmonizedPureGreen,
+                            harmonizedPureBlue = harmonizedPureBlue,
+                            deepSkyBlueColor = deepSkyBlueColor,
+                            harmonizedPureRed = harmonizedPureRed,
+                            harmonizeTargetColor = harmonizeTargetColor,
+                            useMonet = useMonet,
+                            suppressInternalLinkUnderline = suppressInternalLinkUnderline
+                        )
+                    )
+                }
+
+                is InlinePreviewPart.PreviewPart -> {
+                    builder.appendInlineContent(
+                        id = part.inlineContentId,
+                        alternateText = part.richText.plainText
+                    )
+                }
+            }
+        }
+        builder.toAnnotatedString()
+    }
+    val inlineContent = remember(
+        inlinePreviewParts,
+        density,
+        textMeasurer,
+        style,
+        labelMediumStyle,
+        suppressInternalLinkUnderline,
+        currentOnLinkClick
+    ) {
+        inlinePreviewParts
+            .filterIsInstance<InlinePreviewPart.PreviewPart>()
+            .associate { part ->
+                part.inlineContentId to InlineTextContent(
+                    placeholder = Placeholder(
+                        width = estimateInlinePreviewChipWidth(
+                            text = part.richText.plainText,
+                            textStyle = labelMediumStyle,
+                            textMeasurer = textMeasurer,
+                            density = density
+                        ),
+                        height = estimateInlinePreviewChipHeight(
+                            surroundingStyle = style,
+                            density = density
+                        ),
+                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                    )
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        InlinePreviewChip(
+                            richText = part.richText.stripInlinePreviewStyling(),
+                            clickTarget = part.clickTarget,
+                            style = labelMediumStyle,
+                            onLinkClick = currentOnLinkClick,
+                            suppressInternalLinkUnderline = suppressInternalLinkUnderline
+                        )
+                    }
+                }
+            }
     }
 
     Text(
         text = annotatedText,
+        inlineContent = inlineContent,
         modifier = modifier
             .drawBehind {
                 val layout = currentLayoutResult ?: return@drawBehind
@@ -278,7 +365,10 @@ fun NmbRichTextText(
 private fun NmbRichText.toAnnotatedString(
     normalColor: Color,
     linkColor: Color,
+    referenceColor: Color,
+    internalLinkColorOverride: Color?,
     hiddenTextColor: Color,
+    labelMediumStyle: TextStyle,
     baseFontSize: TextUnit,
     revealedHiddenGroupIds: Set<Int>,
     hiddenRevealProgress: Map<Int, Float>,
@@ -288,7 +378,8 @@ private fun NmbRichText.toAnnotatedString(
     deepSkyBlueColor: Color,
     harmonizedPureRed: Color,
     harmonizeTargetColor: Color,
-    useMonet: Boolean
+    useMonet: Boolean,
+    suppressInternalLinkUnderline: Boolean
 ): AnnotatedString {
     val builder = AnnotatedString.Builder()
 
@@ -303,6 +394,8 @@ private fun NmbRichText.toAnnotatedString(
         val segmentColor = segment.resolveDisplayColor(
             normalColor = normalColor,
             linkColor = linkColor,
+            referenceColor = referenceColor,
+            internalLinkColorOverride = internalLinkColorOverride,
             hiddenTextColor = hiddenTextColor,
             revealedHidden = segment.hiddenGroupId?.let { it in revealedHiddenGroupIds } ?: false,
             revealProgress = segment.hiddenGroupId?.let { hiddenRevealProgress[it] } ?: 0f,
@@ -315,13 +408,18 @@ private fun NmbRichText.toAnnotatedString(
             useMonet = useMonet
         )
 
+        val shouldUnderlineLink = when (segment.linkTarget) {
+            is NmbLinkTarget.ExternalUrl -> true
+            null -> false
+            else -> !suppressInternalLinkUnderline && !segment.suppressLinkUnderline
+        }
         val textDecoration = when {
-            segment.linkTarget != null && segment.isStrikethrough ->
+            shouldUnderlineLink && segment.isStrikethrough ->
                 TextDecoration.combine(
                     listOf(TextDecoration.Underline, TextDecoration.LineThrough)
                 )
 
-            segment.linkTarget != null || segment.isUnderline -> TextDecoration.Underline
+            shouldUnderlineLink || segment.isUnderline -> TextDecoration.Underline
             segment.isStrikethrough -> TextDecoration.LineThrough
             else -> null
         }
@@ -331,17 +429,31 @@ private fun NmbRichText.toAnnotatedString(
             segment.isItalic ||
             segment.isSmall ||
             segment.isCode ||
+            segment.useLabelMediumStyle ||
             textDecoration != null
 
         if (hasExplicitStyle) {
             builder.addStyle(
                 style = SpanStyle(
                     color = segmentColor,
-                    fontWeight = if (segment.isBold) FontWeight.Bold else null,
+                    fontWeight = when {
+                        segment.isBold -> FontWeight.Bold
+                        segment.useLabelMediumStyle -> labelMediumStyle.fontWeight
+                        else -> null
+                    },
                     fontStyle = if (segment.isItalic) FontStyle.Italic else null,
-                    fontSize = if (segment.isSmall) (baseFontSize.value * 0.85f).sp else TextUnit.Unspecified,
+                    fontSize = when {
+                        segment.useLabelMediumStyle && labelMediumStyle.fontSize != TextUnit.Unspecified ->
+                            labelMediumStyle.fontSize
+                        segment.isSmall -> (baseFontSize.value * 0.85f).sp
+                        else -> TextUnit.Unspecified
+                    },
                     textDecoration = textDecoration,
-                    fontFamily = if (segment.isCode) FontFamily.Monospace else null
+                    fontFamily = when {
+                        segment.isCode -> FontFamily.Monospace
+                        segment.useLabelMediumStyle -> labelMediumStyle.fontFamily
+                        else -> null
+                    }
                 ),
                 start = start,
                 end = end
@@ -367,6 +479,7 @@ private fun NmbRichText.toAnnotatedString(
                 end = end
             )
         }
+
     }
 
     return builder.toAnnotatedString()
@@ -375,6 +488,8 @@ private fun NmbRichText.toAnnotatedString(
 private fun NmbRichTextSegment.resolveDisplayColor(
     normalColor: Color,
     linkColor: Color,
+    referenceColor: Color,
+    internalLinkColorOverride: Color?,
     hiddenTextColor: Color,
     revealedHidden: Boolean,
     revealProgress: Float,
@@ -388,7 +503,10 @@ private fun NmbRichTextSegment.resolveDisplayColor(
 ): Color {
     val segmentColor = color
     val visibleColor = when {
-        linkTarget != null -> linkColor
+        linkTarget is NmbLinkTarget.ExternalUrl -> linkColor
+        linkTarget != null && useInternalLinkColorOverride && internalLinkColorOverride != null ->
+            internalLinkColorOverride
+        linkTarget != null -> referenceColor
         segmentColor != null -> parseNmbHtmlColor(segmentColor)?.let { parsedColor ->
             remapNmbHtmlColor(
                 rawColor = parsedColor,
@@ -534,18 +652,18 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHiddenTextBackg
     }
 }
 
-private data class HiddenAnnotationRange(
+private data class GroupedAnnotationRange(
     val id: String,
     val start: Int,
     val end: Int
 )
 
-private fun List<AnnotatedString.Range<String>>.mergeAdjacentHiddenAnnotations(): List<HiddenAnnotationRange> {
+private fun List<AnnotatedString.Range<String>>.mergeAdjacentGroupedAnnotations(): List<GroupedAnnotationRange> {
     if (isEmpty()) {
         return emptyList()
     }
 
-    val merged = mutableListOf<HiddenAnnotationRange>()
+    val merged = mutableListOf<GroupedAnnotationRange>()
     forEach { annotation ->
         val previous = merged.lastOrNull()
         if (previous != null &&
@@ -554,7 +672,7 @@ private fun List<AnnotatedString.Range<String>>.mergeAdjacentHiddenAnnotations()
         ) {
             merged[merged.lastIndex] = previous.copy(end = annotation.end)
         } else {
-            merged += HiddenAnnotationRange(
+            merged += GroupedAnnotationRange(
                 id = annotation.item,
                 start = annotation.start,
                 end = annotation.end
@@ -562,6 +680,10 @@ private fun List<AnnotatedString.Range<String>>.mergeAdjacentHiddenAnnotations()
         }
     }
     return merged
+}
+
+private fun List<AnnotatedString.Range<String>>.mergeAdjacentHiddenAnnotations(): List<GroupedAnnotationRange> {
+    return mergeAdjacentGroupedAnnotations()
 }
 
 private fun remapNmbHtmlColor(

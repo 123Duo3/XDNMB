@@ -51,11 +51,11 @@ import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
-import ink.duo3.fogisland.ui.components.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.preview.FogIslandPreviewColumn
 import ink.duo3.fogisland.ui.components.ListItemAnimatedVisibility
-import ink.duo3.fogisland.ui.components.NmbPostCard
-import ink.duo3.fogisland.ui.components.NmbPreviewSamples
-import ink.duo3.fogisland.ui.components.SubscriptionUuidEditorDialog
+import ink.duo3.fogisland.ui.components.post.NmbPostCard
+import ink.duo3.fogisland.ui.components.preview.NmbPreviewSamples
+import ink.duo3.fogisland.ui.components.settings.SubscriptionUuidEditorDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

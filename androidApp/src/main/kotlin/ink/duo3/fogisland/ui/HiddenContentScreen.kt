@@ -27,8 +27,8 @@ import ink.duo3.fogisland.shared.model.Timeline
 import ink.duo3.fogisland.shared.model.buildForumNameMap
 import ink.duo3.fogisland.shared.model.resolveForumName
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
-import ink.duo3.fogisland.ui.components.SettingItem
-import ink.duo3.fogisland.ui.components.SettingItemGroup
+import ink.duo3.fogisland.ui.components.settings.SettingItem
+import ink.duo3.fogisland.ui.components.settings.SettingItemGroup
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

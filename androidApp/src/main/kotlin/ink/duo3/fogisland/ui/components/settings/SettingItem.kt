@@ -1,4 +1,4 @@
-package ink.duo3.fogisland.ui.components
+package ink.duo3.fogisland.ui.components.settings
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope

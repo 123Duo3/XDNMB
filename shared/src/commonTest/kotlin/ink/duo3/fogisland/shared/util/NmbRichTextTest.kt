@@ -22,6 +22,56 @@ class NmbRichTextTest {
     }
 
     @Test
+    fun `parse quoted thread reference without no prefix`() {
+        val richText = parseNmbRichText("前文 &gt;&gt;123456 后文")
+
+        val referenceSegment = richText.segments.firstOrNull {
+            it.linkTarget == NmbLinkTarget.PostReference(123456L)
+        }
+        assertNotNull(referenceSegment)
+        assertEquals(">>123456", referenceSegment.text.trim())
+    }
+
+    @Test
+    fun `parse eight digit arrow thread id as thread target`() {
+        val richText = parseNmbRichText("前文 &gt;&gt;12345678 和 &gt;87654321")
+
+        val threadTargets = richText.segments.mapNotNull { it.linkTarget as? NmbLinkTarget.Thread }
+        assertEquals(
+            listOf(
+                NmbLinkTarget.Thread(threadId = 12345678L),
+                NmbLinkTarget.Thread(threadId = 87654321L)
+            ),
+            threadTargets
+        )
+    }
+
+    @Test
+    fun `do not parse eight digit arrow thread id inside small tag`() {
+        val richText = parseNmbRichText("<small>&gt;&gt;12345678</small> 外边 &gt;87654321")
+
+        assertEquals(">>12345678 外边 >87654321", richText.plainText)
+        assertNull(richText.segments.first().linkTarget)
+        assertTrue(richText.segments.first().isSmall)
+        assertEquals(
+            NmbLinkTarget.Thread(threadId = 87654321L),
+            richText.segments.last().linkTarget
+        )
+    }
+
+    @Test
+    fun `parse no prefix reference only when it is long enough`() {
+        val longReference = parseNmbRichText("引用 No.12345")
+        val shortReference = parseNmbRichText("引用 No.1234")
+
+        assertEquals(
+            NmbLinkTarget.PostReference(12345L),
+            longReference.segments.last().linkTarget
+        )
+        assertNull(shortReference.segments.last().linkTarget)
+    }
+
+    @Test
     fun `parse link and inline color span`() {
         val richText = parseNmbRichText(
             "<span style=\" color: green \">公告</span> <a href=\"https://app.nmbxd.com\">客户端下载</a>"
@@ -107,6 +157,15 @@ class NmbRichTextTest {
     }
 
     @Test
+    fun `parse html list markers`() {
+        val unordered = parseNmbRichText("<ul><li>第一条</li><li>第二条</li></ul>")
+        val ordered = parseNmbRichText("<ol><li>第一条</li><li>第二条</li></ol>")
+
+        assertEquals("• 第一条\n• 第二条\n", unordered.plainText)
+        assertEquals("1. 第一条\n2. 第二条\n", ordered.plainText)
+    }
+
+    @Test
     fun `plain text stays plain when no html formatting exists`() {
         val richText = parseNmbRichText("普通正文(ﾟ∀ﾟ)")
 
@@ -132,9 +191,9 @@ class NmbRichTextTest {
     }
 
     @Test
-    fun `does not normalize tab characters`() {
+    fun `collapses tab characters like html whitespace`() {
         val richText = parseNmbRichText("前文\t\t<b>\t中间\t</b>\t后文")
 
-        assertEquals("前文\t\t\t中间\t\t后文", richText.plainText)
+        assertEquals("前文 中间 后文", richText.plainText)
     }
 }

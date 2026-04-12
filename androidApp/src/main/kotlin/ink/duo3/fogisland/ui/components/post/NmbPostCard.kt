@@ -1,4 +1,4 @@
-package ink.duo3.fogisland.ui.components
+package ink.duo3.fogisland.ui.components.post
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,6 +43,9 @@ import ink.duo3.fogisland.shared.model.toNmbTimeFormatOptions
 import ink.duo3.fogisland.shared.util.formatNmbPostedAtText
 import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.shouldRenderNmbRichText
+import ink.duo3.fogisland.ui.components.preview.FogIslandPreviewColumn
+import ink.duo3.fogisland.ui.components.preview.NmbPreviewSamples
+import ink.duo3.fogisland.ui.components.richtext.NmbRichTextText
 import ink.duo3.fogisland.utils.ProvideContentColorTextStyle
 
 private val NmbPostCardShape = RoundedCornerShape(24.dp)
@@ -73,6 +76,7 @@ fun NmbPostCard(
             isSage = post.sage,
         )
         NmbPostContent(
+            sourcePostId = post.remoteId,
             title = post.title,
             subtitle = post.name,
             bodyHtml = post.contentHtml,
@@ -154,23 +158,34 @@ fun NmbPostFlatItem(
     post: NmbPost,
     onImageClick: (String, String?) -> Unit,
     onLinkClick: ((NmbLinkTarget) -> Unit)? = null,
+    referencePreviewState: NmbPostReferencePreviewState? = null,
     modifier: Modifier = Modifier,
+    showThreadId: Boolean = true,
+    showDivider: Boolean = true,
+    showPosterLabel: Boolean = true,
+    contentPadding: PaddingValues = NmbPostFlatItemPadding,
     bodyMaxLines: Int = Int.MAX_VALUE,
     bodyOverflow: TextOverflow = TextOverflow.Clip
 ) {
-    NmbPostFlatItemLayout(modifier = modifier) {
+    NmbPostFlatItemLayout(
+        modifier = modifier,
+        showDivider = showDivider,
+        contentPadding = contentPadding
+    ) {
         if(!post.isTips) {
             val postedAtText = rememberNmbPostedAtText(post.postedAtEpochMillis)
             NmbPostHeader(
-                threadId = post.remoteId,
+                threadId = post.remoteId.takeIf { showThreadId },
                 userHash = post.userHash,
                 isAdmin = post.admin,
                 postedAtText = postedAtText,
                 isSage = post.sage,
-                isPoster = post.isPoster
+                isPoster = post.isPoster,
+                showPosterLabel = showPosterLabel
             )
         }
         NmbPostContent(
+            sourcePostId = post.remoteId,
             title = post.title,
             subtitle = post.name,
             bodyHtml = post.contentHtml,
@@ -178,6 +193,7 @@ fun NmbPostFlatItem(
             bodyColor = MaterialTheme.colorScheme.onSurface,
             bodyInteractionsEnabled = true,
             onLinkClick = onLinkClick,
+            referencePreviewState = referencePreviewState,
             bodyMaxLines = bodyMaxLines,
             bodyOverflow = bodyOverflow,
             image = post.image,
@@ -217,24 +233,28 @@ private fun NmbPostCardLayout(
 @Composable
 private fun NmbPostFlatItemLayout(
     modifier: Modifier = Modifier,
+    showDivider: Boolean = true,
+    contentPadding: PaddingValues = NmbPostFlatItemPadding,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         NmbPostContainer(
             modifier = Modifier,
-            contentPadding = NmbPostFlatItemPadding,
+            contentPadding = contentPadding,
             onClick = null,
             onLongClick = null
         )
         {
             content()
         }
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(
-                alpha = 0.4f
+        if (showDivider) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(
+                    alpha = 0.4f
+                )
             )
-        )
+        }
     }
 }
 
@@ -255,7 +275,8 @@ private fun NmbPostHeader(
     isAdmin: Boolean,
     postedAtText: String?,
     isSage: Boolean = false,
-    isPoster: Boolean = false
+    isPoster: Boolean = false,
+    showPosterLabel: Boolean = true
 ) {
     ProvideContentColorTextStyle(
         textStyle = MaterialTheme.typography.labelMedium,
@@ -287,7 +308,7 @@ private fun NmbPostHeader(
                 }
             )
 
-            if (isPoster) {
+            if (isPoster && showPosterLabel) {
                 Text(
                     text = " · PO",
                     color = MaterialTheme.colorScheme.primary
@@ -447,6 +468,7 @@ private fun NmbPostFooter(
 @Composable
 private fun NmbPostContent(
     modifier: Modifier = Modifier,
+    sourcePostId: Long? = null,
     title: String?,
     subtitle: String?,
     bodyHtml: String? = null,
@@ -454,6 +476,7 @@ private fun NmbPostContent(
     bodyColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     bodyInteractionsEnabled: Boolean = true,
     onLinkClick: ((NmbLinkTarget) -> Unit)? = null,
+    referencePreviewState: NmbPostReferencePreviewState? = null,
     bodyMaxLines: Int = Int.MAX_VALUE,
     bodyOverflow: TextOverflow = TextOverflow.Clip,
     customBody: (@Composable () -> Unit)? = null,
@@ -487,7 +510,19 @@ private fun NmbPostContent(
         when {
             customBody != null -> customBody()
             !bodyHtml.isNullOrBlank() || !fallbackBodyText.isNullOrBlank() -> {
-                if (shouldRenderNmbRichText(bodyHtml)) {
+                if (referencePreviewState != null) {
+                    NmbReferencedPostBody(
+                        sourcePostId = sourcePostId ?: 0L,
+                        html = bodyHtml,
+                        fallbackText = fallbackBodyText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = bodyColor,
+                        referencePreviewState = referencePreviewState,
+                        onLinkClick = onLinkClick,
+                        maxLines = bodyMaxLines,
+                        overflow = bodyOverflow
+                    )
+                } else if (shouldRenderNmbRichText(bodyHtml)) {
                     NmbRichTextText(
                         html = bodyHtml,
                         fallbackText = fallbackBodyText,

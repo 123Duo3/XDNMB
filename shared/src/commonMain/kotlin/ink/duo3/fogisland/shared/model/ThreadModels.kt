@@ -41,6 +41,11 @@ data class ThreadDetail(
     val progress: ThreadReadProgress?
 )
 
+data class ResolvedPostReference(
+    val threadId: Long,
+    val post: NmbPost
+)
+
 enum class SearchHitType {
     THREAD,
     POST
