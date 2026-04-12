@@ -5,6 +5,7 @@ import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.NmbRichText
 import ink.duo3.fogisland.shared.util.NmbRichTextLine
 import ink.duo3.fogisland.shared.util.NmbRichTextSegment
+import ink.duo3.fogisland.shared.util.NmbRichTextSemanticColor
 import ink.duo3.fogisland.shared.util.findStandaloneNmbPostReferenceId
 import ink.duo3.fogisland.shared.util.joinNmbRichTextLines
 
@@ -87,15 +88,15 @@ internal fun NmbRichText.appendInlineReferenceSnippets(
         if (post == null) {
             return@forEachIndexed
         }
-        val snippet = buildInlinePostReferenceSummary(post, maxLength = 18)
-        if (snippet.isBlank()) {
+        val resolvedInlinePreviewGroupId = inlinePreviewGroupId ?: return@forEachIndexed
+        val snippetSegments = buildInlinePostReferenceSummarySegments(
+            post = post,
+            inlinePreviewGroupId = resolvedInlinePreviewGroupId
+        )
+        if (snippetSegments.isEmpty()) {
             return@forEachIndexed
         }
-        appended += NmbRichTextSegment(
-            text = " $snippet ",
-            inlinePreviewGroupId = inlinePreviewGroupId,
-            useLabelMediumStyle = true
-        )
+        appended += snippetSegments
         if (needsTrailingSpacer) {
             appended += NmbRichTextSegment(text = "  ")
         }
@@ -140,21 +141,75 @@ internal fun buildStandalonePostReferenceFallbackText(
     }
     .trim()
 
-private fun buildInlinePostReferenceSummary(
+private fun buildInlinePostReferenceSummarySegments(
     post: NmbPost,
-    maxLength: Int
-): String {
-    val normalized = when {
-        post.contentText.isNotBlank() -> post.contentText
-        !post.title.isNullOrBlank() -> post.title.orEmpty()
-        !post.image.isNullOrBlank() -> "[图片回复]"
-        else -> ""
-    }.trim().replace(Regex("\\s+"), " ")
+    inlinePreviewGroupId: Int
+): List<NmbRichTextSegment> {
+    val fields = buildList {
+        post.title
+            ?.normalizeInlineReferenceField(maxLength = 14)
+            ?.let { title ->
+                add(
+                    InlineReferenceSummaryField(
+                        text = title,
+                        semanticColor = NmbRichTextSemanticColor.ON_SURFACE
+                    )
+                )
+            }
+        post.name
+            ?.normalizeInlineReferenceField(maxLength = 10)
+            ?.let { name ->
+                add(
+                    InlineReferenceSummaryField(
+                        text = name,
+                        semanticColor = NmbRichTextSemanticColor.OUTLINE
+                    )
+                )
+            }
 
-    if (normalized.isBlank()) {
-        return ""
+        val body = when {
+            post.contentText.isNotBlank() -> post.contentText
+            !post.image.isNullOrBlank() -> "[图片回复]"
+            else -> ""
+        }.normalizeInlineReferenceField(maxLength = 18)
+        body?.let { add(InlineReferenceSummaryField(text = it)) }
     }
 
+    if (fields.isEmpty()) {
+        return emptyList()
+    }
+
+    return buildList {
+        fields.forEach { field ->
+            add(
+                NmbRichTextSegment(
+                    text = " ${field.text}",
+                    semanticColor = field.semanticColor,
+                    inlinePreviewGroupId = inlinePreviewGroupId,
+                    useLabelMediumStyle = true
+                )
+            )
+        }
+        add(
+            NmbRichTextSegment(
+                text = " ",
+                inlinePreviewGroupId = inlinePreviewGroupId,
+                useLabelMediumStyle = true
+            )
+        )
+    }
+}
+
+private data class InlineReferenceSummaryField(
+    val text: String,
+    val semanticColor: NmbRichTextSemanticColor? = null
+)
+
+private fun String.normalizeInlineReferenceField(maxLength: Int): String? {
+    val normalized = trim().replace(Regex("\\s+"), " ")
+    if (normalized.isBlank()) {
+        return null
+    }
     return if (normalized.length > maxLength) {
         normalized.take(maxLength).trimEnd() + "…"
     } else {

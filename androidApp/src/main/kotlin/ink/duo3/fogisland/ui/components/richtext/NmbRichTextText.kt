@@ -4,10 +4,6 @@ import android.graphics.Color as AndroidColor
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -22,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -31,17 +26,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
@@ -52,6 +44,7 @@ import com.materialkolor.ktx.harmonize
 import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.NmbRichText
 import ink.duo3.fogisland.shared.util.NmbRichTextSegment
+import ink.duo3.fogisland.shared.util.NmbRichTextSemanticColor
 import ink.duo3.fogisland.shared.util.parseNmbRichText
 import ink.duo3.fogisland.ui.theme.LocalFogIslandDarkTheme
 import ink.duo3.fogisland.ui.theme.LocalFogIslandUseMonet
@@ -59,7 +52,10 @@ import kotlinx.coroutines.launch
 
 private const val NmbRichTextLinkAnnotationTag = "nmb_link"
 private const val NmbRichTextHiddenAnnotationTag = "nmb_hidden"
+private const val NmbRichTextInlinePreviewBackgroundAnnotationTag = "nmb_inline_preview_background"
+private const val NmbRichTextInlinePreviewClickAnnotationTag = "nmb_inline_preview_click"
 private const val NmbHiddenRevealAnimationDurationMillis = 220
+private const val InlinePreviewBaselineShift = 0.08f
 
 @Composable
 fun NmbRichTextText(
@@ -134,8 +130,11 @@ fun NmbRichTextText(
     val coroutineScope = rememberCoroutineScope()
     val resolvedLinkColor = linkColor ?: MaterialTheme.colorScheme.tertiary
     val resolvedReferenceColor = referenceColor ?: MaterialTheme.colorScheme.tertiary
+    val semanticOnSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val semanticOutlineColor = MaterialTheme.colorScheme.outline
     val hiddenBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f)
     val hiddenTextColor = hiddenBackgroundColor.copy(alpha = 0.12f)
+    val inlinePreviewBackgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val harmonizeTargetColor = MaterialTheme.colorScheme.primary
     val isDarkTheme = LocalFogIslandDarkTheme.current
     val useMonet = LocalFogIslandUseMonet.current
@@ -177,17 +176,24 @@ fun NmbRichTextText(
         style.fontSize != TextUnit.Unspecified -> style.fontSize
         else -> MaterialTheme.typography.bodyMedium.fontSize
     }
-    val inlinePreviewParts = remember(richText) {
-        buildInlinePreviewParts(richText)
+    val inlinePreviewClickTargets = remember(richText) {
+        richText.segments
+            .mapNotNull { segment ->
+                val groupId = segment.inlinePreviewGroupId ?: return@mapNotNull null
+                val linkTarget = segment.linkTarget ?: return@mapNotNull null
+                groupId to linkTarget
+            }
+            .distinctBy { it.first }
+            .toMap()
     }
-    val density = LocalDensity.current
-    val textMeasurer = rememberTextMeasurer()
     val annotatedText = remember(
         richText,
-        inlinePreviewParts,
+        inlinePreviewClickTargets,
         color,
         resolvedLinkColor,
         resolvedReferenceColor,
+        semanticOnSurfaceColor,
+        semanticOutlineColor,
         internalLinkColorOverride,
         hiddenTextColor,
         labelMediumStyle,
@@ -203,92 +209,43 @@ fun NmbRichTextText(
         useMonet,
         suppressInternalLinkUnderline
     ) {
-        val builder = AnnotatedString.Builder()
-        inlinePreviewParts.forEach { part ->
-            when (part) {
-                is InlinePreviewPart.TextPart -> {
-                    builder.append(
-                        part.richText.toAnnotatedString(
-                            normalColor = color,
-                            linkColor = resolvedLinkColor,
-                            referenceColor = resolvedReferenceColor,
-                            internalLinkColorOverride = internalLinkColorOverride,
-                            hiddenTextColor = hiddenTextColor,
-                            labelMediumStyle = labelMediumStyle,
-                            baseFontSize = resolvedBaseFontSize,
-                            revealedHiddenGroupIds = revealedHiddenGroupSnapshot,
-                            hiddenRevealProgress = hiddenRevealProgressSnapshot,
-                            replyColor = replyColor,
-                            harmonizedPureGreen = harmonizedPureGreen,
-                            harmonizedPureBlue = harmonizedPureBlue,
-                            deepSkyBlueColor = deepSkyBlueColor,
-                            harmonizedPureRed = harmonizedPureRed,
-                            harmonizeTargetColor = harmonizeTargetColor,
-                            useMonet = useMonet,
-                            suppressInternalLinkUnderline = suppressInternalLinkUnderline
-                        )
-                    )
-                }
-
-                is InlinePreviewPart.PreviewPart -> {
-                    builder.appendInlineContent(
-                        id = part.inlineContentId,
-                        alternateText = part.richText.plainText
-                    )
-                }
-            }
-        }
-        builder.toAnnotatedString()
-    }
-    val inlineContent = remember(
-        inlinePreviewParts,
-        density,
-        textMeasurer,
-        style,
-        labelMediumStyle,
-        suppressInternalLinkUnderline,
-        currentOnLinkClick
-    ) {
-        inlinePreviewParts
-            .filterIsInstance<InlinePreviewPart.PreviewPart>()
-            .associate { part ->
-                part.inlineContentId to InlineTextContent(
-                    placeholder = Placeholder(
-                        width = estimateInlinePreviewChipWidth(
-                            text = part.richText.plainText,
-                            textStyle = labelMediumStyle,
-                            textMeasurer = textMeasurer,
-                            density = density
-                        ),
-                        height = estimateInlinePreviewChipHeight(
-                            surroundingStyle = style,
-                            density = density
-                        ),
-                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                    )
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        InlinePreviewChip(
-                            richText = part.richText.stripInlinePreviewStyling(),
-                            clickTarget = part.clickTarget,
-                            style = labelMediumStyle,
-                            onLinkClick = currentOnLinkClick,
-                            suppressInternalLinkUnderline = suppressInternalLinkUnderline
-                        )
-                    }
-                }
-            }
+        richText.toAnnotatedString(
+            normalColor = color,
+            linkColor = resolvedLinkColor,
+            referenceColor = resolvedReferenceColor,
+            semanticOnSurfaceColor = semanticOnSurfaceColor,
+            semanticOutlineColor = semanticOutlineColor,
+            internalLinkColorOverride = internalLinkColorOverride,
+            hiddenTextColor = hiddenTextColor,
+            labelMediumStyle = labelMediumStyle,
+            baseFontSize = resolvedBaseFontSize,
+            revealedHiddenGroupIds = revealedHiddenGroupSnapshot,
+            hiddenRevealProgress = hiddenRevealProgressSnapshot,
+            replyColor = replyColor,
+            harmonizedPureGreen = harmonizedPureGreen,
+            deepSkyBlueColor = deepSkyBlueColor,
+            harmonizedPureBlue = harmonizedPureBlue,
+            harmonizedPureRed = harmonizedPureRed,
+            harmonizeTargetColor = harmonizeTargetColor,
+            useMonet = useMonet,
+            suppressInternalLinkUnderline = suppressInternalLinkUnderline,
+            inlinePreviewClickTargets = inlinePreviewClickTargets
+        )
     }
 
     Text(
         text = annotatedText,
-        inlineContent = inlineContent,
         modifier = modifier
             .drawBehind {
                 val layout = currentLayoutResult ?: return@drawBehind
+                drawInlinePreviewBackgrounds(
+                    text = annotatedText,
+                    layout = layout,
+                    backgroundColor = inlinePreviewBackgroundColor,
+                    cornerRadius = 4.dp.toPx(),
+                    horizontalInset = 1.dp.toPx(),
+                    verticalInset = 1.dp.toPx()
+                )
                 drawHiddenTextBackgrounds(
                     text = annotatedText,
                     layout = layout,
@@ -339,6 +296,19 @@ fun NmbRichTextText(
                         return@awaitEachGesture
                     }
 
+                    val inlinePreviewTarget = annotatedText.getStringAnnotations(
+                        tag = NmbRichTextInlinePreviewClickAnnotationTag,
+                        start = characterOffset,
+                        end = characterOffset
+                    ).firstOrNull()?.item?.let(::decodeNmbLinkTarget)
+
+                    if (inlinePreviewTarget != null && currentOnLinkClick != null) {
+                        down.consume()
+                        up.consume()
+                        currentOnLinkClick?.invoke(inlinePreviewTarget)
+                        return@awaitEachGesture
+                    }
+
                     val url = annotatedText.getStringAnnotations(
                         tag = NmbRichTextLinkAnnotationTag,
                         start = characterOffset,
@@ -366,6 +336,8 @@ private fun NmbRichText.toAnnotatedString(
     normalColor: Color,
     linkColor: Color,
     referenceColor: Color,
+    semanticOnSurfaceColor: Color,
+    semanticOutlineColor: Color,
     internalLinkColorOverride: Color?,
     hiddenTextColor: Color,
     labelMediumStyle: TextStyle,
@@ -379,22 +351,25 @@ private fun NmbRichText.toAnnotatedString(
     harmonizedPureRed: Color,
     harmonizeTargetColor: Color,
     useMonet: Boolean,
-    suppressInternalLinkUnderline: Boolean
+    suppressInternalLinkUnderline: Boolean,
+    inlinePreviewClickTargets: Map<Int, NmbLinkTarget>
 ): AnnotatedString {
     val builder = AnnotatedString.Builder()
 
-    segments.forEachIndexed { index, segment ->
+    segments.forEach { segment ->
         val start = builder.length
         builder.append(segment.text)
         val end = builder.length
         if (start >= end) {
-            return@forEachIndexed
+            return@forEach
         }
 
         val segmentColor = segment.resolveDisplayColor(
             normalColor = normalColor,
             linkColor = linkColor,
             referenceColor = referenceColor,
+            semanticOnSurfaceColor = semanticOnSurfaceColor,
+            semanticOutlineColor = semanticOutlineColor,
             internalLinkColorOverride = internalLinkColorOverride,
             hiddenTextColor = hiddenTextColor,
             revealedHidden = segment.hiddenGroupId?.let { it in revealedHiddenGroupIds } ?: false,
@@ -449,6 +424,11 @@ private fun NmbRichText.toAnnotatedString(
                         else -> TextUnit.Unspecified
                     },
                     textDecoration = textDecoration,
+                    baselineShift = if (segment.inlinePreviewGroupId != null && segment.useLabelMediumStyle) {
+                        BaselineShift(InlinePreviewBaselineShift)
+                    } else {
+                        null
+                    },
                     fontFamily = when {
                         segment.isCode -> FontFamily.Monospace
                         segment.useLabelMediumStyle -> labelMediumStyle.fontFamily
@@ -470,6 +450,24 @@ private fun NmbRichText.toAnnotatedString(
             )
         }
 
+        val inlinePreviewGroupId = segment.inlinePreviewGroupId
+        if (inlinePreviewGroupId != null) {
+            builder.addStringAnnotation(
+                tag = NmbRichTextInlinePreviewBackgroundAnnotationTag,
+                annotation = inlinePreviewGroupId.toString(),
+                start = start,
+                end = end
+            )
+            inlinePreviewClickTargets[inlinePreviewGroupId]?.let { inlinePreviewTarget ->
+                builder.addStringAnnotation(
+                    tag = NmbRichTextInlinePreviewClickAnnotationTag,
+                    annotation = encodeNmbLinkTarget(inlinePreviewTarget),
+                    start = start,
+                    end = end
+                )
+            }
+        }
+
         val hiddenGroupId = segment.hiddenGroupId
         if (segment.isHidden && hiddenGroupId != null && hiddenGroupId !in revealedHiddenGroupIds) {
             builder.addStringAnnotation(
@@ -489,6 +487,8 @@ private fun NmbRichTextSegment.resolveDisplayColor(
     normalColor: Color,
     linkColor: Color,
     referenceColor: Color,
+    semanticOnSurfaceColor: Color,
+    semanticOutlineColor: Color,
     internalLinkColorOverride: Color?,
     hiddenTextColor: Color,
     revealedHidden: Boolean,
@@ -507,6 +507,8 @@ private fun NmbRichTextSegment.resolveDisplayColor(
         linkTarget != null && useInternalLinkColorOverride && internalLinkColorOverride != null ->
             internalLinkColorOverride
         linkTarget != null -> referenceColor
+        semanticColor == NmbRichTextSemanticColor.ON_SURFACE -> semanticOnSurfaceColor
+        semanticColor == NmbRichTextSemanticColor.OUTLINE -> semanticOutlineColor
         segmentColor != null -> parseNmbHtmlColor(segmentColor)?.let { parsedColor ->
             remapNmbHtmlColor(
                 rawColor = parsedColor,
@@ -568,6 +570,86 @@ private fun String.nullIfBlank(): String? = takeIf { it.isNotBlank() }
 
 private fun parseNmbHtmlColor(rawColor: String): Color? {
     return runCatching { Color(AndroidColor.parseColor(rawColor)) }.getOrNull()
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawInlinePreviewBackgrounds(
+    text: AnnotatedString,
+    layout: TextLayoutResult,
+    backgroundColor: Color,
+    cornerRadius: Float,
+    horizontalInset: Float,
+    verticalInset: Float
+) {
+    val inlinePreviewAnnotations = text.getStringAnnotations(
+        tag = NmbRichTextInlinePreviewBackgroundAnnotationTag,
+        start = 0,
+        end = text.length
+    ).sortedBy { it.start }
+        .mergeAdjacentGroupedAnnotations()
+
+    inlinePreviewAnnotations.forEachIndexed { index, annotation ->
+        val firstLine = layout.getLineForOffset(annotation.start)
+        val lastCharacterOffset = (annotation.end - 1).coerceAtLeast(annotation.start)
+        val lastLine = layout.getLineForOffset(lastCharacterOffset)
+
+        for (lineIndex in firstLine..lastLine) {
+            val lineStart = maxOf(annotation.start, layout.getLineStart(lineIndex))
+            val lineEndExclusive = minOf(
+                annotation.end,
+                layout.getLineEnd(lineIndex, visibleEnd = true)
+            )
+            if (lineStart >= lineEndExclusive) {
+                continue
+            }
+
+            val firstBox = layout.getBoundingBox(lineStart)
+            val lastBox = layout.getBoundingBox(lineEndExclusive - 1)
+            val lineVisibleStart = layout.getLineStart(lineIndex)
+            val lineVisibleEnd = layout.getLineEnd(lineIndex, visibleEnd = true)
+            val previousChar = text.text.getOrNull(lineStart - 1)
+            val nextChar = text.text.getOrNull(lineEndExclusive)
+
+            val hasPreviousAdjacentPreview = inlinePreviewAnnotations.getOrNull(index - 1)?.let { previous ->
+                previous.end == lineStart &&
+                    lineStart > lineVisibleStart &&
+                    previous.end > previous.start &&
+                    layout.getLineForOffset(previous.end - 1) == lineIndex
+            } == true
+
+            val hasNextAdjacentPreview = inlinePreviewAnnotations.getOrNull(index + 1)?.let { next ->
+                next.start == lineEndExclusive &&
+                    lineEndExclusive < lineVisibleEnd &&
+                    next.end > next.start &&
+                    layout.getLineForOffset(next.start) == lineIndex
+            } == true
+
+            val touchesPreviousText = !hasPreviousAdjacentPreview &&
+                lineStart > lineVisibleStart &&
+                previousChar != null &&
+                !previousChar.isWhitespace()
+
+            val touchesNextText = !hasNextAdjacentPreview &&
+                lineEndExclusive < lineVisibleEnd &&
+                nextChar != null &&
+                !nextChar.isWhitespace()
+
+            val adjustedHorizontalInset = minOf(horizontalInset, firstBox.width / 2f, lastBox.width / 2f)
+            val adjustedVerticalInset = minOf(verticalInset, firstBox.height / 2f)
+            val rect = Rect(
+                left = firstBox.left + if (hasPreviousAdjacentPreview || touchesPreviousText) adjustedHorizontalInset else 0f,
+                top = firstBox.top + adjustedVerticalInset,
+                right = lastBox.right - if (hasNextAdjacentPreview || touchesNextText) adjustedHorizontalInset else 0f,
+                bottom = firstBox.bottom - adjustedVerticalInset
+            )
+
+            drawRoundRect(
+                color = backgroundColor,
+                topLeft = rect.topLeft,
+                size = rect.size,
+                cornerRadius = CornerRadius(cornerRadius, cornerRadius)
+            )
+        }
+    }
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHiddenTextBackgrounds(

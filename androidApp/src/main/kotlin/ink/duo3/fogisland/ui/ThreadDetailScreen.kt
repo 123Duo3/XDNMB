@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Velocity
 import ink.duo3.fogisland.shared.model.ErrorPresentation
 import ink.duo3.fogisland.shared.model.ResolvedPostReference
 import ink.duo3.fogisland.shared.model.ThreadDetail
+import ink.duo3.fogisland.shared.network.api.toErrorPresentation
 import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.ui.components.ErrorMessageCard
 import ink.duo3.fogisland.ui.components.preview.FogIslandPreviewColumn
@@ -62,6 +63,7 @@ import ink.duo3.fogisland.ui.components.post.logReferenceJump
 import ink.duo3.fogisland.ui.components.post.scrollToItemAtPreferredOffset
 import ink.duo3.fogisland.ui.components.post.syncTopAppBarToCurrentListPosition
 import ink.duo3.fogisland.ui.components.preview.NmbPreviewSamples
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -69,6 +71,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlin.time.TimeSource
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -101,7 +104,7 @@ fun ThreadDetailScreen(
     val errorOffset = if (error != null) 1 else 0
 
     var restoredFocusKey by remember { mutableStateOf<Triple<Long?, Long?, Int?>?>(null) }
-    var restoredProgressKey by remember { mutableStateOf<Pair<Long?, Long>?>(null) }
+    var restoredProgressThreadId by remember { mutableStateOf<Long?>(null) }
     var pendingInThreadJump by remember(thread?.id) {
         mutableStateOf<PendingInThreadJump?>(null)
     }
@@ -272,6 +275,7 @@ fun ThreadDetailScreen(
 
     suspend fun handlePostReferenceClick(sourcePostId: Long, postId: Long) {
         val currentThread = thread ?: return
+        val clickMark = TimeSource.Monotonic.markNow()
         logReferenceJump {
             "postReferenceClick source=$sourcePostId target=$postId " +
                     "thread=${currentThread.id} first=${listState.firstVisibleItemIndex}/${listState.firstVisibleItemScrollOffset}"
@@ -299,16 +303,32 @@ fun ThreadDetailScreen(
         }
 
         referenceDialogState = ReferenceDialogState.Loading(postId)
-        logReferenceJump { "postReferenceClick loadCurrentThreadUntilPost start target=$postId" }
-        if (onLoadCurrentThreadUntilPost(postId)) {
-            logReferenceJump { "postReferenceClick loadCurrentThreadUntilPost hit target=$postId" }
-            referenceDialogState = null
-            jumpToInThreadPost(sourcePostId, postId)
+        logReferenceJump {
+            "postReferenceClick queryReference start target=$postId preferredThread=null"
+        }
+        val queryReferenceMark = TimeSource.Monotonic.markNow()
+        val resolved = try {
+            onQueryPostReference(postId, null)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (throwable: Throwable) {
+            val error = throwable.toErrorPresentation("加载引用目标失败")
+            logReferenceJump {
+                "postReferenceClick queryReference error target=$postId " +
+                    "summary=${error.summary} detail=${error.detail} " +
+                    "elapsed=${queryReferenceMark.elapsedNow()} totalElapsed=${clickMark.elapsedNow()}"
+            }
+            referenceDialogState = ReferenceDialogState.Error(
+                postId = postId,
+                message = error.toReferenceDialogMessage()
+            )
             return
         }
-
-        logReferenceJump { "postReferenceClick queryReference start target=$postId" }
-        val resolved = onQueryPostReference(postId, currentThread.id)
+        logReferenceJump {
+            "postReferenceClick queryReference end target=$postId " +
+                "hit=${resolved != null} thread=${resolved?.threadId} " +
+                "elapsed=${queryReferenceMark.elapsedNow()} totalElapsed=${clickMark.elapsedNow()}"
+        }
         if (resolved != null) {
             referenceLookupStates[postId] = CachedReferenceLookupState.Resolved(resolved)
             if (resolved.threadId == currentThread.id) {
@@ -338,8 +358,11 @@ fun ThreadDetailScreen(
         referenceLookupStates[postId] = CachedReferenceLookupState.Loading
         coroutineScope.launch {
             val resolved = onResolveCachedPostReference(postId)
-            referenceLookupStates[postId] = resolved?.let(CachedReferenceLookupState::Resolved)
-                ?: CachedReferenceLookupState.Miss
+            if (resolved != null) {
+                referenceLookupStates[postId] = CachedReferenceLookupState.Resolved(resolved)
+            } else {
+                referenceLookupStates.remove(postId)
+            }
         }
     }
 
@@ -434,14 +457,13 @@ fun ThreadDetailScreen(
         }
     }
 
-    LaunchedEffect(thread?.id, posts.size, progress?.updatedAt) {
+    LaunchedEffect(thread?.id, posts.size, progress?.threadId) {
         if (shouldSuppressProgressRestore) {
             return@LaunchedEffect
         }
         val threadId = thread?.id ?: return@LaunchedEffect
         val readProgress = progress ?: return@LaunchedEffect
-        val restoreKey = threadId to readProgress.updatedAt
-        if (restoredProgressKey == restoreKey) {
+        if (restoredProgressThreadId == threadId) {
             return@LaunchedEffect
         }
 
@@ -455,7 +477,7 @@ fun ThreadDetailScreen(
             scrollOffset = readProgress.lastVisibleItemOffset
         )
         listState.syncTopAppBarToCurrentListPosition(topAppBarScrollBehavior)
-        restoredProgressKey = restoreKey
+        restoredProgressThreadId = threadId
     }
 
     LaunchedEffect(thread?.id, posts.size) {
@@ -474,7 +496,13 @@ fun ThreadDetailScreen(
             }
     }
 
-    LaunchedEffect(thread?.id, posts.size, errorOffset, referenceJumpStack.size) {
+    LaunchedEffect(
+        thread?.id,
+        posts.size,
+        errorOffset,
+        referenceJumpStack.size,
+        pendingInThreadJump
+    ) {
         snapshotFlow {
             listState.layoutInfo.visibleItemsInfo
                 .mapNotNull { item -> resolvePostIdByIndex(item.index) }
@@ -482,6 +510,22 @@ fun ThreadDetailScreen(
         }
             .distinctUntilChanged()
             .collect { visiblePostIds ->
+                val pendingJump = pendingInThreadJump
+                referenceJumpStack.lastOrNull()
+                    ?.takeIf { anchor ->
+                        pendingJump?.sourcePostId == anchor.sourcePostId &&
+                            !anchor.sourceHasLeftViewport &&
+                            anchor.sourcePostId !in visiblePostIds
+                    }
+                    ?.let { anchor ->
+                        referenceJumpStack[referenceJumpStack.lastIndex] =
+                            anchor.copy(sourceHasLeftViewport = true)
+                        logReferenceJump {
+                            "visibleObserver markSourceLeft source=${anchor.sourcePostId} " +
+                                "visiblePosts=$visiblePostIds"
+                        }
+                    }
+
                 while (
                     referenceJumpStack.isNotEmpty() &&
                     referenceJumpStack.last().sourceHasLeftViewport &&
@@ -703,6 +747,11 @@ private data class PendingInThreadJump(
     val targetPostId: Long,
     val token: Long
 )
+
+private fun ErrorPresentation.toReferenceDialogMessage(): String {
+    val detailText = detail?.takeIf { it.isNotBlank() && it != summary }
+    return detailText?.let { "$summary\n$it" } ?: summary
+}
 
 private sealed interface CachedReferenceLookupState {
     data object Loading : CachedReferenceLookupState

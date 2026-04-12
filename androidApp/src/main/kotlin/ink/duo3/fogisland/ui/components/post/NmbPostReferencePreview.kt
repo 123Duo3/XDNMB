@@ -143,6 +143,8 @@ private fun StandalonePostReferencePreviewCard(
             ?: buildStandalonePostReferenceFallbackText(post)
         parseNmbRichText(source).appendCardPreviewReferenceStyling(resolvedPosts)
     }
+    val displayTitle = post.title?.takeIf { it.isNotBlank() }
+    val displayName = post.name?.takeIf { it.isNotBlank() }
     val postImage = post.image
     Surface(
         modifier = Modifier
@@ -198,12 +200,32 @@ private fun StandalonePostReferencePreviewCard(
                     }
                 }
             }
+            if (displayTitle != null || displayName != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    displayTitle?.let { title ->
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    displayName?.let { name ->
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
             NmbRichTextText(
                 richText = bodyRichText,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                linkColor = MaterialTheme.colorScheme.onSurface,
-                referenceColor = MaterialTheme.colorScheme.onSurface,
                 internalLinkColorOverride = MaterialTheme.colorScheme.onSurface,
                 interactionsEnabled = false,
                 maxLines = 3,
@@ -239,6 +261,8 @@ private val ReferencePreviewImageMinimumWidth = 48.dp
 private val PreviewReferenceTargetPrimary = NmbPreviewSamples.replyPost.copy(
     id = 45678961L,
     remoteId = 45678961L,
+    title = "这是一条预览标题",
+    name = "引用预览测试名",
     contentHtml = "<font color=\"#789922\">&gt;&gt;No.45670000</font><br />这是一条被引用的回复，用来看独立预览卡片的密度、圆角和标题样式。",
     contentText = ">>No.45670000 这是一条被引用的回复，用来看独立预览卡片的密度、圆角和标题样式。",
     image = NmbPreviewSamples.forumThread.image,

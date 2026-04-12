@@ -24,6 +24,7 @@ import ink.duo3.fogisland.shared.model.ThreadPostRequest
 import ink.duo3.fogisland.shared.model.ThreadPostResult
 import ink.duo3.fogisland.shared.model.Timeline
 import ink.duo3.fogisland.shared.network.api.NmbApiClient
+import ink.duo3.fogisland.shared.network.api.NmbApiResponseException
 import ink.duo3.fogisland.shared.network.model.ForumBoardDto
 import ink.duo3.fogisland.shared.network.model.ForumGroupDto
 import ink.duo3.fogisland.shared.network.model.PostDto
@@ -572,21 +573,29 @@ class ForumRepository(
         getCachedPostReference(postId)?.let { return it }
 
         preferredThreadId?.let { threadId ->
-            runCatching {
+            val result = runCatching {
                 queryPostReferenceInThread(
                     threadId = threadId,
                     postId = postId
                 )
-            }.getOrNull()?.let { return it }
+            }
+            result.getOrNull()?.let { return it }
+            result.exceptionOrNull()
+                ?.takeUnless { it.isMissingPostReferenceTarget() }
+                ?.let { throw it }
         }
 
         if (preferredThreadId != postId) {
-            runCatching {
+            val result = runCatching {
                 queryPostReferenceInThread(
                     threadId = postId,
                     postId = postId
                 )
-            }.getOrNull()?.let { return it }
+            }
+            result.getOrNull()?.let { return it }
+            result.exceptionOrNull()
+                ?.takeUnless { it.isMissingPostReferenceTarget() }
+                ?.let { throw it }
         }
 
         return getCachedPostReference(postId)
@@ -623,6 +632,10 @@ class ForumRepository(
 
         return getCachedPostReference(postId)
             ?.takeIf { it.threadId == threadId }
+    }
+
+    private fun Throwable.isMissingPostReferenceTarget(): Boolean {
+        return this is NmbApiResponseException && presentation.summary.contains("该串不存在")
     }
 
     suspend fun updateReadProgress(

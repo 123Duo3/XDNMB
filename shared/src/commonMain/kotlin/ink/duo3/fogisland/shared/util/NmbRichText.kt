@@ -14,6 +14,7 @@ data class NmbRichText(
 data class NmbRichTextSegment(
     val text: String,
     val color: String? = null,
+    val semanticColor: NmbRichTextSemanticColor? = null,
     val linkTarget: NmbLinkTarget? = null,
     val hiddenGroupId: Int? = null,
     val inlinePreviewGroupId: Int? = null,
@@ -28,6 +29,11 @@ data class NmbRichTextSegment(
     val suppressLinkUnderline: Boolean = false,
     val useInternalLinkColorOverride: Boolean = false
 )
+
+enum class NmbRichTextSemanticColor {
+    ON_SURFACE,
+    OUTLINE
+}
 
 private data class NmbRichTextScope(
     val tagName: String,
@@ -494,6 +500,7 @@ private fun mergeNmbRichSegments(
             '\n' !in previous.text &&
             '\n' !in segment.text &&
             previous.color == segment.color &&
+            previous.semanticColor == segment.semanticColor &&
             previous.linkTarget == segment.linkTarget &&
             previous.hiddenGroupId == segment.hiddenGroupId &&
             previous.inlinePreviewGroupId == segment.inlinePreviewGroupId &&
