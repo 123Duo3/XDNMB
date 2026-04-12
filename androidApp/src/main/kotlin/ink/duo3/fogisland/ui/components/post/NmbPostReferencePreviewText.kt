@@ -77,7 +77,7 @@ internal fun NmbRichText.appendInlineReferenceSnippets(
         }
         appended += if (post != null) {
             segment.copy(
-                text = " ${segment.text}",
+                text = "  ${segment.text}",
                 inlinePreviewGroupId = inlinePreviewGroupId,
                 useLabelMediumStyle = true,
                 suppressLinkUnderline = true
@@ -141,38 +141,42 @@ internal fun buildStandalonePostReferenceFallbackText(
     }
     .trim()
 
+private const val InlinePreviewSummaryBudget = 24
+
 private fun buildInlinePostReferenceSummarySegments(
     post: NmbPost,
     inlinePreviewGroupId: Int
 ): List<NmbRichTextSegment> {
     val fields = buildList {
+        var remaining = InlinePreviewSummaryBudget
+
         post.title
-            ?.normalizeInlineReferenceField(maxLength = 14)
+            ?.normalizeInlineReferenceField(maxLength = remaining)
             ?.let { title ->
-                add(
-                    InlineReferenceSummaryField(
-                        text = title,
-                        semanticColor = NmbRichTextSemanticColor.ON_SURFACE
-                    )
-                )
-            }
-        post.name
-            ?.normalizeInlineReferenceField(maxLength = 10)
-            ?.let { name ->
-                add(
-                    InlineReferenceSummaryField(
-                        text = name,
-                        semanticColor = NmbRichTextSemanticColor.OUTLINE
-                    )
-                )
+                add(InlineReferenceSummaryField(text = title, semanticColor = NmbRichTextSemanticColor.ON_SURFACE))
+                remaining -= title.length
             }
 
-        val body = when {
-            post.contentText.isNotBlank() -> post.contentText
-            !post.image.isNullOrBlank() -> "[图片回复]"
-            else -> ""
-        }.normalizeInlineReferenceField(maxLength = 18)
-        body?.let { add(InlineReferenceSummaryField(text = it)) }
+        if (remaining > 0) {
+            post.name
+                ?.normalizeInlineReferenceField(maxLength = remaining)
+                ?.let { name ->
+                    add(InlineReferenceSummaryField(text = name, semanticColor = NmbRichTextSemanticColor.OUTLINE))
+                    remaining -= name.length
+                }
+        }
+
+        if (remaining > 0) {
+            val bodySource = when {
+                post.contentText.isNotBlank() -> post.contentText
+                !post.image.isNullOrBlank() -> "[图片回复]"
+                else -> ""
+            }
+            bodySource.normalizeInlineReferenceField(maxLength = remaining)
+                ?.let { body ->
+                    add(InlineReferenceSummaryField(text = body, semanticColor = NmbRichTextSemanticColor.ON_SURFACE_VARIANT))
+                }
+        }
     }
 
     if (fields.isEmpty()) {
@@ -192,7 +196,7 @@ private fun buildInlinePostReferenceSummarySegments(
         }
         add(
             NmbRichTextSegment(
-                text = " ",
+                text = "  ",
                 inlinePreviewGroupId = inlinePreviewGroupId,
                 useLabelMediumStyle = true
             )

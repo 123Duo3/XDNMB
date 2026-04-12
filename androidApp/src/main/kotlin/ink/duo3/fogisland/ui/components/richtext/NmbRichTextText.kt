@@ -131,6 +131,7 @@ fun NmbRichTextText(
     val resolvedLinkColor = linkColor ?: MaterialTheme.colorScheme.tertiary
     val resolvedReferenceColor = referenceColor ?: MaterialTheme.colorScheme.tertiary
     val semanticOnSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val semanticOnSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
     val semanticOutlineColor = MaterialTheme.colorScheme.outline
     val hiddenBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f)
     val hiddenTextColor = hiddenBackgroundColor.copy(alpha = 0.12f)
@@ -193,6 +194,7 @@ fun NmbRichTextText(
         resolvedLinkColor,
         resolvedReferenceColor,
         semanticOnSurfaceColor,
+        semanticOnSurfaceVariantColor,
         semanticOutlineColor,
         internalLinkColorOverride,
         hiddenTextColor,
@@ -214,6 +216,7 @@ fun NmbRichTextText(
             linkColor = resolvedLinkColor,
             referenceColor = resolvedReferenceColor,
             semanticOnSurfaceColor = semanticOnSurfaceColor,
+            semanticOnSurfaceVariantColor = semanticOnSurfaceVariantColor,
             semanticOutlineColor = semanticOutlineColor,
             internalLinkColorOverride = internalLinkColorOverride,
             hiddenTextColor = hiddenTextColor,
@@ -337,6 +340,7 @@ private fun NmbRichText.toAnnotatedString(
     linkColor: Color,
     referenceColor: Color,
     semanticOnSurfaceColor: Color,
+    semanticOnSurfaceVariantColor: Color,
     semanticOutlineColor: Color,
     internalLinkColorOverride: Color?,
     hiddenTextColor: Color,
@@ -369,6 +373,7 @@ private fun NmbRichText.toAnnotatedString(
             linkColor = linkColor,
             referenceColor = referenceColor,
             semanticOnSurfaceColor = semanticOnSurfaceColor,
+            semanticOnSurfaceVariantColor = semanticOnSurfaceVariantColor,
             semanticOutlineColor = semanticOutlineColor,
             internalLinkColorOverride = internalLinkColorOverride,
             hiddenTextColor = hiddenTextColor,
@@ -488,6 +493,7 @@ private fun NmbRichTextSegment.resolveDisplayColor(
     linkColor: Color,
     referenceColor: Color,
     semanticOnSurfaceColor: Color,
+    semanticOnSurfaceVariantColor: Color,
     semanticOutlineColor: Color,
     internalLinkColorOverride: Color?,
     hiddenTextColor: Color,
@@ -508,6 +514,7 @@ private fun NmbRichTextSegment.resolveDisplayColor(
             internalLinkColorOverride
         linkTarget != null -> referenceColor
         semanticColor == NmbRichTextSemanticColor.ON_SURFACE -> semanticOnSurfaceColor
+        semanticColor == NmbRichTextSemanticColor.ON_SURFACE_VARIANT -> semanticOnSurfaceVariantColor
         semanticColor == NmbRichTextSemanticColor.OUTLINE -> semanticOutlineColor
         segmentColor != null -> parseNmbHtmlColor(segmentColor)?.let { parsedColor ->
             remapNmbHtmlColor(
@@ -596,7 +603,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawInlinePreviewBa
             val lineStart = maxOf(annotation.start, layout.getLineStart(lineIndex))
             val lineEndExclusive = minOf(
                 annotation.end,
-                layout.getLineEnd(lineIndex, visibleEnd = true)
+                layout.getLineEnd(lineIndex, visibleEnd = false)
             )
             if (lineStart >= lineEndExclusive) {
                 continue

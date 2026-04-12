@@ -32,6 +32,7 @@ data class NmbRichTextSegment(
 
 enum class NmbRichTextSemanticColor {
     ON_SURFACE,
+    ON_SURFACE_VARIANT,
     OUTLINE
 }
 
