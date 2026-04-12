@@ -194,7 +194,14 @@ class ForumRepository(
         return forumPreferences.hiddenTimelineForumFiltersFlow
     }
 
-    suspend fun refreshCatalog(source: CatalogSource, page: Int) {
+    suspend fun refreshCatalog(
+        source: CatalogSource,
+        page: Int,
+        replaceLoadedPages: Boolean = false
+    ) {
+        require(!replaceLoadedPages || page == 1) {
+            "Replacing loaded catalog pages is only supported from page 1."
+        }
         val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
         val threads = when (source.type) {
             CatalogType.FORUM -> apiClient.getForumThreads(source.id, page)
@@ -205,7 +212,8 @@ class ForumRepository(
             catalogId = source.id,
             page = page,
             threads = threads,
-            refreshedAt = timestamp
+            refreshedAt = timestamp,
+            replaceLoadedPages = replaceLoadedPages
         )
     }
 
@@ -738,7 +746,8 @@ class ForumRepository(
         catalogId: Long,
         page: Int,
         threads: List<ThreadDto>,
-        refreshedAt: Long
+        refreshedAt: Long,
+        replaceLoadedPages: Boolean = false
     ) {
         val threadEntities = threads.map { it.toThreadEntity(refreshedAt) }
         val cachedReplies = threads.flatMap { thread ->
@@ -764,14 +773,24 @@ class ForumRepository(
                 refreshedAt = refreshedAt
             )
         }
-        forumRefreshDao.replaceCatalogPage(
-            catalogType = catalogType,
-            catalogId = catalogId,
-            page = page,
-            threads = threadEntities,
-            posts = cachedReplies,
-            entries = catalogEntries
-        )
+        if (replaceLoadedPages) {
+            forumRefreshDao.replaceCatalogFromFirstPage(
+                catalogType = catalogType,
+                catalogId = catalogId,
+                threads = threadEntities,
+                posts = cachedReplies,
+                entries = catalogEntries
+            )
+        } else {
+            forumRefreshDao.replaceCatalogPage(
+                catalogType = catalogType,
+                catalogId = catalogId,
+                page = page,
+                threads = threadEntities,
+                posts = cachedReplies,
+                entries = catalogEntries
+            )
+        }
     }
 
     private fun ForumBoardDto.toForumBoard(groupId: Long): ForumBoard? {

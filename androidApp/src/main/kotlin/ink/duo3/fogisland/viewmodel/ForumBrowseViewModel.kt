@@ -373,7 +373,13 @@ class ForumBrowseViewModel(
         }
         observeCatalog(source)
 
-        if (forceRefresh || (catalogPageCache[cacheKey] ?: 0) == 0) {
+        if (forceRefresh) {
+            loadCatalogPage(
+                source = source,
+                page = 1,
+                replaceLoadedPages = true
+            )
+        } else if ((catalogPageCache[cacheKey] ?: 0) == 0) {
             loadCatalogPage(source, 1)
         }
     }
@@ -1138,14 +1144,26 @@ class ForumBrowseViewModel(
         }
     }
 
-    private fun loadCatalogPage(source: CatalogSource, page: Int) {
+    private fun loadCatalogPage(
+        source: CatalogSource,
+        page: Int,
+        replaceLoadedPages: Boolean = false
+    ) {
         val cacheKey = source.cacheKey()
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingCatalog = true, error = null) }
             runCatching {
-                repository.refreshCatalog(source, page)
+                repository.refreshCatalog(
+                    source = source,
+                    page = page,
+                    replaceLoadedPages = replaceLoadedPages
+                )
             }.onSuccess {
-                catalogPageCache[cacheKey] = maxOf(catalogPageCache[cacheKey] ?: 0, page)
+                catalogPageCache[cacheKey] = if (replaceLoadedPages) {
+                    page
+                } else {
+                    maxOf(catalogPageCache[cacheKey] ?: 0, page)
+                }
                 _uiState.update {
                     it.copy(
                         isLoadingCatalog = false,

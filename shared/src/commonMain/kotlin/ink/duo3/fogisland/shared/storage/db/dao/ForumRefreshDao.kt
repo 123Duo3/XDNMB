@@ -29,6 +29,20 @@ interface ForumRefreshDao {
     }
 
     @Transaction
+    suspend fun replaceCatalogFromFirstPage(
+        catalogType: String,
+        catalogId: Long,
+        threads: List<ThreadEntity>,
+        posts: List<PostEntity>,
+        entries: List<CatalogEntryEntity>
+    ) {
+        deleteCatalog(catalogType, catalogId)
+        upsertThreads(threads)
+        insertCatalogPreviewPosts(posts)
+        insertCatalogEntries(entries)
+    }
+
+    @Transaction
     suspend fun replaceThreadPage(
         thread: ThreadEntity,
         threadId: Long,
@@ -88,6 +102,14 @@ interface ForumRefreshDao {
         """
     )
     suspend fun deleteCatalogPage(catalogType: String, catalogId: Long, page: Int)
+
+    @Query(
+        """
+        DELETE FROM catalog_entries
+        WHERE catalogType = :catalogType AND catalogId = :catalogId
+        """
+    )
+    suspend fun deleteCatalog(catalogType: String, catalogId: Long)
 
     @Query(
         """
