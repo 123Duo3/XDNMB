@@ -43,6 +43,7 @@ import kotlinx.coroutines.supervisorScope
 data class ForumBrowseUiState(
     val isLoadingIndex: Boolean = true,
     val isLoadingCatalog: Boolean = false,
+    val isRefreshingCatalog: Boolean = false,
     val isLoadingSubscriptions: Boolean = false,
     val isLoadingThread: Boolean = false,
     val isPostingThread: Boolean = false,
@@ -64,6 +65,7 @@ data class ForumBrowseUiState(
     val directThreadShortcut: DirectThreadShortcut? = null,
     val recentSearches: List<String> = emptyList(),
     val loadedCatalogPage: Int = 0,
+    val catalogContentVersion: Long = 0L,
     val loadedSubscriptionPage: Int = 0,
     val siteNotice: SiteNotice? = null,
     val threadDetail: ThreadDetail = ThreadDetail(null, emptyList(), null),
@@ -282,6 +284,8 @@ class ForumBrowseViewModel(
                 _uiState.update {
                     it.copy(
                         isLoadingIndex = false,
+                        isLoadingCatalog = false,
+                        isRefreshingCatalog = false,
                         siteNotice = siteNotice,
                         error = failure.toErrorPresentation("加载板块失败")
                     )
@@ -310,6 +314,12 @@ class ForumBrowseViewModel(
             }
 
             if (source == null) {
+                _uiState.update {
+                    it.copy(
+                        isLoadingCatalog = false,
+                        isRefreshingCatalog = false
+                    )
+                }
                 val refreshedNotice = resolveVisibleSiteNotice(
                     noticeDeferred.await().getOrElse { existingNotice }
                 )
@@ -1151,7 +1161,13 @@ class ForumBrowseViewModel(
     ) {
         val cacheKey = source.cacheKey()
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingCatalog = true, error = null) }
+            _uiState.update {
+                it.copy(
+                    isLoadingCatalog = !replaceLoadedPages,
+                    isRefreshingCatalog = replaceLoadedPages,
+                    error = null
+                )
+            }
             runCatching {
                 repository.refreshCatalog(
                     source = source,
@@ -1167,13 +1183,20 @@ class ForumBrowseViewModel(
                 _uiState.update {
                     it.copy(
                         isLoadingCatalog = false,
-                        loadedCatalogPage = catalogPageCache[cacheKey] ?: page
+                        isRefreshingCatalog = false,
+                        loadedCatalogPage = catalogPageCache[cacheKey] ?: page,
+                        catalogContentVersion = if (replaceLoadedPages) {
+                            it.catalogContentVersion + 1
+                        } else {
+                            it.catalogContentVersion
+                        }
                     )
                 }
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(
                         isLoadingCatalog = false,
+                        isRefreshingCatalog = false,
                         error = throwable.toErrorPresentation("加载串列表失败")
                     )
                 }

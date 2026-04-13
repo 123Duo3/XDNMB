@@ -1,30 +1,36 @@
 package ink.duo3.fogisland.ui
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Message
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -33,6 +39,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,7 +53,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material3.ExperimentalMaterial3Api
+import ink.duo3.fogisland.utils.smoothScrimBrush
 import ink.duo3.fogisland.data.LocalTimeSettings
 import ink.duo3.fogisland.shared.model.CatalogSource
 import ink.duo3.fogisland.shared.model.CatalogType
@@ -62,7 +77,12 @@ import ink.duo3.fogisland.ui.components.post.NmbPostCard
 import ink.duo3.fogisland.ui.components.preview.NmbPreviewSamples
 import ink.duo3.fogisland.ui.components.SiteNoticeCard
 import ink.duo3.fogisland.viewmodel.ForumBrowseUiState
+import kotlinx.coroutines.delay
+import kotlin.random.Random
 
+private const val CatalogSkeletonRevealDelayMillis = 160L
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForumScreen(
     state: ForumBrowseUiState,
@@ -94,6 +114,33 @@ fun ForumScreen(
     var removingTimelineForumThreadIds by remember { mutableStateOf(emptySet<Long>()) }
     val listState = rememberLazyListState()
     val siteNoticeVisibility = remember { MutableTransitionState(state.siteNotice != null) }
+    val pullToRefreshState = rememberPullToRefreshState()
+    val skeletonSpecs = remember {
+        buildForumThreadSkeletonSpecs(seed = 0)
+    }
+    var shouldRevealSkeletonThreads by remember(sourceKey) { mutableStateOf(false) }
+    val hasDisplayedThreads = displayedThreads.isNotEmpty()
+    val isUpdatingCachedThreads =
+        hasDisplayedThreads &&
+        source != null &&
+            state.loadedCatalogPage == 0 &&
+            state.error == null
+    val showRefreshIndicator = state.isRefreshingCatalog || isUpdatingCachedThreads
+    val isAwaitingCatalogContent =
+        source != null &&
+            state.loadedCatalogPage == 0 &&
+            !hasDisplayedThreads &&
+            state.error == null
+    val shouldPrepareSkeletonThreads =
+        !hasDisplayedThreads &&
+            state.error == null &&
+            source != null &&
+            (
+                state.isLoadingCatalog ||
+                    state.isRefreshingCatalog ||
+                    isAwaitingCatalogContent
+                )
+    val shouldShowSkeletonThreads = shouldPrepareSkeletonThreads && shouldRevealSkeletonThreads
 
     LaunchedEffect(sourceKey) {
         displayedThreads = state.threads
@@ -101,6 +148,16 @@ fun ForumScreen(
         removingTimelineForumThreadIds = emptySet()
         pendingSiteNotice = null
         actionTarget = null
+    }
+
+    LaunchedEffect(shouldPrepareSkeletonThreads, sourceKey) {
+        if (!shouldPrepareSkeletonThreads) {
+            shouldRevealSkeletonThreads = false
+            return@LaunchedEffect
+        }
+
+        delay(CatalogSkeletonRevealDelayMillis)
+        shouldRevealSkeletonThreads = true
     }
 
     LaunchedEffect(state.threads, state.error) {
@@ -169,39 +226,50 @@ fun ForumScreen(
         }
     }
 
-    Scaffold(
+    PullToRefreshBox(
+        isRefreshing = showRefreshIndicator,
+        onRefresh = {
+            if (source != null && !state.isLoadingIndex) {
+                onRefreshClick()
+            }
+        },
+        state = pullToRefreshState,
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        bottomBar = {
-            ForumBottomAppBar(
-                source = source,
-                onMenuClick = onMenuClick,
-                onRefreshClick = onRefreshClick,
-                onPostClick = onPostClick
+        enabled = source != null && !state.isLoadingIndex,
+        indicator = {
+            PullToRefreshDefaults.Indicator(
+                state = pullToRefreshState,
+                isRefreshing = showRefreshIndicator,
+                modifier = Modifier
+                    .align(Alignment.TopCenter),
+                maxDistance = WindowInsets.statusBars
+                    .asPaddingValues()
+                    .calculateTopPadding() + PullToRefreshDefaults.PositionalThreshold,
             )
-        }
-    ) { innerPadding ->
-        LazyColumn(
+        },
+    ) {
+        Scaffold(
             modifier = Modifier.fillMaxSize(),
-            state = listState,
-            contentPadding = innerPadding
-        ) {
-            if (state.isLoadingIndex || source == null) {
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            bottomBar = {
+                ForumBottomAppBar(
+                    source = source,
+                    onMenuClick = onMenuClick,
+                    onPostClick = onPostClick
+                )
+            }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                contentPadding = innerPadding
+            ) {
+            if (!shouldShowSkeletonThreads && source == null) {
                 item {
-                    val message = when {
-                        state.isLoadingIndex && source == null ->
-                            "正在加载板块和时间线…"
-
-                        source == null ->
-                            "从左侧菜单选择一个板块或时间线。"
-
-                        else -> null
-                    }
-
-                    message?.let {
+                    if (!state.isLoadingIndex) {
                         Text(
-                            text = it,
+                            text = "从左侧菜单选择一个板块或时间线。",
                             modifier = Modifier.padding(
                                 horizontal = 16.dp,
                                 vertical = 8.dp
@@ -245,6 +313,15 @@ fun ForumScreen(
                         error = error,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
+                }
+            }
+
+            if (shouldShowSkeletonThreads) {
+                items(
+                    items = skeletonSpecs,
+                    key = { spec -> "catalog-skeleton-${spec.id}" }
+                ) { skeletonSpec ->
+                    ForumThreadSkeletonCard(spec = skeletonSpec)
                 }
             }
 
@@ -294,21 +371,26 @@ fun ForumScreen(
                     removingTimelineForumThreadIds = removingTimelineForumThreadIds - thread.id
                 }
                 ListItemAnimatedVisibility(visibleState = visibilityState) {
-                    ThreadCard(
-                        thread = thread,
-                        forumName = if (source?.type == ink.duo3.fogisland.shared.model.CatalogType.TIMELINE) {
-                            resolveForumName(thread.forumId, forumNameById)
-                        } else {
-                            null
-                        },
-                        onClick = { onThreadClick(thread.id) },
-                        onImageClick = onImageClick,
-                        onLongClick = { actionTarget = thread }
-                    )
+                    Crossfade(
+                        targetState = state.catalogContentVersion to thread,
+                        label = "CatalogThreadCard"
+                    ) { (_, renderedThread) ->
+                        ThreadCard(
+                            thread = renderedThread,
+                            forumName = if (source?.type == ink.duo3.fogisland.shared.model.CatalogType.TIMELINE) {
+                                resolveForumName(renderedThread.forumId, forumNameById)
+                            } else {
+                                null
+                            },
+                            onClick = { onThreadClick(renderedThread.id) },
+                            onImageClick = onImageClick,
+                            onLongClick = { actionTarget = renderedThread }
+                        )
+                    }
                 }
             }
 
-            if (source != null) {
+            if (source != null && displayedThreads.isNotEmpty()) {
                 item {
                     Row(
                         modifier = Modifier
@@ -318,7 +400,7 @@ fun ForumScreen(
                     ) {
                         Button(
                             onClick = onLoadMore,
-                            enabled = !state.isLoadingCatalog
+                            enabled = !state.isLoadingCatalog && !state.isRefreshingCatalog
                         ) {
                             Text(
                                 if (state.isLoadingCatalog) "加载中…" else "加载更多"
@@ -327,7 +409,16 @@ fun ForumScreen(
                     }
                 }
             }
+            }
         }
+
+        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(statusBarHeight + 8.dp)
+                .background(smoothScrimBrush(MaterialTheme.colorScheme.surfaceContainer.copy(0.6f), 0.2f))
+        )
     }
 
     actionTarget?.let { thread ->
@@ -439,6 +530,163 @@ private fun mergeAnimatedPosts(
 }
 
 @Composable
+private fun ForumThreadSkeletonCard(
+    spec: ForumThreadSkeletonSpec,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceBright
+        ),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp, 12.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SkeletonBlock(
+                    modifier = Modifier
+                        .width(spec.userHashWidth)
+                        .height(12.dp)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                SkeletonBlock(
+                    modifier = Modifier
+                        .width(spec.postedAtWidth)
+                        .height(10.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (spec.hasTitle) {
+                    SkeletonBlock(
+                        modifier = Modifier
+                            .fillMaxWidth(spec.titleWidthFraction)
+                            .height(20.dp)
+                    )
+                }
+                if (spec.hasSubtitle) {
+                    SkeletonBlock(
+                        modifier = Modifier
+                            .fillMaxWidth(spec.subtitleWidthFraction)
+                            .height(16.dp)
+                    )
+                }
+                spec.bodyLineWidthFractions.forEach { lineWidth ->
+                    SkeletonBlock(
+                        modifier = Modifier
+                            .fillMaxWidth(lineWidth)
+                            .height(14.dp)
+                    )
+                }
+                if (spec.hasImagePreview) {
+                    SkeletonBlock(
+                        modifier = Modifier
+                            .fillMaxWidth(spec.imageWidthFraction)
+                            .height(spec.imageHeight),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SkeletonBlock(
+                    modifier = Modifier
+                        .width(spec.footerWidth)
+                        .height(12.dp)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                SkeletonBlock(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(12.dp)
+                )
+            }
+        }
+    }
+}
+
+private data class ForumThreadSkeletonSpec(
+    val id: Int,
+    val userHashWidth: Dp,
+    val postedAtWidth: Dp,
+    val hasTitle: Boolean,
+    val titleWidthFraction: Float,
+    val hasSubtitle: Boolean,
+    val subtitleWidthFraction: Float,
+    val bodyLineWidthFractions: List<Float>,
+    val hasImagePreview: Boolean = false,
+    val imageWidthFraction: Float = 0.42f,
+    val imageHeight: Dp = 108.dp,
+    val footerWidth: Dp
+)
+
+private fun buildForumThreadSkeletonSpecs(seed: Int): List<ForumThreadSkeletonSpec> {
+    val random = Random(seed)
+    return List(18) { index ->
+        val bodyLineCount = random.nextInt(from = 1, until = 5)
+        val hasImage = random.nextInt(100) < 32
+        val hasTitle = random.nextInt(100) < 28
+        ForumThreadSkeletonSpec(
+            id = index,
+            userHashWidth = random.nextInt(from = 72, until = 128).dp,
+            postedAtWidth = random.nextInt(from = 64, until = 104).dp,
+            hasTitle = hasTitle,
+            titleWidthFraction = random.nextFloat(from = 0.32f, until = 0.72f),
+            hasSubtitle = hasTitle && random.nextBoolean(),
+            subtitleWidthFraction = random.nextFloat(from = 0.24f, until = 0.48f),
+            bodyLineWidthFractions = List(bodyLineCount) { lineIndex ->
+                when {
+                    bodyLineCount == 1 -> random.nextFloat(from = 0.34f, until = 0.76f)
+                    lineIndex == bodyLineCount - 1 -> random.nextFloat(from = 0.42f, until = 0.82f)
+                    else -> random.nextFloat(from = 0.78f, until = 1f)
+                }
+            },
+            hasImagePreview = hasImage,
+            imageWidthFraction = random.nextFloat(from = 0.34f, until = 0.58f),
+            imageHeight = random.nextInt(from = 88, until = 148).dp,
+            footerWidth = random.nextInt(from = 76, until = 136).dp
+        )
+    }
+}
+
+private fun Random.nextFloat(from: Float, until: Float): Float {
+    return from + nextFloat() * (until - from)
+}
+
+@Composable
+private fun SkeletonBlock(
+    modifier: Modifier,
+    shape: RoundedCornerShape = RoundedCornerShape(8.dp)
+) {
+    Box(
+        modifier = modifier.background(
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+            shape = shape
+        )
+    )
+}
+
+@Composable
 private fun ThreadCard(
     thread: NmbPost,
     forumName: String?,
@@ -462,7 +710,6 @@ private fun ThreadCard(
 private fun ForumBottomAppBar(
     source: CatalogSource?,
     onMenuClick: () -> Unit,
-    onRefreshClick: () -> Unit,
     onPostClick: () -> Unit
 ) {
     BottomAppBar(
@@ -486,9 +733,6 @@ private fun ForumBottomAppBar(
                         text = source?.title ?: "雾岛",
                         style = MaterialTheme.typography.titleLarge
                     )
-                }
-                IconButton(onClick = onRefreshClick) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新")
                 }
             }
         },
