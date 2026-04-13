@@ -33,17 +33,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import ink.duo3.fogisland.utils.smoothScrimBrush
 
-private val ViewerTopBarScrim = Brush.verticalGradient(
-    colors = listOf(
-        Color.Black.copy(alpha = 0.78f),
-        Color.Black.copy(alpha = 0.34f),
-        Color.Transparent
-    )
-)
+private val ViewerTopBarScrim = smoothScrimBrush(Color.Black.copy(alpha = 0.6f), flatFraction = 0.3f)
 
 private const val TOP_BAR_VISIBILITY_ANIMATION_MILLIS = 240
 
