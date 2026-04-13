@@ -147,7 +147,7 @@ fun joinNmbRichTextLines(lines: List<NmbRichTextLine>): NmbRichText {
 }
 
 fun findStandaloneNmbPostReferenceId(richText: NmbRichText): Long? {
-    val plainText = richText.plainText.trim()
+    val plainText = richText.plainText.trimAsciiEdgeWhitespace()
     if (plainText.isEmpty()) {
         return null
     }
@@ -161,7 +161,7 @@ fun findStandaloneNmbPostReferenceId(richText: NmbRichText): Long? {
 
     val referenceSegment = nonWhitespaceSegments.single()
     val referenceId = (referenceSegment.linkTarget as? NmbLinkTarget.PostReference)?.postId ?: return null
-    return referenceId.takeIf { referenceSegment.text.trim() == plainText }
+    return referenceId.takeIf { referenceSegment.text.trimAsciiEdgeWhitespace() == plainText }
 }
 
 private fun collectPureNumericReferenceCandidates(text: String): List<Long> {
@@ -194,4 +194,8 @@ private fun isBlockedNumericReferenceNeighbor(char: Char?): Boolean {
 
 private fun Char.isAsciiWordChar(): Boolean {
     return isDigit() || this in 'a'..'z' || this in 'A'..'Z'
+}
+
+private fun String.trimAsciiEdgeWhitespace(): String {
+    return trim { char -> char == ' ' || char == '\t' || char == '\r' || char == '\n' }
 }

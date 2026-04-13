@@ -156,7 +156,7 @@ private fun StandalonePostReferencePreviewCard(
     ) {
         Column(
             modifier = Modifier.padding(12.dp, 8.dp, 12.dp, 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

@@ -42,7 +42,7 @@ internal fun buildReferencePreviewBlocks(
             flushBodyLines()
             blocks += ReferencePreviewBlock.StandaloneCard(
                 referenceId = standaloneReferenceId,
-                referenceText = line.richText.plainText.trim(),
+                referenceText = line.richText.plainText.trimAsciiEdgeWhitespace(),
                 post = standalonePost
             )
         } else {
@@ -135,11 +135,7 @@ internal fun buildStandalonePostReferenceFallbackText(
     else -> ""
 }
     .replace("\r\n", "\n")
-    .lines()
-    .joinToString("\n") { line ->
-        line.replace(Regex("[\\t ]+"), " ").trim()
-    }
-    .trim()
+    .trimAsciiLineBreaks()
 
 private const val InlinePreviewSummaryBudget = 24
 
@@ -219,4 +215,12 @@ private fun String.normalizeInlineReferenceField(maxLength: Int): String? {
     } else {
         normalized
     }
+}
+
+private fun String.trimAsciiLineBreaks(): String {
+    return trim { char -> char == '\r' || char == '\n' }
+}
+
+private fun String.trimAsciiEdgeWhitespace(): String {
+    return trim { char -> char == ' ' || char == '\t' || char == '\r' || char == '\n' }
 }

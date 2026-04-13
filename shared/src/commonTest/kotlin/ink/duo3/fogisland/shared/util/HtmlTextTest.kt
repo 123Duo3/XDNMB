@@ -22,9 +22,9 @@ class HtmlTextTest {
     }
 
     @Test
-    fun collapsesHtmlWhitespaceAroundLineEdges() {
+    fun preservesHtmlWhitespaceAroundLineEdges() {
         assertEquals(
-            expected = "ASCII\n艺术",
+            expected = "  ASCII \n 艺术  ",
             actual = htmlToPlainText("  ASCII <br> 艺术  ")
         )
     }

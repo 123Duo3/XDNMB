@@ -184,16 +184,23 @@ class NmbRichTextTest {
     }
 
     @Test
-    fun `collapses consecutive html spaces`() {
+    fun `preserves consecutive html spaces`() {
         val richText = parseNmbRichText("前文   <b> 中间 </b>   后文")
 
-        assertEquals("前文 中间 后文", richText.plainText)
+        assertEquals("前文    中间    后文", richText.plainText)
     }
 
     @Test
-    fun `collapses tab characters like html whitespace`() {
+    fun `preserves tab characters`() {
         val richText = parseNmbRichText("前文\t\t<b>\t中间\t</b>\t后文")
 
-        assertEquals("前文 中间 后文", richText.plainText)
+        assertEquals("前文\t\t\t中间\t\t后文", richText.plainText)
+    }
+
+    @Test
+    fun `preserves leading trailing full width spaces and ascii art spacing`() {
+        val richText = parseNmbRichText("　　头<br>  /\\_/\\\\<br> ( o.o )  <br>　　尾　")
+
+        assertEquals("　　头\n  /\\_/\\\\\n ( o.o )  \n　　尾　", richText.plainText)
     }
 }
