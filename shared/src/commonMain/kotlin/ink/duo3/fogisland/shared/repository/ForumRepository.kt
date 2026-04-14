@@ -195,6 +195,30 @@ class ForumRepository(
         return forumPreferences.hiddenTimelineForumFiltersFlow
     }
 
+    fun observeFavoriteForumIds(): Flow<Set<Long>> {
+        return forumPreferences.favoriteForumIdsFlow
+    }
+
+    suspend fun addFavoriteForum(forumId: Long) {
+        forumPreferences.addFavoriteForumId(forumId)
+    }
+
+    suspend fun removeFavoriteForum(forumId: Long) {
+        forumPreferences.removeFavoriteForumId(forumId)
+    }
+
+    fun observeFavoriteTimelineIds(): Flow<Set<Long>> {
+        return forumPreferences.favoriteTimelineIdsFlow
+    }
+
+    suspend fun addFavoriteTimeline(timelineId: Long) {
+        forumPreferences.addFavoriteTimelineId(timelineId)
+    }
+
+    suspend fun removeFavoriteTimeline(timelineId: Long) {
+        forumPreferences.removeFavoriteTimelineId(timelineId)
+    }
+
     suspend fun refreshCatalog(
         source: CatalogSource,
         page: Int,

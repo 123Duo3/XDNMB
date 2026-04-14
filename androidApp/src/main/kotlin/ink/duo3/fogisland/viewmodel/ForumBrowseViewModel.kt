@@ -56,6 +56,8 @@ data class ForumBrowseUiState(
     val subscriptionThreads: List<NmbPost> = emptyList(),
     val readHistory: List<NmbPost> = emptyList(),
     val hiddenThreadIds: Set<Long> = emptySet(),
+    val favoriteForumIds: Set<Long> = emptySet(),
+    val favoriteTimelineIds: Set<Long> = emptySet(),
     val hiddenTimelineForumFilters: Set<HiddenTimelineForumFilter> = emptySet(),
     val hiddenContentError: ErrorPresentation? = null,
     val postingHistory: List<PostingHistoryEntry> = emptyList(),
@@ -118,6 +120,8 @@ class ForumBrowseViewModel(
     private var postingHistoryObservationJob: Job? = null
     private var hiddenThreadObservationJob: Job? = null
     private var hiddenTimelineForumObservationJob: Job? = null
+    private var favoriteForumObservationJob: Job? = null
+    private var favoriteTimelineObservationJob: Job? = null
     private var threadObservationJob: Job? = null
     private var searchJob: Job? = null
     private var recentSearchObservationJob: Job? = null
@@ -1152,6 +1156,38 @@ class ForumBrowseViewModel(
                 }
             }
         }
+
+        if (favoriteForumObservationJob == null) {
+            favoriteForumObservationJob = viewModelScope.launch {
+                repository.observeFavoriteForumIds().collect { favoriteForumIds ->
+                    _uiState.update { it.copy(favoriteForumIds = favoriteForumIds) }
+                }
+            }
+        }
+
+        if (favoriteTimelineObservationJob == null) {
+            favoriteTimelineObservationJob = viewModelScope.launch {
+                repository.observeFavoriteTimelineIds().collect { favoriteTimelineIds ->
+                    _uiState.update { it.copy(favoriteTimelineIds = favoriteTimelineIds) }
+                }
+            }
+        }
+    }
+
+    fun addFavoriteForum(forumId: Long) {
+        viewModelScope.launch { repository.addFavoriteForum(forumId) }
+    }
+
+    fun removeFavoriteForum(forumId: Long) {
+        viewModelScope.launch { repository.removeFavoriteForum(forumId) }
+    }
+
+    fun addFavoriteTimeline(timelineId: Long) {
+        viewModelScope.launch { repository.addFavoriteTimeline(timelineId) }
+    }
+
+    fun removeFavoriteTimeline(timelineId: Long) {
+        viewModelScope.launch { repository.removeFavoriteTimeline(timelineId) }
     }
 
     private fun loadCatalogPage(

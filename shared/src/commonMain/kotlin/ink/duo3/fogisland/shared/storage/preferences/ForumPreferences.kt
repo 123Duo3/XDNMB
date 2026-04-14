@@ -83,6 +83,8 @@ class ForumPreferences(
             stringPreferencesKey("dismissed_site_notice_content")
         private val HIDDEN_THREAD_IDS = stringPreferencesKey("hidden_thread_ids")
         private val HIDDEN_TIMELINE_FORUM_IDS = stringPreferencesKey("hidden_timeline_forum_ids")
+        private val FAVORITE_FORUM_IDS = stringPreferencesKey("favorite_forum_ids")
+        private val FAVORITE_TIMELINE_IDS = stringPreferencesKey("favorite_timeline_ids")
         private val CACHE_CLEANUP_TTL_POLICY = stringPreferencesKey("cache_cleanup_ttl_policy")
         private val READ_HISTORY_CLEANUP_TTL_POLICY =
             stringPreferencesKey("read_history_cleanup_ttl_policy")
@@ -106,6 +108,14 @@ class ForumPreferences(
 
     val hiddenThreadIdsFlow: Flow<Set<Long>> = dataStore.data.map { preferences ->
         decodeLongIdSet(preferences[HIDDEN_THREAD_IDS])
+    }
+
+    val favoriteForumIdsFlow: Flow<Set<Long>> = dataStore.data.map { preferences ->
+        decodeLongIdSet(preferences[FAVORITE_FORUM_IDS])
+    }
+
+    val favoriteTimelineIdsFlow: Flow<Set<Long>> = dataStore.data.map { preferences ->
+        decodeLongIdSet(preferences[FAVORITE_TIMELINE_IDS])
     }
 
     val hiddenTimelineForumFiltersFlow: Flow<Set<HiddenTimelineForumFilter>> = dataStore.data.map {
@@ -251,6 +261,48 @@ class ForumPreferences(
                 preferences.remove(HIDDEN_THREAD_IDS)
             } else {
                 preferences[HIDDEN_THREAD_IDS] = encodeLongIdSet(updatedValues)
+            }
+        }
+    }
+
+    suspend fun addFavoriteForumId(forumId: Long) {
+        if (forumId <= 0L) return
+        dataStore.edit { preferences ->
+            preferences[FAVORITE_FORUM_IDS] = encodeLongIdSet(
+                decodeLongIdSet(preferences[FAVORITE_FORUM_IDS]) + forumId
+            )
+        }
+    }
+
+    suspend fun removeFavoriteForumId(forumId: Long) {
+        if (forumId <= 0L) return
+        dataStore.edit { preferences ->
+            val updated = decodeLongIdSet(preferences[FAVORITE_FORUM_IDS]) - forumId
+            if (updated.isEmpty()) {
+                preferences.remove(FAVORITE_FORUM_IDS)
+            } else {
+                preferences[FAVORITE_FORUM_IDS] = encodeLongIdSet(updated)
+            }
+        }
+    }
+
+    suspend fun addFavoriteTimelineId(timelineId: Long) {
+        if (timelineId <= 0L) return
+        dataStore.edit { preferences ->
+            preferences[FAVORITE_TIMELINE_IDS] = encodeLongIdSet(
+                decodeLongIdSet(preferences[FAVORITE_TIMELINE_IDS]) + timelineId
+            )
+        }
+    }
+
+    suspend fun removeFavoriteTimelineId(timelineId: Long) {
+        if (timelineId <= 0L) return
+        dataStore.edit { preferences ->
+            val updated = decodeLongIdSet(preferences[FAVORITE_TIMELINE_IDS]) - timelineId
+            if (updated.isEmpty()) {
+                preferences.remove(FAVORITE_TIMELINE_IDS)
+            } else {
+                preferences[FAVORITE_TIMELINE_IDS] = encodeLongIdSet(updated)
             }
         }
     }

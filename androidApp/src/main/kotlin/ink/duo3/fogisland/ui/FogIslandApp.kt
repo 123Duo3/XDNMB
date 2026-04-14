@@ -4,7 +4,9 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,6 +18,8 @@ import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -24,10 +28,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +62,7 @@ import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.htmlToPlainText
 import ink.duo3.fogisland.shared.util.shouldRenderNmbRichText
+import ink.duo3.fogisland.ui.components.ForumDrawerItem
 import ink.duo3.fogisland.ui.components.NavigationItemGroupHeader
 import ink.duo3.fogisland.ui.components.richtext.NmbRichTextText
 import ink.duo3.fogisland.utils.openNmbExternalLink
@@ -80,6 +85,65 @@ fun FogIslandApp(
     val backStack = remember { mutableStateListOf<AppRoute>(AppRoute.Catalog) }
     var expandedGroupId by remember { mutableStateOf<Long?>(null) }
     val drawerListState = rememberLazyListState()
+    var favoriteDialogSource by remember { mutableStateOf<CatalogSource?>(null) }
+    val favoriteItems = remember(state.forumGroups, state.favoriteForumIds, state.timelines, state.favoriteTimelineIds) {
+        buildList {
+            state.timelines
+                .filter { it.id in state.favoriteTimelineIds }
+                .forEach { add(it.toCatalogSource()) }
+            state.forumGroups.flatMap { group ->
+                group.forums
+                    .filter { it.id in state.favoriteForumIds }
+                    .map { it.toCatalogSource(group) }
+            }.forEach { add(it) }
+        }
+    }
+
+    val favoriteStarBadge: @Composable () -> Unit = {
+        Box(
+            modifier = Modifier.size(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = null,
+                modifier = Modifier.size(12.dp),
+                tint = MaterialTheme.colorScheme.tertiary
+            )
+        }
+    }
+
+    val fds = favoriteDialogSource
+    if (fds != null) {
+        val isFavorite = when (fds.type) {
+            CatalogType.FORUM -> fds.id in state.favoriteForumIds
+            CatalogType.TIMELINE -> fds.id in state.favoriteTimelineIds
+        }
+        AlertDialog(
+            onDismissRequest = { favoriteDialogSource = null },
+            title = { Text(fds.title) },
+            text = { Text(if (isFavorite) "从收藏中移除？" else "添加到收藏？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (isFavorite) {
+                        when (fds.type) {
+                            CatalogType.FORUM -> viewModel.removeFavoriteForum(fds.id)
+                            CatalogType.TIMELINE -> viewModel.removeFavoriteTimeline(fds.id)
+                        }
+                    } else {
+                        when (fds.type) {
+                            CatalogType.FORUM -> viewModel.addFavoriteForum(fds.id)
+                            CatalogType.TIMELINE -> viewModel.addFavoriteTimeline(fds.id)
+                        }
+                    }
+                    favoriteDialogSource = null
+                }) { Text(if (isFavorite) "移除" else "收藏") }
+            },
+            dismissButton = {
+                TextButton(onClick = { favoriteDialogSource = null }) { Text("取消") }
+            }
+        )
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val currentRoute = backStack.lastOrNull() ?: AppRoute.Catalog
     val isCatalogRoute = currentRoute == AppRoute.Catalog
@@ -291,15 +355,18 @@ fun FogIslandApp(
                         LaunchedEffect(expandedGroupId) {
                             val targetId = expandedGroupId ?: return@LaunchedEffect
                             val hasTimelines = state.timelines.isNotEmpty()
-                            val index = if (targetId == -1L) {
-                                0
-                            } else {
-                                var idx = if (hasTimelines) 2 else 0
-                                for (group in state.forumGroups) {
-                                    if (group.id == targetId) break
-                                    idx += 2
+                            val favoritesOffset = if (favoriteItems.isNotEmpty()) 2 else 0
+                            val index = when (targetId) {
+                                -2L -> 0
+                                -1L -> favoritesOffset
+                                else -> {
+                                    var idx = favoritesOffset + if (hasTimelines) 2 else 0
+                                    for (group in state.forumGroups) {
+                                        if (group.id == targetId) break
+                                        idx += 2
+                                    }
+                                    idx
                                 }
-                                idx
                             }
                             drawerListState.animateScrollToItem(index)
                         }
@@ -308,11 +375,41 @@ fun FogIslandApp(
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(vertical = 8.dp)
                         ) {
+                            if (favoriteItems.isNotEmpty()) {
+                                stickyHeader(key = "favorites_header") {
+                                    NavigationItemGroupHeader(
+                                        label = { DrawerItemLabel("收藏") },
+                                        selected = isCatalogRoute && favoriteItems.any { it == state.currentSource },
+                                        expanded = expandedGroupId == -2L,
+                                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
+                                        onClick = { expandedGroupId = if (expandedGroupId == -2L) null else -2L }
+                                    )
+                                }
+                                item(key = "favorites_content") {
+                                    AnimatedVisibility(visible = expandedGroupId == -2L) {
+                                        Column(Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp)) {
+                                            favoriteItems.forEach { source ->
+                                                ForumDrawerItem(
+                                                    label = source.title,
+                                                    selected = isCatalogRoute && state.currentSource == source,
+                                                    onClick = {
+                                                        viewModel.openSource(source)
+                                                        showCatalog()
+                                                        scope.launch { drawerState.close() }
+                                                    },
+                                                    onLongClick = { favoriteDialogSource = source },
+                                                    badge = favoriteStarBadge
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             if (state.timelines.isNotEmpty()) {
                                 stickyHeader(key = "timeline_header") {
                                     NavigationItemGroupHeader(
                                         label = { DrawerItemLabel("时间线") },
-                                        selected = isCatalogRoute && state.currentSource?.type == CatalogType.TIMELINE,
+                                        selected = isCatalogRoute && state.currentSource?.type == CatalogType.TIMELINE && state.currentSource !in favoriteItems,
                                         expanded = expandedGroupId == -1L,
                                         modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
                                         onClick = { expandedGroupId = if (expandedGroupId == -1L) null else -1L }
@@ -323,15 +420,16 @@ fun FogIslandApp(
                                         Column(Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp)) {
                                             state.timelines.forEach { timeline ->
                                                 val source = timeline.toCatalogSource()
-                                                NavigationDrawerItem(
-                                                    label = { DrawerItemLabel(timeline.displayName) },
+                                                ForumDrawerItem(
+                                                    label = timeline.displayName,
                                                     selected = isCatalogRoute && state.currentSource == source,
                                                     onClick = {
                                                         viewModel.openSource(source)
                                                         showCatalog()
                                                         scope.launch { drawerState.close() }
                                                     },
-                                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                                    onLongClick = { favoriteDialogSource = source },
+                                                    badge = if (timeline.id in state.favoriteTimelineIds) favoriteStarBadge else null
                                                 )
                                             }
                                         }
@@ -341,7 +439,8 @@ fun FogIslandApp(
                             state.forumGroups.forEach { group ->
                                 val groupSelected = isCatalogRoute &&
                                     state.currentSource?.type == CatalogType.FORUM &&
-                                    group.forums.any { it.id == state.currentSource?.id }
+                                    group.forums.any { it.id == state.currentSource?.id } &&
+                                    state.currentSource !in favoriteItems
                                 stickyHeader(key = "group_${group.id}") {
                                     NavigationItemGroupHeader(
                                         label = { DrawerItemLabel(group.name) },
@@ -356,15 +455,16 @@ fun FogIslandApp(
                                         Column(Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp)) {
                                             group.forums.forEach { forum ->
                                                 val source = forum.toCatalogSource(group)
-                                                NavigationDrawerItem(
-                                                    label = { DrawerItemLabel(forum.displayName) },
+                                                ForumDrawerItem(
+                                                    label = forum.displayName,
                                                     selected = isCatalogRoute && state.currentSource == source,
                                                     onClick = {
                                                         viewModel.openSource(source)
                                                         showCatalog()
                                                         scope.launch { drawerState.close() }
                                                     },
-                                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                                    onLongClick = { favoriteDialogSource = source },
+                                                    badge = if (forum.id in state.favoriteForumIds) favoriteStarBadge else null
                                                 )
                                             }
                                         }
