@@ -36,6 +36,35 @@ import ink.duo3.fogisland.utils.ProvideContentColorTextStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun NavigationItemGroupHeader(
+    label: @Composable () -> Unit,
+    selected: Boolean,
+    expanded: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    NavigationDrawerItem(
+        modifier = modifier,
+        colors = NavigationDrawerItemDefaults.colors(
+            selectedContainerColor = LocalContentColor.current.copy(0.08f),
+            selectedTextColor = MaterialTheme.colorScheme.onSurface
+        ),
+        label = label,
+        selected = selected,
+        onClick = onClick,
+        badge = {
+            val rotate by animateFloatAsState(if (expanded) 180f else 0f, label = "")
+            Icon(
+                modifier = Modifier.rotate(rotate),
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = if (expanded) "折叠" else "展开"
+            )
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun NavigationItemGroup(
     label: @Composable () -> Unit,
     selected: Boolean,

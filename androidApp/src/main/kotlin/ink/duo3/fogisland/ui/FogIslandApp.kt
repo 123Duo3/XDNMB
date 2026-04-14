@@ -5,8 +5,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Bookmarks
@@ -31,7 +34,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,7 +58,7 @@ import ink.duo3.fogisland.shared.repository.RepositoryProvider
 import ink.duo3.fogisland.shared.util.NmbLinkTarget
 import ink.duo3.fogisland.shared.util.htmlToPlainText
 import ink.duo3.fogisland.shared.util.shouldRenderNmbRichText
-import ink.duo3.fogisland.ui.components.NavigationItemGroup
+import ink.duo3.fogisland.ui.components.NavigationItemGroupHeader
 import ink.duo3.fogisland.ui.components.richtext.NmbRichTextText
 import ink.duo3.fogisland.utils.openNmbExternalLink
 import ink.duo3.fogisland.utils.resolveNmbIntentLinkTarget
@@ -76,7 +78,8 @@ fun FogIslandApp(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val backStack = remember { mutableStateListOf<AppRoute>(AppRoute.Catalog) }
-    val expandedGroups = remember { mutableStateMapOf<Long, Boolean>() }
+    var expandedGroupId by remember { mutableStateOf<Long?>(null) }
+    val drawerListState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val currentRoute = backStack.lastOrNull() ?: AppRoute.Catalog
     val isCatalogRoute = currentRoute == AppRoute.Catalog
@@ -285,64 +288,86 @@ fun FogIslandApp(
                             Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
                             color = MaterialTheme.colorScheme.outlineVariant
                         )
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState())
-                                .padding(vertical = 8.dp)
+                        LaunchedEffect(expandedGroupId) {
+                            val targetId = expandedGroupId ?: return@LaunchedEffect
+                            val hasTimelines = state.timelines.isNotEmpty()
+                            val index = if (targetId == -1L) {
+                                0
+                            } else {
+                                var idx = if (hasTimelines) 2 else 0
+                                for (group in state.forumGroups) {
+                                    if (group.id == targetId) break
+                                    idx += 2
+                                }
+                                idx
+                            }
+                            drawerListState.animateScrollToItem(index)
+                        }
+                        LazyColumn(
+                            state = drawerListState,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(vertical = 8.dp)
                         ) {
                             if (state.timelines.isNotEmpty()) {
-                                val timelineExpanded = expandedGroups[-1L] ?: false
-                                NavigationItemGroup(
-                                    label = { DrawerItemLabel("时间线") },
-                                    selected = isCatalogRoute && state.currentSource?.type == CatalogType.TIMELINE,
-                                    expanded = timelineExpanded,
-                                    modifier = Modifier,
-                                    onExpandStateChange = { expandedGroups[-1L] = it }
-                                ) {
-                                    state.timelines.forEach { timeline ->
-                                        val source = timeline.toCatalogSource()
-                                        NavigationDrawerItem(
-                                            label = {
-                                                DrawerItemLabel(timeline.displayName)
-                                            },
-                                            selected = isCatalogRoute && state.currentSource == source,
-                                            onClick = {
-                                                viewModel.openSource(source)
-                                                showCatalog()
-                                                scope.launch { drawerState.close() }
-                                            },
-                                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                                        )
+                                stickyHeader(key = "timeline_header") {
+                                    NavigationItemGroupHeader(
+                                        label = { DrawerItemLabel("时间线") },
+                                        selected = isCatalogRoute && state.currentSource?.type == CatalogType.TIMELINE,
+                                        expanded = expandedGroupId == -1L,
+                                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
+                                        onClick = { expandedGroupId = if (expandedGroupId == -1L) null else -1L }
+                                    )
+                                }
+                                item(key = "timeline_content") {
+                                    AnimatedVisibility(visible = expandedGroupId == -1L) {
+                                        Column(Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp)) {
+                                            state.timelines.forEach { timeline ->
+                                                val source = timeline.toCatalogSource()
+                                                NavigationDrawerItem(
+                                                    label = { DrawerItemLabel(timeline.displayName) },
+                                                    selected = isCatalogRoute && state.currentSource == source,
+                                                    onClick = {
+                                                        viewModel.openSource(source)
+                                                        showCatalog()
+                                                        scope.launch { drawerState.close() }
+                                                    },
+                                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                             state.forumGroups.forEach { group ->
-                                val expanded = expandedGroups[group.id] ?: false
                                 val groupSelected = isCatalogRoute &&
                                     state.currentSource?.type == CatalogType.FORUM &&
                                     group.forums.any { it.id == state.currentSource?.id }
-                                NavigationItemGroup(
-                                    label = { DrawerItemLabel(group.name) },
-                                    selected = groupSelected,
-                                    expanded = expanded,
-                                    modifier = Modifier,
-                                    onExpandStateChange = { expandedGroups[group.id] = it }
-                                ) {
-                                    group.forums.forEach { forum ->
-                                        val source = forum.toCatalogSource(group)
-                                        NavigationDrawerItem(
-                                            label = {
-                                                DrawerItemLabel(forum.displayName)
-                                            },
-                                            selected = isCatalogRoute && state.currentSource == source,
-                                            onClick = {
-                                                viewModel.openSource(source)
-                                                showCatalog()
-                                                scope.launch { drawerState.close() }
-                                            },
-                                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                                        )
+                                stickyHeader(key = "group_${group.id}") {
+                                    NavigationItemGroupHeader(
+                                        label = { DrawerItemLabel(group.name) },
+                                        selected = groupSelected,
+                                        expanded = expandedGroupId == group.id,
+                                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
+                                        onClick = { expandedGroupId = if (expandedGroupId == group.id) null else group.id }
+                                    )
+                                }
+                                item(key = "group_content_${group.id}") {
+                                    AnimatedVisibility(visible = expandedGroupId == group.id) {
+                                        Column(Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp)) {
+                                            group.forums.forEach { forum ->
+                                                val source = forum.toCatalogSource(group)
+                                                NavigationDrawerItem(
+                                                    label = { DrawerItemLabel(forum.displayName) },
+                                                    selected = isCatalogRoute && state.currentSource == source,
+                                                    onClick = {
+                                                        viewModel.openSource(source)
+                                                        showCatalog()
+                                                        scope.launch { drawerState.close() }
+                                                    },
+                                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
