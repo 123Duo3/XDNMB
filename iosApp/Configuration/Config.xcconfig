@@ -1,7 +1,9 @@
-TEAM_ID=
+// Public, committed defaults.
+// Per-developer signing overrides (DEVELOPMENT_TEAM, etc.) live in
+// Signing.xcconfig, which is gitignored. See Signing.xcconfig.example.
+#include? "Signing.xcconfig"
 
 PRODUCT_NAME=Fog Island
-PRODUCT_BUNDLE_IDENTIFIER=ink.duo3.fogisland.FogIsland$(TEAM_ID)
 
 CURRENT_PROJECT_VERSION=1
 MARKETING_VERSION=1.0

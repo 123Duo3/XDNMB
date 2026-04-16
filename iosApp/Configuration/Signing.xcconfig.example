@@ -1,0 +1,10 @@
+// Copy this file to Signing.xcconfig and fill in your values.
+// Signing.xcconfig is gitignored so each developer keeps their own.
+
+// Your Apple Developer Team ID (10-character string).
+TEAM_ID = ABCD123456
+DEVELOPMENT_TEAM = $(TEAM_ID)
+
+// "Automatic" lets Xcode manage provisioning profiles for you.
+// Use "Manual" if you need to pin a specific provisioning profile.
+CODE_SIGN_STYLE = Automatic
