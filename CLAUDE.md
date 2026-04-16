@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 
 ### Apple (iOS/macOS)
-First build via Gradle, then open `iosApp/iosApp.xcodeproj` in Xcode and select a target.
+First build via Gradle, then open `appleApp/appleApp.xcodeproj` in Xcode and select a target.
 
 ### Run All Tests
 ```shell
@@ -43,7 +43,7 @@ First build via Gradle, then open `iosApp/iosApp.xcodeproj` in Xcode and select 
 - **`/shared`** — KMP library with all business logic, data models, networking, and storage. Shared across Android, iOS, and Desktop.
 - **`/androidApp`** — Android application entry point and Android-specific Compose UI.
 - **`/desktopApp`** — Desktop JVM application entry point.
-- **`/iosApp`** — SwiftUI host project for iOS/macOS (uses the shared KMP framework).
+- **`/appleApp`** — SwiftUI host project for iOS and macOS (uses the shared KMP framework). iOS-specific code lives under `appleApp/iOS/`, macOS-specific under `appleApp/macOS/`; everything else is shared between both targets.
 
 ### Shared Module Layers (`shared/src/commonMain`)
 

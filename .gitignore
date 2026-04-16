@@ -51,11 +51,10 @@ google-services.json
 # Xcode user settings
 xcuserdata/
 
-# Per-developer iOS signing config (see Signing.xcconfig.example)
-iosApp/Configuration/Signing.xcconfig
+# Per-developer Apple signing config (see Signing.xcconfig.example)
+appleApp/Configuration/Signing.xcconfig
 
 # CocoaPods
 Pods/
 DerivedData/
 .LSOverride
-

@@ -45,9 +45,11 @@
 
 ### Apple 平台（SwiftUI）
 
-[`/iosApp`](./iosApp) 是 SwiftUI 宿主工程，负责 Apple 平台原生入口，可通过 Xcode 构建并运行到 iOS 和 macOS。
+[`/appleApp`](./appleApp) 是 SwiftUI 宿主工程，负责 Apple 平台原生入口，可通过 Xcode 构建并运行到 iOS 和 macOS。
 
-要运行 iOS 或 macOS 开发版本，可以先使用 Gradle 完整构建一次项目，然后用 Xcode 打开 [`/iosApp/iosApp.xcodeproj`](./iosApp/iosApp.xcodeproj) 并选择对应目标运行。
+要运行 iOS 或 macOS 开发版本，可以先使用 Gradle 完整构建一次项目，然后用 Xcode 打开 [`/appleApp/appleApp.xcodeproj`](./appleApp/appleApp.xcodeproj) 并选择相应目标运行。
+
+Apple 端配置位于 [`/appleApp/Configuration/Config.xcconfig`](./appleApp/Configuration/Config.xcconfig)。编译前请将 Team ID 写入 `Signing.xcconfig`，可参考 [`/appleApp/Configuration/Signing.xcconfig.example`](./appleApp/Configuration/Signing.xcconfig.example)。
 
 您也可以在 Xcode 后台运行时，继续使用安装了 Kotlin Multiplatform 插件的 Android Studio 进行开发、编译与安装。
 
@@ -58,11 +60,10 @@
 
 ## 关于
 
-* Copyright (C) 2026 123哆3 & Konyaco.
+* Copyright (C) 2026 123哆3.
 * 欢迎提交 Pull Request 帮助开发，也欢迎通过 Issue 反馈问题。
 * 您可以在 [爱发电](https://afdian.net/a/123duo3) 进行捐赠，以支持开发。
 
 ## 特别鸣谢
 
 感谢 [良辰](https://github.com/kevinluo6191) 对开发的大力支持。
-

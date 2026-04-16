@@ -1,0 +1,16 @@
+// Public, committed defaults.
+// Per-developer signing overrides live in Signing.xcconfig, which is
+// gitignored. See Signing.xcconfig.example.
+
+PRODUCT_NAME = Fog Island
+
+CURRENT_PROJECT_VERSION = 1
+MARKETING_VERSION = 1.0
+
+IPHONEOS_DEPLOYMENT_TARGET = 18.0
+MACOSX_DEPLOYMENT_TARGET = 14.0
+
+CODE_SIGN_STYLE = Automatic
+APP_PRODUCT_BUNDLE_IDENTIFIER = ink.duo3.fogisland
+
+#include? "Signing.xcconfig"

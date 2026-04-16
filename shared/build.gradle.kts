@@ -10,6 +10,8 @@ plugins {
 }
 
 kotlin {
+    applyDefaultHierarchyTemplate()
+
     android {
         namespace = "ink.duo3.fogisland.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -28,9 +30,10 @@ kotlin {
     
     listOf(
         iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
+        iosSimulatorArm64(),
+        macosArm64()
+    ).forEach { appleTarget ->
+        appleTarget.binaries.framework {
             baseName = "Shared"
             isStatic = true
         }
@@ -55,8 +58,10 @@ kotlin {
             implementation(libs.ktor.client.cio)
         }
 
-        iosMain.dependencies {
-            implementation(libs.ktor.client.darwin)
+        val appleMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.darwin)
+            }
         }
 
         jvmMain.dependencies {
@@ -77,5 +82,6 @@ dependencies {
     add("kspAndroid", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
+    add("kspMacosArm64", libs.room.compiler)
     add("kspJvm", libs.room.compiler)
 }
