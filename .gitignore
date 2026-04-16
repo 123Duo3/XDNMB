@@ -51,6 +51,9 @@ google-services.json
 # Xcode user settings
 xcuserdata/
 
+# Per-developer iOS signing config (see Signing.xcconfig.example)
+iosApp/Configuration/Signing.xcconfig
+
 # CocoaPods
 Pods/
 DerivedData/
