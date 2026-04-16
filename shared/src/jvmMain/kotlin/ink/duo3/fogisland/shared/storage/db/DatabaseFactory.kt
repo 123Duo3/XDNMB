@@ -1,8 +1,13 @@
+@file:JvmName("DatabaseFactoryJvm")
+
 package ink.duo3.fogisland.shared.storage.db
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import java.io.File
+import kotlin.jvm.JvmName
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 
 actual class DatabaseFactory {
     actual fun createBuilder(): RoomDatabase.Builder<AppDatabase> {
@@ -17,3 +22,5 @@ actual class DatabaseFactory {
         )
     }
 }
+
+actual val databaseQueryDispatcher: CoroutineDispatcher = Dispatchers.IO

@@ -3,6 +3,8 @@ package ink.duo3.fogisland.shared.storage.db
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
@@ -26,3 +28,7 @@ actual class DatabaseFactory {
         )
     }
 }
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+actual val databaseQueryDispatcher: CoroutineDispatcher =
+    Dispatchers.Default.limitedParallelism(4)
