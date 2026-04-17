@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+./scripts/sanitize-xcode-signing.sh
+git add appleApp/appleApp.xcodeproj/project.pbxproj
